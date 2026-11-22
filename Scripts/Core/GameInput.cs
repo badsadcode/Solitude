@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 
 namespace Solitude.Core;
 
@@ -25,6 +25,10 @@ public static class GameInput
     public const string CameraCycle = "camera_cycle";
     public const string Lights = "lights";
 
+    // Sonar
+    public const string Ping = "sonar_ping";
+    public const string SonarRange = "sonar_range";
+
     // Monitor station
     public const string Fullscreen = "feed_fullscreen";
     public const string ToggleFullscreenWindow = "window_fullscreen";
@@ -49,6 +53,8 @@ public static class GameInput
         Bind(CenterControls, Godot.Key.X);
         Bind(CameraCycle, Godot.Key.V);
         Bind(Lights, Godot.Key.L);
+        Bind(Ping, Godot.Key.P);
+        Bind(SonarRange, Godot.Key.Q);
 
         Bind(Fullscreen, Godot.Key.F);
         Bind(ToggleFullscreenWindow, Godot.Key.F11);

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Solitude.Core;
+using Solitude.Sonar;
 using Solitude.Sub;
 
 namespace Solitude.Interior;
@@ -26,7 +27,17 @@ public partial class SubInterior : Node3D
     public HullCameraRig Rig;
     public Action OnHelm;
     public Action OnMonitors;
+    public Action OnSonar;
+    public Action OnHolo;
     public Action<string> OnMessage;
+
+    // Sonar (set before Build)
+    public SonarSystem Sonar;
+    public Texture2D SonarTexture;
+    public ShaderMaterial SonarScreen { get; private set; }
+    public HoloTable Holo { get; private set; }
+    public Transform3D SonarView { get; private set; }
+    public Vector3 HoloCentre { get; private set; }
 
     // Exposed anchors (local space)
     public Transform3D PlayerSpawn { get; private set; }
@@ -292,19 +303,37 @@ public partial class SubInterior : Node3D
         Solid(_dark, new Vector3(-0.9f, 0.25f, -3f), new Vector3(0.45f, 0.5f, 0.45f), Grey);
         _dark.Box(new Vector3(-0.9f, 0.55f, -3f), new Vector3(0.5f, 0.1f, 0.5f), new Color(0.2f, 0.22f, 0.3f));
 
-        // Holo table (milestone 2)
+        // Holo table: projects the sonar's terrain memory.
+        Vector3 holo = new(1.45f, 0.97f, -3.2f);
         Solid(_machine, new Vector3(1.45f, 0.45f, -3.2f), new Vector3(1.1f, 0.9f, 1.1f), Grey.Shade(0.8f));
         _machine.Cylinder(new Vector3(1.45f, 0.9f, -3.2f), 0.62f, 0.62f, 0.06f, 10, Grey.Shade(0.6f));
-        _machine.Cylinder(new Vector3(1.45f, 0.96f, -3.2f), 0.5f, 0.5f, 0.01f, 10, new Color(0.1f, 0.4f, 0.45f, 0.6f));
-        Interactable.Create(this, new Vector3(1.45f, 0.9f, -3.2f), new Vector3(1.2f, 0.4f, 1.2f), "Holo table",
-            () => OnMessage?.Invoke("HOLO TABLE: projector offline. Sonar data feed not connected. (Milestone 2)"));
+        _dark.Cylinder(new Vector3(1.45f, 0.96f, -3.2f), 0.5f, 0.5f, 0.01f, 10, new Color(0.03f, 0.07f, 0.08f)); // dark projector glass
+        Holo = new HoloTable { Name = "HoloTable", Sonar = Sonar, Sub = Sub, Position = holo };
+        AddChild(Holo);
+        HoloCentre = holo + new Vector3(0, HoloTable.BaseHeight, 0);
+        Interactable.Create(this, new Vector3(1.45f, 0.9f, -3.2f), new Vector3(1.2f, 0.4f, 1.2f), "Use holo table", () => OnHolo?.Invoke());
 
-        // Sonar console on the starboard wall (milestone 2)
+        // Sonar console on the starboard wall: PPI scope CRT.
         Solid(_machine, new Vector3(2.15f, 0.5f, -0.9f), new Vector3(0.7f, 1.0f, 1.2f), Grey.Shade(0.9f));
-        _machine.Box(new Vector3(HalfW - 0.07f, 1.5f, -0.9f), new Vector3(0.08f, 0.6f, 0.6f), new Color(0.05f, 0.25f, 0.12f, 0.7f));
-        Interactable.Create(this, new Vector3(2.1f, 1.1f, -0.9f), new Vector3(0.8f, 0.5f, 1.2f), "Sonar",
-            () => OnMessage?.Invoke("SONAR: transducer calibration pending. Ping disabled. (Milestone 2)"));
-        Label("SONAR", new Vector3(HalfW - 0.02f, 2.0f, -0.9f), -Mathf.Pi / 2f, 36);
+        _machine.BoxOriented(new Transform3D(new Basis(Vector3.Back, 0.35f), new Vector3(2.1f, 1.02f, -0.9f)), new Vector3(0.7f, 0.05f, 1.15f), Grey.Shade(0.7f));
+        _machine.Box(new Vector3(1.95f, 1.07f, -1.25f), new Vector3(0.14f, 0.05f, 0.14f), RedLamp); // the big ping button
+        for (int i = 0; i < 4; i++)
+            _machine.Box(new Vector3(1.97f, 1.06f, -0.85f + i * 0.14f), new Vector3(0.06f, 0.04f, 0.06f), i == 0 ? AmberLamp : GreenLamp);
+        _dark.Box(new Vector3(HalfW - 0.06f, 1.55f, -0.9f), new Vector3(0.1f, 0.78f, 0.78f), new Color(0.12f, 0.12f, 0.12f));
+        SonarScreen = Art.Crt(SonarTexture);
+        SonarScreen.SetShaderParameter("desaturate", 0.1f);
+        SonarScreen.SetShaderParameter("scan_lines", 128f);
+        SonarScreen.SetShaderParameter("brightness", 1.5f);
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(0.68f, 0.68f) },
+            Position = new Vector3(HalfW - 0.115f, 1.55f, -0.9f),
+            Rotation = new Vector3(0, -Mathf.Pi / 2f, 0),
+            MaterialOverride = SonarScreen,
+        });
+        Interactable.Create(this, new Vector3(2.1f, 1.2f, -0.9f), new Vector3(0.8f, 0.8f, 1.2f), "Use sonar", () => OnSonar?.Invoke());
+        SonarView = new Transform3D(new Basis(Vector3.Up, -Mathf.Pi / 2f), new Vector3(1.25f, 1.55f, -0.9f));
+        Label("SONAR", new Vector3(HalfW - 0.02f, 2.08f, -0.9f), -Mathf.Pi / 2f, 36);
 
         Light(new Vector3(0.6f, Height - 0.15f, -3f), new Color(0.6f, 0.8f, 0.85f), 0.45f, 6f);
         Light(new Vector3(-1.2f, 1.9f, -3f), new Color(0.4f, 1f, 0.7f), 0.35f, 3f, fixture: false);

@@ -63,7 +63,7 @@ public sealed class GroanVoice : Voice
         T += 1f / Rate;
         alive = T < _dur;
         float u = T / _dur;
-        float env = MathF.Pow(MathF.Sin(MathF.PI * u), 1.5f);
+        float env = MathF.Pow(MathF.Max(0f, MathF.Sin(MathF.PI * u)), 1.5f); // Max: u can exceed 1 on the last sample
         float f = _f0 * (1f + _bend * u + 0.015f * MathF.Sin(T * 5.3f));
         _ph += f / Rate;
         _ph -= MathF.Floor(_ph);
@@ -101,7 +101,7 @@ public sealed class CallVoice : Voice
         T += 1f / Rate;
         alive = T < _dur;
         float u = T / _dur;
-        float env = MathF.Min(1f, u * 4f) * MathF.Pow(1f - u, 1.6f);
+        float env = MathF.Min(1f, u * 4f) * MathF.Pow(MathF.Max(0f, 1f - u), 1.6f);
         float f = _f0 * (1f - _glide * u * u) * (1f + 0.02f * MathF.Sin(T * 4.1f + MathF.Sin(T * 0.7f) * 3f));
         float s = 0f;
         for (int i = 0; i < 3; i++)
@@ -187,5 +187,61 @@ public sealed class BlipVoice : Voice
         float sq = _ph < 0.5f ? 1f : -1f;
         float env = MathF.Min(1f, (_dur - T) * 60f) * MathF.Min(1f, T * 400f);
         return sq * env * Gain * 0.25f;
+    }
+}
+
+/// <summary>
+/// Active sonar ping: a clean, slightly falling tone with a long decaying tail.
+/// The echo variant is duller (low-passed), quieter and shorter.
+/// </summary>
+public sealed class PingVoice : Voice
+{
+    private readonly float _f, _dur;
+    private readonly bool _echo;
+    private float _ph1, _ph2;
+    private OnePole _lp;
+
+    public PingVoice(float rate, Random rng, bool echo, float strength = 1f) : base(rate, rng)
+    {
+        _echo = echo;
+        _f = echo ? 1180f + (float)rng.NextDouble() * 40f : 1240f;
+        _dur = echo ? 1.1f : 2.6f;
+        _lp = new OnePole(echo ? 900f : 6000f, rate);
+        Gain = echo ? 0.16f * Math.Clamp(strength, 0.2f, 1f) : 0.32f;
+        Pan = echo ? (float)(rng.NextDouble() * 2 - 1) * 0.5f : 0f;
+    }
+
+    public override float Next(out bool alive)
+    {
+        T += 1f / Rate;
+        alive = T < _dur;
+        float glide = 1f - 0.03f * MathF.Min(T * 2f, 1f);
+        _ph1 += _f * glide / Rate; _ph1 -= MathF.Floor(_ph1);
+        _ph2 += _f * 2.01f * glide / Rate; _ph2 -= MathF.Floor(_ph2);
+        float attack = MathF.Min(1f, T * (_echo ? 80f : 250f));
+        float env = attack * MathF.Exp(-T * (_echo ? 4.5f : 2.2f));
+        float s = MathF.Sin(_ph1 * MathF.Tau) + 0.18f * MathF.Sin(_ph2 * MathF.Tau);
+        return _lp.Process(s) * env * Gain;
+    }
+}
+
+/// <summary>Plays another voice after a delay (silence until then).</summary>
+public sealed class DelayedVoice : Voice
+{
+    private readonly Voice _inner;
+    private readonly float _delay;
+
+    public DelayedVoice(float rate, Random rng, Voice inner, float delay) : base(rate, rng)
+    {
+        _inner = inner;
+        _delay = delay;
+        Pan = inner.Pan;
+    }
+
+    public override float Next(out bool alive)
+    {
+        T += 1f / Rate;
+        if (T < _delay) { alive = true; return 0f; }
+        return _inner.Next(out alive) * Gain;
     }
 }

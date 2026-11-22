@@ -163,7 +163,7 @@ public partial class Hud : CanvasLayer
 
     public void ShowHelm(bool on) => _helmGroup.Visible = on;
 
-    public void ShowFeed(Texture2D tex, string name, float signal)
+    public void ShowFeed(Texture2D tex, string name, float signal, string hint = "[1-6] switch   [F] close")
     {
         bool on = tex != null;
         _feedOverlay.Visible = on;
@@ -171,7 +171,7 @@ public partial class Hud : CanvasLayer
         _feedName.Visible = on;
         if (!on) return;
         _feedOverlay.Texture = tex;
-        _feedName.Text = $"{name}    [1-6] switch   [F] close";
+        _feedName.Text = $"{name}    {hint}";
         ((ShaderMaterial)_feedOverlay.Material).SetShaderParameter("signal", signal);
     }
 

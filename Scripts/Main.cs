@@ -4,6 +4,7 @@ using Solitude.Audio;
 using Solitude.Core;
 using Solitude.Interior;
 using Solitude.Player;
+using Solitude.Sonar;
 using Solitude.Sub;
 using Solitude.UI;
 using Solitude.World;
@@ -15,13 +16,15 @@ namespace Solitude;
 ///   Walking  – first person in the interior
 ///   Helm     – steering; views: Bridge (via forward screen) / Bow camera / External chase
 ///   Monitors – sensor bay camera wall; 1-6 select the big screen, F fullscreen
+///   Sonar    – PPI scope console; ping, range, fullscreen
+///   Holo     – orbit the holo table's terrain projection
 ///
 /// Everything 3D renders into a low-resolution SubViewport that is upscaled with nearest
 /// filtering and run through the PS1 post shader; the HUD sits on top at full resolution.
 /// </summary>
 public partial class Main : Node
 {
-	private enum Mode { Walking, Helm, Monitors }
+	private enum Mode { Walking, Helm, Monitors, Sonar, Holo }
 	private enum HelmView { Bridge, BowCamera, Chase }
 
 	[Export] public int PixelScale = 3;
@@ -41,6 +44,9 @@ public partial class Main : Node
 	private Camera3D _stationCam, _bowCam, _chaseCam;
 	private AudioDirector _audio;
 	private Hud _hud;
+	private SonarSystem _sonar;
+	private SubViewport _sonarScope;
+	private float _holoYaw = 0.6f, _holoPitch = 0.75f;
 
 	private Mode _mode = Mode.Walking;
 	private HelmView _view = HelmView.Bridge;
@@ -108,14 +114,31 @@ public partial class Main : Node
 		_chaseCam.AddChild(new SpotLight3D { SpotRange = 80f, SpotAngle = 32f, LightEnergy = 3.5f, LightVolumetricFogEnergy = 0.5f, LightColor = new Color(0.85f, 0.92f, 1f) });
 		_chaseCam.GlobalPosition = _sub.GlobalTransform * new Vector3(0, 9f, 36f);
 
+		// ---- sonar: system + 2D PPI scope rendered into its own small viewport
+		_sonar = new SonarSystem { Name = "Sonar", Gen = _gen, Sub = _sub };
+		AddChild(_sonar);
+		_sonarScope = new SubViewport
+		{
+			Name = "SonarScope",
+			Size = new Vector2I(256, 256),
+			Disable3D = true,
+			RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+		};
+		AddChild(_sonarScope);
+		_sonarScope.AddChild(new SonarDisplay { Sonar = _sonar, Sub = _sub, Size = new Vector2(256, 256) });
+
 		// ---- interior
 		_interior = new SubInterior
 		{
 			Name = "Interior",
 			Sub = _sub,
 			Rig = _rig,
+			Sonar = _sonar,
+			SonarTexture = _sonarScope.GetTexture(),
 			OnHelm = EnterHelm,
 			OnMonitors = EnterMonitors,
+			OnSonar = EnterSonar,
+			OnHolo = EnterHolo,
 			OnMessage = msg => { _hud.Message(msg); _audio.PlayBlip(330f, 0.12f); },
 		};
 		_game.AddChild(_interior);
@@ -139,6 +162,7 @@ public partial class Main : Node
 		AddChild(_audio);
 		_hud = new Hud { Name = "Hud" };
 		AddChild(_hud);
+		_sonar.Audio = _audio;
 
 		_sub.Impact += s =>
 		{
@@ -204,7 +228,7 @@ public partial class Main : Node
 		_hud.SetCrosshair(false);
 		_hud.SetPrompt("");
 		_hud.ShowHelm(true);
-		_hud.SetHelp("W/S throttle · A/D + mouse rudder · R/F + mouse planes · SPACE blow / C flood ballast · X centre · L floods · V view · E leave");
+		_hud.SetHelp("W/S throttle · A/D + mouse rudder · R/F + mouse planes · SPACE blow / C flood ballast · P ping · X centre · L floods · V view · E leave");
 		_audio.PlayBlip(660f, 0.08f);
 		_view = HelmView.Bridge;
 		MoveStationCam(_interior.GlobalTransform * _interior.HelmView * new Transform3D(new Basis(Vector3.Right, -0.06f), Vector3.Zero));
@@ -223,12 +247,60 @@ public partial class Main : Node
 		MoveStationCam(_interior.GlobalTransform * _interior.MonitorView);
 	}
 
+	private void EnterSonar()
+	{
+		_mode = Mode.Sonar;
+		_player.InputEnabled = false;
+		_hud.SetCrosshair(false);
+		_hud.SetPrompt("");
+		_hud.SetHelp("SPACE / click / P ping · Q range · F fullscreen scope · E / ESC leave");
+		_audio.PlayBlip(990f, 0.05f);
+		Input.MouseMode = Input.MouseModeEnum.Visible;
+		MoveStationCam(_interior.GlobalTransform * _interior.SonarView);
+	}
+
+	private void EnterHolo()
+	{
+		_mode = Mode.Holo;
+		_player.InputEnabled = false;
+		_hud.SetCrosshair(false);
+		_hud.SetPrompt("");
+		_hud.SetHelp("mouse orbit · wheel / Q zoom · SPACE / P ping · E / ESC leave");
+		_audio.PlayBlip(1100f, 0.05f);
+		Input.MouseMode = Input.MouseModeEnum.Captured;
+		// Start the orbit from roughly where the player is standing.
+		Vector3 c = _interior.GlobalTransform * _interior.HoloCentre;
+		Vector3 d = _player.Camera.GlobalPosition - c;
+		_holoYaw = Mathf.Atan2(d.X, d.Z);
+		_holoPitch = 0.75f;
+		MoveStationCam(HoloCamTransform());
+	}
+
+	private Transform3D HoloCamTransform()
+	{
+		// Orbit in interior-local space, clamped so the camera never leaves the sensor bay.
+		Vector3 c = _interior.HoloCentre;
+		const float dist = 1.35f;
+		Vector3 pos = c + new Vector3(Mathf.Sin(_holoYaw) * Mathf.Cos(_holoPitch), Mathf.Sin(_holoPitch), Mathf.Cos(_holoYaw) * Mathf.Cos(_holoPitch)) * dist;
+		pos = new Vector3(Mathf.Clamp(pos.X, -2.2f, 2.3f), Mathf.Min(pos.Y, 2.4f), Mathf.Clamp(pos.Z, -5.7f, -0.3f));
+		var local = Transform3D.Identity.Translated(pos).LookingAt(c, Vector3.Up);
+		return _interior.GlobalTransform * local;
+	}
+
+	private void TryPing()
+	{
+		if (_sonar.Ping()) return;
+		_audio.PlayBlip(180f, 0.08f, 0.5f); // still recharging
+	}
+
 	private void MoveStationCam(Transform3D target)
 	{
 		_stationCam.GlobalTransform = _player.Camera.GlobalTransform;
 		_stationCam.MakeCurrent();
 		var tw = CreateTween().SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 		tw.TweenProperty(_stationCam, "global_transform", target, 0.6);
+		_stationCam.SetMeta("tweening", true);
+		tw.Finished += () => _stationCam.SetMeta("tweening", false);
 	}
 
 	private void ApplyHelmView()
@@ -283,11 +355,23 @@ public partial class Main : Node
 				_sub.Rudder = Mathf.Clamp(_sub.Rudder + mm.Relative.X * 0.0025f, -1f, 1f);
 				_sub.Planes = Mathf.Clamp(_sub.Planes - mm.Relative.Y * 0.0025f, -1f, 1f);
 			}
+			else if (_mode == Mode.Holo)
+			{
+				_holoYaw -= mm.Relative.X * 0.006f;
+				_holoPitch = Mathf.Clamp(_holoPitch + mm.Relative.Y * 0.005f, 0.3f, 1.35f);
+			}
+		}
+		else if (e is InputEventMouseButton wheel && wheel.Pressed && _mode == Mode.Holo &&
+				 (wheel.ButtonIndex == MouseButton.WheelUp || wheel.ButtonIndex == MouseButton.WheelDown))
+		{
+			_interior.Holo.CycleZoom(wheel.ButtonIndex == MouseButton.WheelUp ? -1 : 1);
+			_audio.PlayBlip(1300f, 0.02f, 0.3f);
 		}
 		else if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left)
 		{
-			if (_mode == Mode.Monitors && !_feedFullscreen) ClickScreen(mb.Position);
-			else if (Input.MouseMode != Input.MouseModeEnum.Captured && _mode != Mode.Monitors)
+			if (_mode == Mode.Sonar && !_feedFullscreen) TryPing();
+			else if (_mode == Mode.Monitors && !_feedFullscreen) ClickScreen(mb.Position);
+			else if (Input.MouseMode != Input.MouseModeEnum.Captured && _mode != Mode.Monitors && _mode != Mode.Sonar)
 				Input.MouseMode = Input.MouseModeEnum.Captured;
 		}
 		else if (e is InputEventKey k && k.Pressed && !k.Echo && _mode == Mode.Monitors)
@@ -328,6 +412,8 @@ public partial class Main : Node
 			case Mode.Walking: UpdateWalking(); break;
 			case Mode.Helm: UpdateHelm(dt); break;
 			case Mode.Monitors: UpdateMonitors(); break;
+			case Mode.Sonar: UpdateSonar(); break;
+			case Mode.Holo: UpdateHolo(); break;
 		}
 
 		UpdateChaseCam(dt);
@@ -393,6 +479,7 @@ public partial class Main : Node
 
 		_sub.BallastInput = Input.IsActionPressed(GameInput.BallastBlow) ? 1f : Input.IsActionPressed(GameInput.BallastFlood) ? -1f : 0f;
 
+		if (Input.IsActionJustPressed(GameInput.Ping)) TryPing();
 		if (Input.IsActionJustPressed(GameInput.CenterControls)) { _sub.Rudder = 0f; _sub.Planes = 0f; _audio.PlayBlip(400f, 0.05f); }
 		if (Input.IsActionJustPressed(GameInput.Lights)) { _sub.LightsOn = !_sub.LightsOn; _audio.PlayBlip(220f, 0.04f, 0.8f); }
 		if (Input.IsActionJustPressed(GameInput.CameraCycle))
@@ -404,6 +491,7 @@ public partial class Main : Node
 
 		float alt = _sub.GlobalPosition.Y - _gen.Height(_sub.GlobalPosition.X, _sub.GlobalPosition.Z);
 		string view = _view switch { HelmView.Bridge => "BRIDGE [V]", HelmView.BowCamera => "CAM 1 BOW [V]", _ => "EXTERNAL [V]" };
+		view += _sonar.RechargeLeft > 0 ? $"\nSONAR    CHARGING {_sonar.RechargeLeft:0.0}s" : "\nSONAR    READY [P]";
 		_hud.UpdateHelm(_sub, alt, view);
 	}
 
@@ -426,6 +514,47 @@ public partial class Main : Node
 			}
 			EnterWalking();
 		}
+	}
+
+	private void UpdateSonar()
+	{
+		if (Input.IsActionJustPressed(GameInput.Jump) || Input.IsActionJustPressed(GameInput.Ping)) TryPing();
+		if (Input.IsActionJustPressed(GameInput.SonarRange))
+		{
+			_sonar.CycleRange();
+			_audio.PlayBlip(1300f, 0.03f, 0.4f);
+		}
+		if (Input.IsActionJustPressed(GameInput.Fullscreen))
+		{
+			_feedFullscreen = !_feedFullscreen;
+			_hud.ShowFeed(_feedFullscreen ? _sonarScope.GetTexture() : null, "SONAR  -  ACTIVE", 1f, "[SPACE] ping   [Q] range   [F] close");
+			_audio.PlayBlip(_feedFullscreen ? 1000f : 700f, 0.05f);
+		}
+		if (Input.IsActionJustPressed(GameInput.Cancel) || Input.IsActionJustPressed(GameInput.Interact))
+		{
+			if (_feedFullscreen && Input.IsActionJustPressed(GameInput.Cancel))
+			{
+				_feedFullscreen = false;
+				_hud.ShowFeed(null, null, 1f);
+				return;
+			}
+			EnterWalking();
+		}
+	}
+
+	private void UpdateHolo()
+	{
+		if (Input.IsActionJustPressed(GameInput.Jump) || Input.IsActionJustPressed(GameInput.Ping)) TryPing();
+		if (Input.IsActionJustPressed(GameInput.SonarRange))
+		{
+			_interior.Holo.ZoomIndex = (_interior.Holo.ZoomIndex + 1) % HoloTable.Zooms.Length;
+			_audio.PlayBlip(1300f, 0.02f, 0.3f);
+		}
+		// Follow the orbit once the entry tween is done (tween owns the camera for 0.6 s).
+		if (_stationCam.GetMeta("tweening", false).AsBool() == false)
+			_stationCam.GlobalTransform = _stationCam.GlobalTransform.InterpolateWith(HoloCamTransform(), 0.35f);
+		if (Input.IsActionJustPressed(GameInput.Cancel) || Input.IsActionJustPressed(GameInput.Interact))
+			EnterWalking();
 	}
 
 	private void UpdateChaseCam(float dt)

@@ -8,7 +8,17 @@ synthesized soundscape designed to make you uncomfortable about what's below you
 
 A [Bad Ideas Works](https://github.com/badsadcode) production.
 
-## Current state — Milestone 1: the vertical slice
+## Current state — Milestone 2: sonar and holo table
+
+- **Active sonar** — ping (P anywhere at the helm, or at the console) and 360 beams sweep the real
+  seabed with **acoustic shadowing**: what hides behind a ridge stays unknown. Heading-up PPI scope
+  with a travelling wavefront, phosphor-fading returns, amber for terrain at or above your keel,
+  three ranges, echoes you can hear coming back off nearby walls. Sometimes something answers
+  that isn't the seabed.
+- **Holo table** — a wireframe projection of everything the sonar has ever seen (persistent map
+  memory), revealed in step with the wavefront. Orbit it with the mouse, zoom with the wheel.
+
+## Milestone 1: the vertical slice
 
 - **Walkable interior** — bridge, sensor bay, galley, quarters/workshop, engineering. The room
   leans as the hull pitches and rolls; you drift downhill and feel engine vibration and impacts.
@@ -41,13 +51,15 @@ Godot_v4.7.2-stable_mono_win64.exe --path . -- --seed=1234
 | Context | Keys |
 |---|---|
 | Walking | **WASD** move · **Shift** run · **E** use · **Esc** release mouse · **F11** fullscreen |
-| Helm | **W/S** throttle (telegraph steps or hold) · **A/D** + mouse rudder · **R/F** + mouse dive planes · **Space** blow / **C** flood ballast · **X** centre controls · **T** drive mode · **L** floodlights · **V** view · **E** leave |
+| Helm | **W/S** throttle (telegraph steps or hold) · **A/D** + mouse rudder · **R/F** + mouse dive planes · **Space** blow / **C** flood ballast · **P** sonar ping · **X** centre controls · **T** drive mode · **L** floodlights · **V** view · **E** leave |
 | Monitors | **1–6** or click a screen · **F** fullscreen feed · **E/Esc** leave |
+| Sonar | **Space** / click / **P** ping · **Q** range · **F** fullscreen scope · **E/Esc** leave |
+| Holo table | mouse orbit · wheel / **Q** zoom · **Space** / **P** ping · **E/Esc** leave |
 
 ## Roadmap
 
 1. ~~Vertical slice: interior, helm, monitors, world, atmosphere, audio~~
-2. Sonar and holo table (scanned terrain hologram)
+2. ~~Sonar and holo table (scanned terrain hologram)~~
 3. Manipulator arm and collectors, inventory, crafting and cooking stations, hull and power systems
 4. Deep-sea stations: docking, procedural interiors (via [NoorLevel](https://github.com/badsadcode/BadLevel)), weapons, creatures
 5. Diving suit and swimming outside the boat

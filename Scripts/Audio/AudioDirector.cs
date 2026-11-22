@@ -131,6 +131,8 @@ public partial class AudioDirector : Node
     public void PlayImpact(float strength) => Add(new ImpactVoice(Rate, _mainRng, strength) { Pan = (float)(_mainRng.NextDouble() - 0.5) });
     public void PlayStep() => Add(new StepVoice(Rate, _mainRng));
     public void PlayBlip(float freq = 880f, float dur = 0.06f, float gain = 0.6f) => Add(new BlipVoice(Rate, _mainRng, freq, dur, gain));
+    public void PlayPing() => Add(new PingVoice(Rate, _mainRng, echo: false));
+    public void PlayEcho(float delay, float strength) => Add(new DelayedVoice(Rate, _mainRng, new PingVoice(Rate, _mainRng, echo: true, strength), delay));
 
     // ------------------------------------------------------------ audio thread
 
@@ -214,6 +216,7 @@ public partial class AudioDirector : Node
             {
                 var voice = _voices[v];
                 float s = voice.Next(out bool alive);
+                if (!float.IsFinite(s)) { _voices.RemoveAt(v); continue; }
                 l += s * (1f - MathF.Max(0f, voice.Pan));
                 r += s * (1f + MathF.Min(0f, voice.Pan));
                 if (!alive) _voices.RemoveAt(v);
@@ -232,6 +235,7 @@ public partial class AudioDirector : Node
     private static float SoftLimit(float x)
     {
         const float knee = 0.6f;
+        if (!float.IsFinite(x)) return 0f; // never let one bad voice poison the stream
         float ax = MathF.Abs(x);
         if (ax <= knee) return x;
         return MathF.Sign(x) * (knee + (1f - knee) * MathF.Tanh((ax - knee) / (1f - knee)));
