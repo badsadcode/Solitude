@@ -82,6 +82,8 @@ public partial class AudioDirector : Node
         AddChild(player);
         player.Play();
         _pb = (AudioStreamGeneratorPlayback)player.GetStreamPlayback();
+        _player = player;
+        _baseDb = player.VolumeDb;
 
         _running = true;
         _thread = new Thread(AudioLoop) { IsBackground = true, Name = "SolitudeAudio", Priority = ThreadPriority.AboveNormal };
@@ -141,6 +143,12 @@ public partial class AudioDirector : Node
     public void PlayImpact(float strength) => Add(new ImpactVoice(Rate, _mainRng, strength) { Pan = (float)(_mainRng.NextDouble() - 0.5) });
     public void PlayStep() => Add(new StepVoice(Rate, _mainRng));
     public void PlayBlip(float freq = 880f, float dur = 0.06f, float gain = 0.6f) => Add(new BlipVoice(Rate, _mainRng, freq, dur, gain));
+    private AudioStreamPlayer _player;
+    private float _baseDb;
+
+    /// <summary>Lower (negative dB) or restore (0) the whole synthesized soundscape, smoothly.</summary>
+    public void Duck(float db, float seconds) => CreateTween().TweenProperty(_player, "volume_db", _baseDb + db, seconds);
+
     public void PlayCall() => Add(new CallVoice(Rate, _mainRng));
     public void PlayGroan(float intensity) => Add(new GroanVoice(Rate, _mainRng, intensity));
     /// <summary>One-shot effect (see SfxVoice) with stereo pan -1..1 and gain 0..1.</summary>

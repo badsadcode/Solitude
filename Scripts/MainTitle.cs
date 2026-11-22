@@ -66,6 +66,36 @@ public partial class Main
         _hud.FadeTo(0f, 3f);
         _titleRayTimer = 22f + (float)GD.RandRange(0, 8);
         Input.MouseMode = Input.MouseModeEnum.Visible;
+        StartTitleMusic();
+    }
+
+    // ------------------------------------------------------------------ Tom's title music
+
+    private AudioStreamPlayer _titleMusic;
+    private const float TitleMusicDb = -5f;
+
+    private void StartTitleMusic()
+    {
+        var stream = GD.Load<AudioStream>("res://assets/audio/music/title_screen_music.wav");
+        if (stream == null) return;
+        _titleMusic = new AudioStreamPlayer { Name = "TitleMusic", Stream = stream, VolumeDb = -40f, Bus = "Master" };
+        AddChild(_titleMusic);
+        _titleMusic.Finished += () => _titleMusic?.Play(); // loop for as long as you linger
+        _titleMusic.Play();
+        if (_titleCaptureDir != null) GD.Print($"[title] music: {stream.GetLength():0.0} s, playing={_titleMusic.Playing}");
+        CreateTween().TweenProperty(_titleMusic, "volume_db", TitleMusicDb, 4.0).SetTrans(Tween.TransitionType.Sine);
+        _audio.Duck(-9f, 2f); // let the music lead; the hull still creaks underneath
+    }
+
+    private void StopTitleMusic(float seconds)
+    {
+        if (_titleMusic == null) return;
+        var m = _titleMusic;
+        _titleMusic = null;
+        var tw = CreateTween();
+        tw.TweenProperty(m, "volume_db", -50f, seconds).SetTrans(Tween.TransitionType.Sine);
+        tw.TweenCallback(Callable.From(m.QueueFree));
+        _audio.Duck(0f, seconds);
     }
 
     private static void Sleep(Node n, bool asleep)
@@ -135,6 +165,7 @@ public partial class Main
     {
         if (_mode != Mode.Title) return;
         _mode = Mode.Walking; // stop menu input immediately
+        StopTitleMusic(2.5f);
         _hud.HideTitle();
         _hud.FadeTo(1f, 1.2f);
         _audio.PlayAt("airlock", 0f, 0.5f);

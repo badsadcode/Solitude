@@ -161,6 +161,7 @@ public partial class Main
         var d = ReadSave();
         if (d == null) { _hud.Message("The save could not be read."); return; }
         PendingLoad = d;
+        StopTitleMusic(1.0f);
         _hud.HideTitle();
         _hud.FadeTo(1f, 1f);
         var tw = CreateTween();
