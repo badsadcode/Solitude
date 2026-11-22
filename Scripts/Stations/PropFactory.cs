@@ -41,6 +41,23 @@ public static class PropFactory
         return n;
     }
 
+    /// <summary>
+    /// Tom's model for a class, prepared for the game (recentred, crisp textures, glow), or null if he
+    /// hasn't made one. Also used by station hardware built in code (e.g. the pressure door leaves).
+    /// </summary>
+    public static Node3D Model(string cls, int variant, bool broken = false)
+    {
+        int count = Variants(cls);
+        if (count == 0) return null;
+        string path = $"res://assets/props/{cls}_{variant % count}";
+        if (broken && ResourceLoader.Exists(path + "_broken.glb")) path += "_broken";
+        var prop = GD.Load<PackedScene>(path + ".glb").Instantiate<Node3D>();
+        if (prop.GetChildCount() == 1 && prop.GetChild(0) is Node3D only && (Mathf.Abs(only.Position.X) > 0.01f || Mathf.Abs(only.Position.Z) > 0.01f))
+            only.Position = new Vector3(0f, only.Position.Y, 0f);
+        PrepareMaterials(prop, GlowByClass.TryGetValue(cls, out float g) ? g : GlowBoost);
+        return prop;
+    }
+
     public static Node3D Make(string cls, string mount, Vector3 fp, int variant, bool broken, string text, Random rng)
     {
         int count = Variants(cls);

@@ -224,7 +224,7 @@ public partial class StationInterior
             if (k != kind || (cls != null && Field(extras, "class").AsString() != cls) || HasTag(extras, "blockout")) continue;
             if (brokenOnly && !HasTag(extras, "broken")) continue;
             Vector3 fwd = _markerBasis[i].Z; fwd.Y = 0; fwd = fwd.LengthSquared() > 0.01f ? fwd.Normalized() : Vector3.Back;
-            Vector3 eye = pos + fwd * 2.4f;
+            Vector3 eye = pos + fwd * (kind == "bulkhead" ? 3.6f : 2.4f);   // doors open within 2.6 m: look from outside that
             if (Floor(eye + Vector3.Up * 1.5f, 4f) is Vector3 f) eye = f;
             return new Transform3D(Basis.LookingAt(-fwd, Vector3.Up), eye);
         }
@@ -296,11 +296,22 @@ public partial class SlideDoor : Node3D
 
     private (Node3D, CollisionShape3D) Leaf(float side, StaticBody3D body)
     {
-        var mb = new MeshBuilder();
-        mb.Box(new Vector3(0, _h / 2f, 0), new Vector3(_w / 2f, _h, 0.1f), new Color(0.5f, 0.52f, 0.5f));
-        mb.Box(new Vector3(-side * (_w / 4f - 0.04f), _h / 2f, 0.06f), new Vector3(0.04f, _h * 0.9f, 0.02f), new Color(0.85f, 0.65f, 0.1f));
         var n = new Node3D();
-        n.AddChild(new MeshInstance3D { Mesh = mb.Build(Art.Machine) });
+        // Tom's leaf (assets/props/pressure_door_leaf_<n>.glb: 1.0 x 2.4 x 0.12, origin bottom centre),
+        // scaled to this door's size; the right leaf is mirrored so the two meet as a pair.
+        if (PropFactory.Model("pressure_door_leaf", 0) is Node3D model)
+        {
+            // (turned half a circle rather than mirrored: a negative scale flips the faces and lights them black)
+            model.Transform = new Transform3D(new Basis(Vector3.Up, side > 0 ? Mathf.Pi : 0f).Scaled(new Vector3((_w / 2f) / 1.0f, _h / 2.4f, 1f)), Vector3.Zero);
+            n.AddChild(model);
+        }
+        else
+        {
+            var mb = new MeshBuilder();
+            mb.Box(new Vector3(0, _h / 2f, 0), new Vector3(_w / 2f, _h, 0.1f), new Color(0.5f, 0.52f, 0.5f));
+            mb.Box(new Vector3(-side * (_w / 4f - 0.04f), _h / 2f, 0.06f), new Vector3(0.04f, _h * 0.9f, 0.02f), new Color(0.85f, 0.65f, 0.1f));
+            n.AddChild(new MeshInstance3D { Mesh = mb.Build(Art.Machine) });
+        }
         AddChild(n);
         var cs = new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(_w / 2f, _h, 0.12f) } };
         body.AddChild(cs);
