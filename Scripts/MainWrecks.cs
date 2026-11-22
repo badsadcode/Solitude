@@ -19,7 +19,7 @@ public partial class Main
     private WreckDirectory _wrecks;
     private readonly Dictionary<long, (WreckSite site, WreckBuilder.Built built)> _wreckNodes = new();
     private readonly HashSet<long> _wrecksHeard = new(), _wrecksVisited = new();
-    private float _wreckScanT, _wreckHearT, _wreckBlinkT;
+    private float _wreckScanT, _wreckHearT, _wreckBlinkT, _loopReplayT = 60f;
 
     public const float PingerRange = 1600f;
 
@@ -80,12 +80,23 @@ public partial class Main
             {
                 _hud.Message($"HYDROPHONE: a distress pinger. {Compass(f, w.Position)}.", 7f);
                 _audio.PlayBlip(1800f, 0.05f, 0.35f);
-                if (WreckDirectory.Loop(w) is string loop)
+                // A few seconds later the comms set catches the crew's loop: voiced if we have it (twice,
+                // the way a loop does), otherwise as text.
+                var site = w;
+                GetTree().CreateTimer(4.5).Timeout += () =>
                 {
-                    var site = w;
-                    GetTree().CreateTimer(7.5).Timeout += () => { if (!Silenced(site)) _hud.Message(loop, 9f); };
-                }
+                    if (Silenced(site)) return;
+                    if (PlayWreckLoop(site, first: true)) PlayWreckLoop(site, first: false);
+                    else if (WreckDirectory.Loop(site) is string loop) _hud.Message(loop, 9f);
+                };
+                _loopReplayT = 70f;
                 break;   // one at a time; the next one is heard on the next scan
+            }
+            // Close to a call you haven't answered, the loop keeps coming round on the comms set.
+            if (d < 500f && _wrecksHeard.Contains(w.Id) && !Silenced(w) && !_player.InStation)
+            {
+                _loopReplayT -= 2f;
+                if (_loopReplayT <= 0f && !VoiceBusy) { _loopReplayT = 55f + GD.Randf() * 30f; PlayWreckLoop(w, first: false); }
             }
             if (d < 70f && _wrecksVisited.Add(w.Id))
                 _hud.Message($"WRECK: {w.Name}. {(w.Kind == WreckKind.CargoString ? "Containers spilled along a snapped tether." : "Nobody answers the hull knocks.")}", 6f);
@@ -124,6 +135,7 @@ public partial class Main
         _shipLog.AddNote(title, body, w.Name);
         _hud.Message($"RECORDER: {w.Name}. Its last entries are in your journal (J). {(w.Pinger ? "Its pinger goes quiet." : "")}", 7f);
         _audio.PlayBlip(600f, 0.2f, 0.4f);
+        PlayRecorder(w);
         return true;
     }
 

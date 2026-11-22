@@ -21,6 +21,10 @@ public sealed class WreckSite
     public bool Pinger;
     /// <summary>A wrong one. The details are in the recorder.</summary>
     public bool Wrong;
+    /// <summary>Which voiced crew this is (supply subs, capsules, drones: see tools/voice/solitude_voice_script.json).</summary>
+    public int Variant;
+    /// <summary>Voice line id prefix: "sub2", "cap0", "drone1".</summary>
+    public string VoiceKey => Kind switch { WreckKind.SupplySub => $"sub{Variant}", WreckKind.Capsule => $"cap{Variant}", WreckKind.SurveyDrone => $"drone{Variant}", _ => null };
     public bool HasRecorder => Kind != WreckKind.CargoString;
     /// <summary>Salvage id space: 1&lt;&lt;62 | wreck id &lt;&lt; 6 | slot (slot 0 = the recorder).</summary>
     public long SalvageId(int slot) => (1L << 62) | (Id << 6) | (long)slot;
@@ -41,6 +45,8 @@ public sealed class WreckDirectory
     private readonly Dictionary<Vector2I, WreckSite> _cells = new();   // null value = no wreck here
 
     private static readonly string[] SubNames = { "HALDANE", "MERIDIAN BELL", "OKONKWO", "PATIENCE", "GREY HERON", "TALLY", "ST. ELMO", "KITTIWAKE", "LODESTAR", "BRAVE DORA" };
+    /// <summary>Capsule variant -> the number its voice gives ("Capsule two", "Capsule four", ...).</summary>
+    private static readonly int[] CapsuleNumbers = { 2, 4, 1, 3 };
     private static readonly string[] Crew = { "Ada", "Marek", "Ilse", "Tomas", "Yuki", "Bram", "Nadia", "Oren", "Sabine", "Kofi", "Lena", "Piotr", "Ines", "Rafe" };
 
     /// <param name="blocked">true where no wreck may lie (stations, the Origin, the start)</param>
@@ -95,12 +101,21 @@ public sealed class WreckDirectory
                 Pinger = kind != WreckKind.CargoString && rng.NextDouble() < 0.7,
             };
             w.Wrong = w.Pinger && rng.NextDouble() < 0.09;
+            // The voiced crews: the name has to match what the voice on the loop says.
+            var subs = VoiceLines.SubNames.Count > 0 ? (IReadOnlyList<string>)VoiceLines.SubNames : SubNames;
+            w.Variant = kind switch
+            {
+                WreckKind.SupplySub => rng.Next(subs.Count),
+                WreckKind.Capsule => rng.Next(Math.Max(1, VoiceLines.Capsules)),
+                WreckKind.SurveyDrone => rng.Next(Math.Max(1, VoiceLines.Drones)),
+                _ => 0,
+            };
             w.Name = kind switch
             {
-                WreckKind.SupplySub => $"SUPPLY SUB {SubNames[rng.Next(SubNames.Length)]}",
+                WreckKind.SupplySub => $"SUPPLY SUB {subs[w.Variant]}",
                 WreckKind.CargoString => $"CARGO STRING {rng.Next(2, 40)}",
                 WreckKind.SurveyDrone => $"SURVEY DRONE SD-{rng.Next(10, 99)}",
-                _ => $"ESCAPE CAPSULE {rng.Next(1, 6)}",
+                _ => $"ESCAPE CAPSULE {CapsuleNumbers[w.Variant % CapsuleNumbers.Length]}",
             };
             return w;
         }
@@ -112,6 +127,8 @@ public sealed class WreckDirectory
     /// <summary>What the comms set picks up when the pinger is first heard (the loop the crew left running).</summary>
     public static string Loop(WreckSite w)
     {
+        if (!w.Wrong && w.VoiceKey != null && VoiceLines.Get(w.VoiceKey + "_loop") is { } vl)
+            return w.Kind == WreckKind.SurveyDrone ? $"COMMS: a synthetic voice, repeating: \"{vl.Caption}\"" : $"COMMS: a voice loop, very faint: \"{vl.Caption}\"";
         var r = new Random(w.Seed);
         string who = Crew[r.Next(Crew.Length)];
         if (w.Wrong) return "COMMS: a voice loop, very faint. It's a man's voice, tired, calm. It's giving your boat's heading. Then your depth. Then it starts again.";
@@ -125,8 +142,19 @@ public sealed class WreckDirectory
     }
 
     /// <summary>The recorder's last entries (copied into the journal when the diver pulls it).</summary>
+    /// <summary>The voiced recorder entries for this wreck (empty if none / the wrong ones).</summary>
+    public static List<VoiceLines.Line> RecorderLines(WreckSite w)
+    {
+        var l = new List<VoiceLines.Line>();
+        if (w.Wrong || w.VoiceKey == null) return l;
+        for (int i = 1; i <= 6; i++) if (VoiceLines.Get($"{w.VoiceKey}_rec{i}") is { } line) l.Add(line);
+        return l;
+    }
+
     public static (string title, string body) Recorder(WreckSite w)
     {
+        var voiced = RecorderLines(w);
+        if (voiced.Count > 0) return ($"{w.Name}: recorder", string.Join("\n\n", voiced.ConvertAll(v => v.Caption)));
         var r = new Random(w.Seed + 1);
         string a = Crew[r.Next(Crew.Length)], b = Crew[(r.Next(Crew.Length - 1) + 1 + Array.IndexOf(Crew, a)) % Crew.Length];
         int depth = Mathf.RoundToInt(-w.Position.Y);

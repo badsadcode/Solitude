@@ -830,7 +830,9 @@ public partial class Main
                 EnterHelm(); _view = HelmView.Bridge; ApplyHelmView();
             }),
             (t += 5f, () => GD.Print($"[capture] pinger heard: {_wrecksHeard.Contains(_capPinger.Id)}  helm:{WreckHelmText().Replace("\n", " ")}")),
-            (t += 8f, () => { Shot("45a_pinger_heard"); }),
+            (t += 8f, () => { Shot("45a_pinger_heard"); GD.Print($"[capture] voice: lines available {VoiceLines.Any}, playing {_voice?.Playing} ({(_voice?.Stream as Resource)?.ResourcePath}), queued {_voiceQueue.Count}"); }),
+            (t += 0.1f, () => { _voiceQueue.Clear(); _voice?.Stop(); bool ok = PlayWrongLoop(true); GD.Print($"[capture] wrong loop queued: {ok}, {_voiceQueue.Count} clips"); }),
+            (t += 9f, () => GD.Print($"[capture] wrong loop after 9 s: playing {_voice?.Playing}, left {_voiceQueue.Count}")),
             (t += 0.1f, () => CapWreckShot(0)),
             (t += 2.5f, () => Shot("45b_wreck_0")),
             (t += 0.1f, () => CapWreckShot(1)),
