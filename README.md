@@ -8,7 +8,15 @@ synthesized soundscape designed to make you uncomfortable about what's below you
 
 A [Bad Ideas Works](https://github.com/badsadcode) production.
 
-## Current state — Milestone 4: deep-sea stations
+## Current state — Milestone 5: the hard suit
+
+- Suit up at the **dive locker** (engineering), climb to the **dive hatch** with the boat stopped,
+  and you're outside: swim where you look, ~4 minutes of air, helmet lamp, a homing chevron back to
+  the hatch, your own breathing in your ears and everything else muffled through the glass.
+- Pick things up by hand (six-slot sample bag, stowed in the hold when you get back).
+- The ravager likes divers. The first passes only look.
+
+## Milestone 4: deep-sea stations
 
 - **Stations** scattered across the seabed, each with a **distress beacon** you can hear (and see on
   sonar and the holo table). The first one is always a few hundred metres from where you start.
@@ -86,6 +94,7 @@ Godot_v4.7.2-stable_mono_win64.exe --path . -- --seed=1234
 | Walking | **WASD** move · **Shift** run · **E** use · **I** hold · **Esc** release mouse · **F11** fullscreen |
 | Arm | mouse claw · wheel / **W-S** height · click grab · **E/Esc** stow |
 | Stations (panels) | **1–9** or click an option · **E/Esc** leave |
+| Diving | **WASD** swim where you look · **Space/C** up/down · **Shift** boost · **F** lamp · **E** collect / enter airlock |
 | Aboard a station | **LMB** fire · **R** reload · **1–3** weapon · **F** flashlight · **H** medkit · **E** use |
 | Helm | **W/S** throttle (telegraph steps or hold) · **A/D** + mouse rudder · **R/F** + mouse dive planes · **Space** blow / **C** flood ballast · **P** sonar ping · **G** intake · **K** dock / undock · **X** centre controls · **T** drive mode · **L** floodlights · **V** view · **E** leave |
 | Monitors | **1–6** or click a screen · **F** fullscreen feed · **E/Esc** leave |
@@ -98,7 +107,7 @@ Godot_v4.7.2-stable_mono_win64.exe --path . -- --seed=1234
 2. ~~Sonar and holo table (scanned terrain hologram)~~
 3. ~~Manipulator arm and collectors, inventory, crafting and cooking stations, hull and power systems~~
 4. ~~Deep-sea stations: docking, procedural interiors (via [NoorLevel](https://github.com/badsadcode/BadLevel)), weapons, creatures~~
-5. Diving suit and swimming outside the boat
+5. ~~Diving suit and swimming outside the boat~~
 6. Replayability: biomes, progression, logs, map fragments
 
 ## Development notes

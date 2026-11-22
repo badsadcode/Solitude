@@ -26,7 +26,7 @@ namespace Solitude;
 /// </summary>
 public partial class Main : Node
 {
-	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading }
+	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading, Diving }
 	private enum HelmView { Bridge, BowCamera, Chase }
 
 	[Export] public int PixelScale = 3;
@@ -110,8 +110,8 @@ public partial class Main : Node
 		_sub.GlobalPosition = spawn;
 		_sub.ApplyTelegraph();
 
-		_terrain.Focus = () => _sub.GlobalPosition;
-		_ocean.Focus = () => _sub.GlobalPosition;
+		_terrain.Focus = FocusPoint;
+		_ocean.Focus = FocusPoint;
 
 		_rig = new HullCameraRig { Name = "HullCameras", Sub = _sub };
 		_game.AddChild(_rig);
@@ -152,6 +152,7 @@ public partial class Main : Node
 			OnArm = EnterArm,
 			OnPanel = EnterPanel,
 			OnHatch = OnHatch,
+			OnSuit = OnSuit,
 			OnMessage = msg => { _hud.Message(msg); _audio.PlayBlip(330f, 0.12f); },
 		};
 		_game.AddChild(_interior);
@@ -198,6 +199,7 @@ public partial class Main : Node
 
 		// ---- stations (milestone 4)
 		SetupStations(spawn);
+		SetupDiving();
 
 		_sub.Impact += s =>
 		{
@@ -500,6 +502,7 @@ public partial class Main : Node
 		if (e is InputEventMouseMotion mm && Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
 			if (_mode == Mode.Walking) { _player.Look(mm.Relative); _weapons.AddSway(mm.Relative); }
+			else if (_mode == Mode.Diving) _diver.Look(mm.Relative);
 			else if (_mode == Mode.Helm)
 			{
 				_sub.Rudder = Mathf.Clamp(_sub.Rudder + mm.Relative.X * 0.0025f, -1f, 1f);
@@ -593,6 +596,7 @@ public partial class Main : Node
 			case Mode.Arm: UpdateArm(dt); break;
 			case Mode.Panel: UpdatePanel(); break;
 			case Mode.Reading: UpdateReading(); break;
+			case Mode.Diving: UpdateDiving(dt); break;
 		}
 		UpdateVitals();
 
@@ -600,6 +604,7 @@ public partial class Main : Node
 		UpdateFeedsOnScreens();
 		UpdateAudioAndPost(dt);
 		UpdateWarnings(dt);
+		UpdateHatchBeacon(dt);
 		UpdateCapture(dt);
 	}
 
@@ -816,7 +821,7 @@ public partial class Main : Node
 		float hullDamage = 1f - _sub.Hull / 100f;
 		_post.SetShaderParameter("damage", Mathf.Max(_damageFlash, hullDamage * 0.3f));
 		bool outside = _mode == Mode.Helm && _view != HelmView.Bridge;
-		_post.SetShaderParameter("wobble", outside ? 1f : 0f);
+		if (_mode != Mode.Diving) _post.SetShaderParameter("wobble", outside ? 1f : 0f);
 	}
 
 	private void UpdateWarnings(float dt)

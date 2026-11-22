@@ -130,8 +130,8 @@ public partial class Main
     {
         if (_stations.DockedAt == null)
         {
-            _hud.Message(_stations.Docking ? "Hold on — clamps still engaging." : "Dive hatch sealed. On the other side: 500 metres of water.");
-            _audio.PlayAt("deny", 0f, 0.6f);
+            if (_stations.Docking) { _hud.Message("Hold on — clamps still engaging."); _audio.PlayAt("deny", 0f, 0.6f); return; }
+            TryDiveFromHatch();   // not docked: the hatch opens onto the sea (milestone 5)
             return;
         }
         var site = _stations.DockedAt;
@@ -266,6 +266,7 @@ public partial class Main
 
     private void OnPlayerDied()
     {
+        if (_diver.Active) _diver.SetPhysicsProcess(false);
         _player.InputEnabled = false;
         _weapons.SetActive(false);
         _hud.FadeTo(1f, 2.5f);
@@ -275,7 +276,8 @@ public partial class Main
         tw.TweenInterval(3.5);
         tw.TweenCallback(Callable.From(() =>
         {
-            // You wake up in your bunk. You don't remember the walk back.
+            // You wake up in your bunk. You don't remember the walk back (or the swim).
+            if (_diver.Active) { _diver.Bag.Clear(); EndDive(); }
             _player.Revive(55f);
             _player.InStation = false;
             _player.Flashlight.Visible = false;

@@ -279,6 +279,24 @@ public partial class Hud : CanvasLayer
 
     public void SetVitals(string text) { EnsureM3(); _vitals.Text = text; }
 
+    private HelmetOverlay _helmet;
+    public HelmetOverlay Helmet
+    {
+        get
+        {
+            if (_helmet == null)
+            {
+                _helmet = new HelmetOverlay { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+                _helmet.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+                _root.AddChild(_helmet);
+                _root.MoveChild(_helmet, _fade.GetIndex()); // under the fade, over the world
+            }
+            return _helmet;
+        }
+    }
+
+    public void ShowHelmet(bool on) => Helmet.Visible = on;
+
     public void SetHold(string text, bool visible) { EnsureM3(); _hold.Text = text; _hold.Visible = visible; }
 
     public void ShowArm(bool on) { EnsureM3(); _armGroup.Visible = on; }

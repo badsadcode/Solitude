@@ -32,6 +32,7 @@ public partial class SubInterior : Node3D
     public Action OnArm;
     public Action<string> OnPanel;
     public Action OnHatch;
+    public Action OnSuit;
     public Action<string> OnMessage;
 
     // Sonar (set before Build)
@@ -466,8 +467,8 @@ public partial class SubInterior : Node3D
         _wall.Box(new Vector3(-2.05f, 1.15f, 11.6f), new Vector3(0.3f, 0.75f, 0.45f), new Color(0.65f, 0.5f, 0.2f));
         _wall.Box(new Vector3(-2.05f, 0.5f, 11.45f), new Vector3(0.14f, 0.6f, 0.14f), new Color(0.6f, 0.45f, 0.18f));
         _wall.Box(new Vector3(-2.05f, 0.5f, 11.75f), new Vector3(0.14f, 0.6f, 0.14f), new Color(0.6f, 0.45f, 0.18f));
-        Interactable.Create(this, new Vector3(-2.0f, 1.2f, 11.6f), new Vector3(0.6f, 2.2f, 1.2f), "Dive suit",
-            () => OnMessage?.Invoke("DIVE SUIT: seals uncertified. Airlock cycle untested. You are not going out there. Yet. (Milestone 5)"));
+        Interactable.Create(this, new Vector3(-2.0f, 1.2f, 11.6f), new Vector3(0.6f, 2.2f, 1.2f), "Put on / take off the hard suit",
+            () => OnSuit?.Invoke());
         Label("DIVE LOCKER", new Vector3(-HalfW + 0.02f, 2.3f, 10.3f), Mathf.Pi / 2f, 36);
 
         // Ladder and ceiling hatch

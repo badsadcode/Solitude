@@ -132,13 +132,61 @@ public partial class Ravager : Node3D
         Audio?.PlayCall();
     }
 
+    // ------------------------------------------------------------------ divers
+
+    /// <summary>Set while the captain is outside in the suit. The ravager prefers divers.</summary>
+    public Node3D Diver;
+    public Func<float> DiverTimeOutside;
+    public event Action<float> Bite;            // damage
+    public float DistanceToDiver => Diver != null ? GlobalPosition.DistanceTo(Diver.GlobalPosition) : float.MaxValue;
+    private bool _hadDiver;
+    private float _biteCooldown;
+
+    /// <summary>A slow pass close by the diver: the first ones only look; later ones may bite.</summary>
+    public void DiverPass()
+    {
+        Vector3 d = Diver.GlobalPosition;
+        float a = (float)_rng.NextDouble() * Mathf.Tau;
+        Vector3 across = new(MathF.Cos(a), 0, MathF.Sin(a));
+        Vector3 side = new(-across.Z, 0, across.X);
+        _passCross = d + side * (7f + (float)_rng.NextDouble() * 4f) + Vector3.Up * (float)(_rng.NextDouble() * 4 - 1);
+        _passStart = _passCross - across * 60f;
+        _passEnd = _passCross + across * 70f;
+        _state = State.Approach;
+        Audio?.PlayCall();
+    }
+
     public override void _Process(double delta)
     {
         float dt = (float)Math.Min(delta, 0.1);
         _t += dt;
         if (Sub == null) return;
         Vector3 pos = GlobalPosition;
-        Vector3 sp = Sub.GlobalPosition;
+        // It circles whatever it finds most interesting: a diver, otherwise the boat.
+        bool diver = Diver != null;
+        if (diver && !_hadDiver) _passTimer = Math.Min(_passTimer, 30f + (float)_rng.NextDouble() * 15f);
+        _hadDiver = diver;
+        Vector3 sp = diver ? Diver.GlobalPosition : Sub.GlobalPosition;
+
+        // Leash: if it has fallen far behind whatever it follows, it quietly relocates into the
+        // fog nearby (never inside visibility range: the fog hides the cheat).
+        float leash = diver ? 160f : 320f;
+        if (pos.DistanceTo(sp) > leash && _state == State.Lurk)
+        {
+            float a = (float)_rng.NextDouble() * Mathf.Tau;
+            pos = sp + new Vector3(MathF.Sin(a), 0, MathF.Cos(a)) * (diver ? 90f : 140f) + Vector3.Up * (float)(_rng.NextDouble() * 10 - 3);
+            GlobalPosition = pos;
+            _orbitAngle = a;
+        }
+
+        // Bites: only once the diver has overstayed, only during a pass, and only up close.
+        _biteCooldown -= dt;
+        if (diver && _state == State.Pass && _biteCooldown <= 0f && (DiverTimeOutside?.Invoke() ?? 0f) > 150f
+            && pos.DistanceTo(sp) < Length * 0.35f)
+        {
+            _biteCooldown = 20f;
+            Bite?.Invoke(35f);
+        }
 
         // --- choose a target
         Vector3 target;
@@ -152,11 +200,11 @@ public partial class Ravager : Node3D
             case State.Pass:
                 target = pos.DistanceTo(_passCross) > 10f && (_passCross - pos).Dot(_passEnd - _passCross) > 0 ? _passCross : _passEnd;
                 targetSpeed = 6.5f;
-                if (pos.DistanceTo(_passEnd) < 15f) { _state = State.Lurk; _passTimer = 60f + (float)_rng.NextDouble() * 60f; }
+                if (pos.DistanceTo(_passEnd) < 15f) { _state = State.Lurk; _passTimer = diver ? 35f + (float)_rng.NextDouble() * 30f : 60f + (float)_rng.NextDouble() * 60f; }
                 break;
             default:
                 _passTimer -= dt;
-                if (_passTimer <= 0f) ForcePass();
+                if (_passTimer <= 0f) { if (diver) DiverPass(); else ForcePass(); }
                 _orbitAngle += dt * 3.5f / _orbitRadius;
                 _orbitRadius = 75f + MathF.Sin(_t * 0.05f) * 15f;
                 _orbitHeight = MathF.Sin(_t * 0.07f) * 10f - 4f;

@@ -179,6 +179,37 @@ public partial class Main
             (t += 0.1f, () => { _interior.Holo.ZoomIndex = 2; EnterWalking(); _player.Position = new Vector3(0.2f, 0.05f, -2.0f); EnterHolo(); }),
             (t += 1.5f, () => Shot("17b_holo_beacons")),
             (t += 0.1f, () => EnterWalking()),
+            // --- Milestone 5: suit up, go outside, look back, collect, meet the ravager, come home
+            (t += 0.1f, () =>
+            {
+                _player.Position = new Vector3(-1.4f, 0.05f, 11.4f);
+                OnSuit();
+                _sub.TelegraphIndex = 2; _sub.ApplyTelegraph();
+                _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+            }),
+            (t += 1.5f, () => { _player.Transform = new Transform3D(Basis.Identity, SubHatchSpot); GD.Print($"[capture] dive attempt: {TryDiveFromHatch()} subSpeed={_sub.LinearVelocity.Length():0.00} engine={_sub.EngineOutput:0.00}"); }),
+            (t += 3.0f, () => { Shot("18a_outside_hatch"); GD.Print($"[capture] diving={_diver.Active} mode={_mode} O2={_diver.Oxygen:0} depth={-_diver.GlobalPosition.Y:0}"); }),
+            (t += 0.1f, () => { _diver.Place(_diver.GlobalPosition + _sub.GlobalBasis.Z * -6f + Vector3.Up * 2f, Mathf.Atan2(-_sub.GlobalBasis.Z.X, -_sub.GlobalBasis.Z.Z) + Mathf.Pi); }),
+            (t += 1.0f, () => Shot("18b_sub_from_outside")),
+            (t += 0.1f, () =>
+            {
+                var pk = _terrain.NearestPickup(_diver.GlobalPosition, 200f);
+                if (pk != null)
+                {
+                    Vector3 from = pk.Position + new Vector3(1.5f, 1.2f, 0f);
+                    Vector3 d = pk.Position - from;
+                    _diver.Place(from, Mathf.Atan2(-d.X, -d.Z));
+                    GD.Print($"[capture] swimming to {pk.Type} at {pk.Position.DistanceTo(_sub.GlobalPosition):0} m from the boat");
+                }
+            }),
+            (t += 0.8f, () => { Shot("18c_pickup"); GD.Print($"[capture] near pickup: {_diver.Nearest?.Type.ToString() ?? "none"}; collect -> {_diver.Collect()?.ToString() ?? "nothing"}; bag={_diver.Bag.Count}"); }),
+            (t += 0.1f, () => { _ravager.DiverPass(); }),
+            (t += 14.0f, () => { Shot("18d_ravager_vs_diver"); GD.Print($"[capture] ravager to diver {_ravager.DistanceToDiver:0.0} m, heartbeat={_audio.Heartbeat:0.00}, O2={_diver.Oxygen:0}"); }),
+            (t += 2.0f, () => Shot("18e_ravager_vs_diver")),
+            (t += 0.1f, () => { _diver.Place(_sub.GlobalTransform * HatchLocal + Vector3.Up * 1.5f, 0f); }),
+            (t += 0.3f, () => { int before = _systems.Hold.Weight; ExitDive(); GD.Print($"[capture] exit dive from hold weight {before}"); }),
+            (t += 2.8f, () => { Shot("18f_back_aboard"); GD.Print($"[capture] back aboard: diving={_diver.Active} mode={_mode} hold={_systems.Hold.Weight} bag={_diver.Bag.Count}"); }),
+            (t += 0.1f, () => { OnSuit(); }),
             (t += 0.1f, () => { EnterWalking(); EnterHelm(); var p = _sub.GlobalPosition; _sub.GlobalPosition = new Vector3(p.X, _gen.Height(p.X, p.Z) + 7f, p.Z); _sub.TelegraphIndex = 4; _sub.ApplyTelegraph(); }),
             (t += 1.5f, () => Shot("07_helm_bridge")),
             (t += 0.1f, () => { _view = HelmView.BowCamera; ApplyHelmView(); _ravager.ForcePass(26f, teleport: true); }),

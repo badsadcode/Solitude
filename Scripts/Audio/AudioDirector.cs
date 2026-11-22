@@ -33,6 +33,9 @@ public partial class AudioDirector : Node
     public volatile float Hull = 100f;
     public volatile float Servo;      // manipulator hydraulics activity 0..1
     public volatile float Intake;     // intake filter running 0/1
+    public volatile bool Diving;      // in the suit: breathing in the helmet, the world muffled
+    public volatile float Exertion;   // 0..1, breathing rate
+    public volatile float Heartbeat;  // 0..1, panic
 
     private AudioStreamGeneratorPlayback _pb;
     private Thread _thread;
@@ -47,6 +50,8 @@ public partial class AudioDirector : Node
     private float _brown, _dronePh1, _dronePh2, _dronePh3, _humPh, _engPh, _chugPh, _t;
     private OnePole _rumbleHp = new(25f, Rate), _droneLp = new(110f, Rate),_hissLp = new(2500f, Rate), _hissHp = new(600f, Rate), _flowLp = new(700f, Rate), _engLp = new(400f, Rate);
     private float _servoPh;
+    private float _breathPh, _bubbleT, _heartPh, _heartEnv, _bubblePh, _bubbleF, _bubbleEnv;
+    private OnePole _muffleL = new(900f, Rate), _muffleR = new(900f, Rate), _breathLp = new(1400f, Rate), _exhaleLp = new(500f, Rate);
     private OnePole _servoLp = new(900f, Rate), _intakeLp = new(350f, Rate);
     private float _creakTimer = 6f, _groanTimer = 25f, _callTimer = 40f;
     private float _master;
@@ -234,6 +239,17 @@ public partial class AudioDirector : Node
                 if (!alive) _voices.RemoveAt(v);
             }
 
+            // In the suit: the world arrives through the helmet (muffled), your breath does not.
+            if (Diving)
+            {
+                l = _muffleL.Process(l) * 0.85f;
+                r = _muffleR.Process(r) * 0.85f;
+                float b = Breath(inv, w);
+                l += b; r += b;
+            }
+            float hb = Heart(inv);
+            l += hb; r += hb;
+
             // Soft limiter only: linear below ~0.6, tanh shoulder above (safety net for big impacts).
             _buf[i] = new Vector2(SoftLimit(l * _master), SoftLimit(r * _master));
         }
@@ -243,6 +259,54 @@ public partial class AudioDirector : Node
     }
 
     private static float Wrap(float ph) => ph >= 1f ? ph - MathF.Floor(ph) : ph;
+
+    /// <summary>Helmet breathing: inhale hiss, short pause, bubbling exhale. Faster with exertion.</summary>
+    private float Breath(float inv, float w)
+    {
+        float period = 4.2f - Exertion * 2.3f - Heartbeat * 0.6f;
+        _breathPh += inv / MathF.Max(1.2f, period);
+        if (_breathPh >= 1f) _breathPh -= 1f;
+        float s = 0f;
+        if (_breathPh < 0.38f)
+        {
+            float u = _breathPh / 0.38f;
+            s += _breathLp.Process(w) * MathF.Sin(MathF.PI * u) * (0.1f + Exertion * 0.08f);
+        }
+        else if (_breathPh > 0.48f && _breathPh < 0.95f)
+        {
+            float u = (_breathPh - 0.48f) / 0.47f;
+            s += _exhaleLp.Process(w) * MathF.Sin(MathF.PI * u) * (0.16f + Exertion * 0.1f);
+            // Bubbles leaving the regulator
+            _bubbleT -= inv;
+            if (_bubbleT <= 0f)
+            {
+                _bubbleT = 0.02f + (float)_rng.NextDouble() * 0.07f;
+                _bubbleF = 250f + (float)_rng.NextDouble() * 700f;
+                _bubbleEnv = 1f;
+            }
+        }
+        if (_bubbleEnv > 0.001f)
+        {
+            _bubbleF *= 1f + inv * 3f;                    // pops chirp upward
+            _bubblePh = Wrap(_bubblePh + _bubbleF * inv);
+            s += MathF.Sin(_bubblePh * MathF.Tau) * _bubbleEnv * 0.05f;
+            _bubbleEnv *= 1f - inv * 60f;
+        }
+        return s;
+    }
+
+    /// <summary>Heartbeat (lub-dub) when air runs low or something big is near.</summary>
+    private float Heart(float inv)
+    {
+        float hb = Heartbeat;
+        if (hb < 0.02f) { _heartEnv = 0f; return 0f; }
+        float bpm = 70f + hb * 60f;
+        float prev = _heartPh;
+        _heartPh = Wrap(_heartPh + inv * bpm / 60f);
+        if (_heartPh < prev || (prev < 0.28f && _heartPh >= 0.28f)) _heartEnv = 1f;
+        _heartEnv *= 1f - inv * 14f;
+        return MathF.Sin(_heartPh * MathF.Tau * 9f) * _heartEnv * 0.3f * hb;
+    }
 
     private static float SoftLimit(float x)
     {
