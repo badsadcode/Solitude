@@ -56,6 +56,8 @@ public partial class Submarine : RigidBody3D
     public bool LightsOn = true;
     /// <summary>Max |engine output| the power bus allows (1 normally, low on emergency power).</summary>
     public float EngineLimit = 1f;
+    /// <summary>Worn-out drive bearings cap the engine (the boat as a body).</summary>
+    public float WearLimit = 1f;
     /// <summary>Downward force from flooded compartments (set by HullEvents).</summary>
     public float FloodWeight;
     /// <summary>The water's own velocity here (currents, a silt storm's push). Drag acts on the boat's
@@ -197,7 +199,8 @@ public partial class Submarine : RigidBody3D
 
         // Engine spools slowly; reversing is weaker.
         EngineOutput = Mathf.MoveToward(EngineOutput, TargetThrottle, SpoolRate * dt);
-        float limited = Mathf.Clamp(EngineOutput, -EngineLimit, EngineLimit);
+        float lim = EngineLimit * WearLimit;
+        float limited = Mathf.Clamp(EngineOutput, -lim, lim);
         float thrust = limited * MaxThrust * (limited >= 0f ? 1f : ReverseFactor);
 
         // Ballast tank level follows the pumps.

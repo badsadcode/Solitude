@@ -308,6 +308,8 @@ public partial class Main
         else l.Add(new Line($"BREACHES  {rooms.Count}: {string.Join(", ", rooms)}. Weld them (multi-tool).", 3));
         if (_hull.TotalFlood > 0.05f) l.Add(new Line($"WATER IN  {_hull.TotalFlood:0.0}  (the bilge pumps it out once the breach is sealed)", 3));
         l.Add(new Line(""));
+        l.AddRange(WearLines());
+        l.Add(new Line(""));
         l.Add(new Line($"MODULES  {_modules.Used}/{_modules.Bays} bays", 1));
         foreach (var id in _modules.Fitted) { var d = Modules.Def(id); l.Add(new Line($"  {d.Name}: {d.Effect}")); }
         return l;

@@ -26,6 +26,7 @@ public partial class Main
     private void SetupLab()
     {
         SetupWrecks();
+        SetupWear();
         // The holo table marks distress calls you've heard, too.
         var beacons = _interior.Holo.Beacons;
         _interior.Holo.Beacons = () =>
@@ -129,7 +130,7 @@ public partial class Main
     private void ApplyDiscoveries()
     {
         _sonar.Recharge = _lab.Has(Discovery.FastSonar) ? 2.5f : 4f;
-        _systems.IntakeYield = _lab.Has(Discovery.RichIntake) ? 1.6f : 1f;
+        _labIntakeYield = _lab.Has(Discovery.RichIntake) ? 1.6f : 1f;   // (the intake filter's condition multiplies this)
         Ravager.StunFactor = _lab.Has(Discovery.NerveMap) ? 2.5f : 1f;
         if (!_lab.Has(Discovery.RedFloods)) _sub.RedFloods = false;
     }

@@ -38,6 +38,8 @@ public sealed class SaveData
     public List<string> Lab = new();
     /// <summary>Wreck pingers heard and wrecks reached (their salvage is in TakenPickups).</summary>
     public List<long> WrecksHeard = new(), WrecksVisited = new();
+    /// <summary>The boat as a body: each part's condition (missing = new).</summary>
+    public Dictionary<string, float> Wear = new();
 }
 
 public sealed class StationSave
@@ -198,6 +200,7 @@ public partial class Main
         d.Clock = _shipLog.Clock; d.LogEntries = _shipLog.SaveEntries(); d.Notes = _shipLog.SaveNotes();
         d.Lab = _lab.Save();
         d.WrecksHeard = _wrecksHeard.ToList(); d.WrecksVisited = _wrecksVisited.ToList();
+        d.Wear = _wear.Save();
         foreach (var s in _stations.Directory.Generated) if (s.Known) d.KnownStations.Add(s.Id);
         foreach (var (id, st) in _stations.States)
             d.Stations.Add(new StationSave
@@ -215,6 +218,7 @@ public partial class Main
         _lab.Load(d.Lab);
         foreach (var id in d.WrecksHeard ?? new List<long>()) _wrecksHeard.Add(id);
         foreach (var id in d.WrecksVisited ?? new List<long>()) _wrecksVisited.Add(id);
+        _wear.Load(d.Wear);
         ApplyDiscoveries();
         foreach (var m in d.Modules) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Fitted.Add(id);
         foreach (var m in d.Blueprints) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Known.Add(id);

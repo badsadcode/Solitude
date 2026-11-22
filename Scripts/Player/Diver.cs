@@ -30,6 +30,8 @@ public partial class Diver : CharacterBody3D
     public readonly List<ItemId> Bag = new();
     /// <summary>Id of the last pickup collected (wreck salvage is recognised by it).</summary>
     public long LastId;
+    /// <summary>A worn suit leaks a little air: oxygen use is multiplied by this.</summary>
+    public float AirFactor = 1f;
     public const int BagSize = 6;
     public TerrainStreamer.Pickup Nearest { get; private set; }
 
@@ -140,7 +142,7 @@ public partial class Diver : CharacterBody3D
         // Air
         float effort = wish.Length() * (boost ? 1f : 0.4f);
         Exertion = Mathf.Lerp(Exertion, effort, Mathf.Clamp(0.8f * dt, 0f, 1f));
-        Oxygen = Mathf.Max(0f, Oxygen - O2PerSecond * (1f + Exertion * 1.2f * ExertionAir) * dt);
+        Oxygen = Mathf.Max(0f, Oxygen - O2PerSecond * (1f + Exertion * 1.2f * ExertionAir) * AirFactor * dt);
         if (Oxygen < 25f && _warn <= 0f) { OxygenWarning?.Invoke(); _warn = 12f; }
         _warn -= dt;
         if (Oxygen <= 0f)

@@ -863,6 +863,40 @@ public partial class Main
             }),
             (t += 1.5f, () => { _feedFullscreen = true; _hud.ShowFeed(_sonarScope.GetTexture(), "SONAR  -  ACTIVE", 1f); }),
             (t += 0.5f, () => { Shot("45g_wreck_sonar"); _feedFullscreen = false; _hud.ShowFeed(null, null, 1f); EnterWalking(); LogProx(); }),
+            // --- The boat as a body: wear, symptoms, service points
+            (t += 0.1f, CaptureMarkWear),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                _wear.Use(Part.IntakeFilter, 70f); _wear.Use(Part.Bearings, 90f); _wear.Use(Part.HullSeals, 65f);
+                _wear.Use(Part.Scrubber, 50f); _wear.Use(Part.Electronics, 88f); _wear.Use(Part.Suit, 70f);
+                foreach (var d in Wear.All) GD.Print($"[capture] wear {d.Part}: {_wear.Condition(d.Part):0} {_wear.StateOf(d.Part)}");
+                GD.Print($"[capture] wear effects: engine limit {_sub.WearLimit}, intake yield {_systems.IntakeYield}, suit air x{_diver.AirFactor}");
+                // Engineering, looking aft: the filter on the bulkhead, the bearings on the engine.
+                _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi + 0.35f), new Vector3(-0.2f, 0.05f, 10.6f));
+                _player.SetLook(0f, -0.25f);
+            }),
+            (t += 1.5f, () => { UpdateWear(0.01f); GD.Print($"[capture] after a frame: engine limit {_sub.WearLimit}, intake yield {_systems.IntakeYield}, suit air x{_diver.AirFactor}"); Shot("46a_engineering"); GD.Print($"[capture] focused: {_player.Focused?.Prompt ?? "nothing"}"); }),
+            (t += 0.1f, () => { _player.Transform = new Transform3D(new Basis(Vector3.Up, -Mathf.Pi / 2f), new Vector3(1.3f, 0.05f, 8.75f)); _player.SetLook(0f, 0.05f); }),
+            (t += 1.2f, () => { Shot("46b_scrubber"); GD.Print($"[capture] focused: {_player.Focused?.Prompt ?? "nothing"}"); }),
+            (t += 0.1f, () => { _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-1.2f, 0.05f, 8.6f)); _player.SetLook(0f, -0.55f); }),
+            (t += 1.2f, () => { Shot("46c_seals"); GD.Print($"[capture] focused: {_player.Focused?.Prompt ?? "nothing"}"); }),
+            (t += 0.1f, () => { _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-1.2f, 0.05f, -0.45f)); _player.SetLook(0f, -0.1f); }),
+            (t += 1.2f, () => { Shot("46d_bus"); GD.Print($"[capture] focused: {_player.Focused?.Prompt ?? "nothing"}"); }),
+            (t += 0.1f, () =>
+            {
+                Service(Part.Bearings);   // nothing in the hold: refused
+                _systems.Hold.Add(ItemId.Plankton, 2); _systems.Hold.Add(ItemId.Sealant); _systems.Hold.Add(ItemId.Circuit);
+                Service(Part.Bearings); Service(Part.HullSeals); Service(Part.Electronics); Service(Part.IntakeFilter);
+                UpdateWear(0.01f);
+                foreach (var d in Wear.All) GD.Print($"[capture] after service {d.Part}: {_wear.Condition(d.Part):0} {_wear.StateOf(d.Part)}");
+                GD.Print($"[capture] engine limit {_sub.WearLimit}");
+                EnterTerminal();
+            }),
+            (t += 1.0f, () => _logScreen.SetTab(3)),
+            (t += 0.5f, () => { Shot("46e_boat_page"); _logScreen.SetTab(0); }),
+            (t += 0.4f, () => { Shot("46f_log_page"); CloseTerminal(); }),
+            (t += 0.5f, () => { }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -1138,6 +1172,7 @@ public partial class Main
     private void CaptureMarkSilt() => CaptureSection("silt");
     private void CaptureMarkLab() => CaptureSection("lab");
     private void CaptureMarkWrecks() => CaptureSection("wrecks");
+    private void CaptureMarkWear() => CaptureSection("wear");
     private List<Solitude.Systems.WreckSite> _capWrecks = new();
     private Solitude.Systems.WreckSite _capPinger;
     private float Flatness(Vector3 p) => Mathf.Abs(_gen.Height(p.X + 20f, p.Z) - _gen.Height(p.X - 20f, p.Z)) + Mathf.Abs(_gen.Height(p.X, p.Z + 20f) - _gen.Height(p.X, p.Z - 20f));
@@ -1220,7 +1255,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

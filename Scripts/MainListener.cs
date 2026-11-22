@@ -47,7 +47,8 @@ public partial class Main
                   + (_sub.LightsOn ? 0.05f : 0f)
                   + (_systems.IntakeOn ? 0.04f : 0f)
                   + (_systems.ArmActive ? 0.06f : 0f)
-                  + (_hull.ActiveBreaches > 0 ? 0.2f : 0f);   // the klaxon
+                  + (_hull.ActiveBreaches > 0 ? 0.2f : 0f)    // the klaxon
+                  + WearNoise;                                 // a knocking drive
         }
         bool shielded = _stations.DockedAt != null || _player.InStation;
         float depth = diving ? Mathf.Max(0f, -_diver.GlobalPosition.Y) : _sub.Depth;

@@ -164,6 +164,35 @@ public partial class SubInterior : Node3D
         });
     }
 
+    /// <summary>
+    /// A service point for a part that wears (the boat as a body): a small housing on a wall, a status
+    /// lamp the director colours, a stencilled label and the place to press E. yaw = which way it faces.
+    /// </summary>
+    public (Interactable use, ShaderMaterial lamp) ServicePoint(Vector3 at, float yaw, Vector3 housing, string label, Action onUse)
+    {
+        var b = new Basis(Vector3.Up, yaw);
+        var mb = new MeshBuilder { UvScale = 0.5f };
+        mb.Box(Vector3.Zero, housing, Grey.Shade(0.75f));
+        mb.Box(new Vector3(0, 0, housing.Z * 0.5f + 0.01f), new Vector3(housing.X * 0.8f, housing.Y * 0.7f, 0.02f), Grey.Shade(0.55f));   // access plate
+        for (int i = -1; i <= 1; i += 2)
+            mb.Box(new Vector3(i * housing.X * 0.35f, housing.Y * 0.32f, housing.Z * 0.5f + 0.02f), new Vector3(0.03f, 0.03f, 0.02f), Grey.Shade(0.3f)); // bolts
+        AddChild(new MeshInstance3D { Mesh = mb.Build(Art.Machine), Transform = new Transform3D(b, at) });
+        var lampMat = Art.World(Art.FlatTexture(new Color(0.15f, 0.15f, 0.12f)), Colors.White, roughness: 0.4f).Glow(new Color(0.3f, 1f, 0.4f), 1.2f);
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = new Vector3(0.06f, 0.06f, 0.04f) }, MaterialOverride = lampMat,
+            Transform = new Transform3D(b, at + b * new Vector3(housing.X * 0.5f - 0.06f, housing.Y * 0.5f + 0.06f, housing.Z * 0.5f)),
+        });
+        AddChild(new Label3D
+        {
+            Text = label, Transform = new Transform3D(b, at + b * new Vector3(0, -housing.Y * 0.5f - 0.07f, housing.Z * 0.5f + 0.01f)),
+            FontSize = 18, PixelSize = 0.004f, Modulate = new Color(0.85f, 0.8f, 0.6f), Shaded = true, TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest,
+        });
+        var use = Interactable.Create(this, at + b * new Vector3(0, 0, housing.Z * 0.5f + 0.15f), new Vector3(housing.X + 0.1f, housing.Y + 0.1f, 0.4f), label, onUse);
+        use.Rotation = new Vector3(0, yaw, 0);
+        return (use, lampMat);
+    }
+
     private void ProxLamp(Transform3D at, Vector3 size)
     {
         // Dark red-brown glass when off; the director drives its emission every frame.

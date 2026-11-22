@@ -457,6 +457,13 @@ public partial class Main : Node
 					var def = m;
 					_panelActions.Add(() => FabricateModule(def));
 				}
+				// The hard suit is serviced here too (the boat as a body).
+				var suitDef = Wear.Of(Part.Suit);
+				var sealant = new[] { (ItemId.Sealant, 1) };
+				opts.Add(($"## THE HARD SUIT  —  {Wear.Word(_wear.StateOf(Part.Suit)).ToLowerInvariant()}", false));
+				_panelActions.Add(() => { });
+				opts.Add(($"Service the hard suit  <-  1x {Items.Name(ItemId.Sealant)}", _wear.Condition(Part.Suit) < 90f && hold.Has(sealant)));
+				_panelActions.Add(() => Service(Part.Suit));
 				break;
 			case "lab":
 				title = LabPanel(opts);
@@ -728,6 +735,7 @@ public partial class Main : Node
 		UpdateSilt(dt);
 		UpdateLab(dt);
 		UpdateWrecks(dt);
+		UpdateWear(dt);
 		UpdateTerminalWorld(dt);
 		UpdateProximity(dt);
 		if (_mode != Mode.Monitors) _camServo = Mathf.MoveToward(_camServo, 0f, dt * 6f);
@@ -959,7 +967,7 @@ public partial class Main : Node
 
 		_damageFlash = Mathf.MoveToward(_damageFlash, 0f, dt * 1.2f);
 		float hullDamage = 1f - _sub.Hull / 100f;
-		_post.SetShaderParameter("damage", Mathf.Max(_damageFlash, hullDamage * 0.3f));
+		_post.SetShaderParameter("damage", Mathf.Max(Mathf.Max(_damageFlash, hullDamage * 0.3f), _airHaze));
 		bool outside = _mode == Mode.Helm && _view != HelmView.Bridge;
 		if (_mode != Mode.Diving) _post.SetShaderParameter("wobble", outside ? 1f : 0f);
 	}
