@@ -56,12 +56,12 @@ public partial class Main
         if (Input.IsActionJustPressed(GameInput.SummonWyrm)) { _creatures.SummonWyrm(); _hud.Message("[debug] the Fangwyrm is passing", 3f); }
         if (Input.IsActionJustPressed(GameInput.SummonWhale))
         {
-            // Close enough to see from the bow camera: right overhead, already on its way past.
-            _creatures.DismissWhale();
-            _creatures.SummonWhale(overhead: true);
-            var w = _creatures.Whale;
-            w.GlobalPosition = FocusPoint() - (-w.GlobalBasis.Z) * 150f + Vector3.Up * 44f;
-            _hud.Message("[debug] something very large is coming over", 3f);
+            // Across the bow, ~45 m out, entering CAM 1's view within seconds.
+            Vector3 fwd = -_sub.GlobalBasis.Z; fwd.Y = 0; fwd = fwd.Normalized();
+            Vector3 side = new(-fwd.Z, 0, fwd.X);
+            Vector3 centre = _sub.GlobalPosition + fwd * 45f + Vector3.Up * 4f;
+            _creatures.SummonWhaleBetween(centre - side * 30f, centre + side * 420f);
+            _hud.Message("[debug] something very large is crossing the bow (CAM 1)", 4f);
         }
     }
 }

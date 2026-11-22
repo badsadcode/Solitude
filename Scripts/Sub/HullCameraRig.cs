@@ -88,7 +88,10 @@ public partial class HullCameraRig : Node
             if (f.Panning)
             {
                 float a = Mathf.Sin(_t * 0.12f) * 2.6f;
-                dir = new Vector3(Mathf.Sin(a), -0.12f, -Mathf.Cos(a)).Normalized();
+                // ...and slowly tilts: mostly the horizon, but now and then it looks up into the water
+                // above the boat (the only camera that does: that's where the whale passes overhead).
+                float up = Mathf.Lerp(-0.12f, 1.6f, Mathf.Max(0f, Mathf.Sin(_t * 0.045f)) * Mathf.Max(0f, Mathf.Sin(_t * 0.045f)));
+                dir = new Vector3(Mathf.Sin(a), up, -Mathf.Cos(a)).Normalized();
             }
             f.Camera.GlobalTransform = st * new Transform3D(LookBasis(dir), f.MountPos);
 

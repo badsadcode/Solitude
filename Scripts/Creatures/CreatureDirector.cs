@@ -97,6 +97,14 @@ public partial class CreatureDirector : Node3D
     /// <summary>Gone (dev / capture).</summary>
     public void DismissWhale() { Whale?.QueueFree(); Whale = null; }
 
+    /// <summary>A whale on a given path (dev: across the bow, where CAM 1 sees it).</summary>
+    public void SummonWhaleBetween(Vector3 from, Vector3 to)
+    {
+        DismissWhale();
+        Whale = Spawn(CreatureProfile.Whale(), from, Focus());
+        Whale.Transit(to);
+    }
+
     public void SummonWhale(bool overhead = false)
     {
         if (Whale != null) return;

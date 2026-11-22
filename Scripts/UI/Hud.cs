@@ -45,7 +45,7 @@ public partial class Hud : CanvasLayer
         _root.AddChild(feedBg);
         _root.AddChild(_feedOverlay);
         _feedName = MakeLabel(Phosphor, 20);
-        _feedName.Position = new Vector2(32, 24);
+        _feedName.Position = new Vector2(32, 58);   // below the vitals line (y 34), which stays visible
         _feedName.Visible = false;
         _root.AddChild(_feedName);
 

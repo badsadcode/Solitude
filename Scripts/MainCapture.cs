@@ -430,18 +430,22 @@ public partial class Main
             (t += 1.0f, () => Shot("31d_whale_top")),
             (t += 0.1f, () =>
             {
-                // From the boat: it goes right overhead.
+                // From the boat, the F4 way: across the bow, watched on CAM 1 full screen.
                 _docCam.QueueFree(); _docCam = null; _docTarget = null;
-                _creatures.DismissWhale();
-                _creatures.SummonWhale(overhead: true);
-                var w = _creatures.Whale;
-                Vector3 d = -w.GlobalBasis.Z;
-                w.GlobalPosition = _sub.GlobalPosition - d * 20f + Vector3.Up * 24f;
-                _view = HelmView.BowCamera; ApplyHelmView();
-                _bowCam.RotationDegrees = new Vector3(60f, 0, 0);
+                Vector3 fwd = -_sub.GlobalBasis.Z; fwd.Y = 0; fwd = fwd.Normalized();
+                Vector3 side = new(-fwd.Z, 0, fwd.X);
+                Vector3 centre = _sub.GlobalPosition + fwd * 45f + Vector3.Up * 4f;
+                _creatures.SummonWhaleBetween(centre - side * 30f, centre + side * 420f);
+                EnterWalking(); _player.Position = new Vector3(-0.9f, 0.05f, -3f); EnterMonitors();
+                SelectFeed(0); _feedFullscreen = true; _hud.ShowFeed(_rig.Feeds[0].Viewport.GetTexture(), _rig.Feeds[0].Name, 1f);
             }),
-            (t += 3.0f, () => { Shot("31e_whale_overhead"); _audio.PlayAt("whalesong", 0f, 1f); }),
-            (t += 4.0f, () => { Shot("31f_whale_overhead_later"); _bowCam.RotationDegrees = Vector3.Zero; _view = HelmView.Bridge; ApplyHelmView(); }),
+            (t += 6.0f, () =>
+            {
+                Shot("31e_whale_cam1");
+                var w = _creatures.Whale;
+                GD.Print(w == null ? "[capture] whale: none" : $"[capture] whale relative to boat: {_sub.GlobalTransform.AffineInverse() * w.GlobalPosition} (−Z = ahead), visible={w.IsVisibleInTree()}, leaving={w.Leaving}, scale={w.Scale}");
+            }),
+            (t += 8.0f, () => { Shot("31f_whale_cam1_later"); EnterWalking(); }),
             // --- The hydrophone: waterfall, the Sounding, recording, a creature, own noise
             (t += 0.1f, CaptureMarkHydrophone),
             (t += 0.1f, () =>
