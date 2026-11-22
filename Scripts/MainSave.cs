@@ -37,7 +37,7 @@ public sealed class StationSave
 {
     public long Id;
     public List<int> Taken = new(), Killed = new();
-    public bool DoorOpen, SecretOpen, HasKeycard, Visited;
+    public bool DoorOpen, SecretOpen, HasKeycard, Visited, PowerRestored;
 }
 
 /// <summary>
@@ -93,6 +93,7 @@ public partial class Main
                 _modules.Fitted.Add(ModuleId.FrameI);
                 _modules.Known.Add(ModuleId.Bilge);
                 _systems.Hold.Add(ItemId.ModReelMotor);
+                _stations.StateOf(_stations.Directory.Starter).PowerRestored = true;
                 ApplyModules();
                 _coreSites.Add(-42);
                 _weapons.Give(WeaponId.Shotgun, 6);
@@ -122,6 +123,7 @@ public partial class Main
                 Check(_modules.Has(ModuleId.FrameI) && Mathf.IsEqualApprox(_sub.CrushDepth, 1250f), $"Frame I / crush {_sub.CrushDepth}");
                 Check(_modules.Known.Contains(ModuleId.Bilge), "bilge blueprint");
                 Check(_systems.Hold.Count(ItemId.ModReelMotor) == 1, "reel motor in hold");
+                Check(_stations.States.TryGetValue(_stations.Directory.Starter.Id, out var sst) && sst.PowerRestored, "starter station power restored");
                 Check(_coreSites.Contains(-42), "data core");
                 Check(_weapons.Owned.Contains(WeaponId.Shotgun), "shotgun");
                 var p = new Vector3(e.SubPos[0], e.SubPos[1], e.SubPos[2]);
@@ -185,7 +187,7 @@ public partial class Main
             d.Stations.Add(new StationSave
             {
                 Id = id, Taken = st.Taken.ToList(), Killed = st.Killed.ToList(),
-                DoorOpen = st.DoorOpen, SecretOpen = st.SecretOpen, HasKeycard = st.HasKeycard, Visited = st.Visited,
+                DoorOpen = st.DoorOpen, SecretOpen = st.SecretOpen, HasKeycard = st.HasKeycard, Visited = st.Visited, PowerRestored = st.PowerRestored,
             });
         return d;
     }
@@ -231,7 +233,7 @@ public partial class Main
 
         foreach (var s in d.Stations)
         {
-            var st = new StationState { DoorOpen = s.DoorOpen, SecretOpen = s.SecretOpen, HasKeycard = s.HasKeycard, Visited = s.Visited };
+            var st = new StationState { DoorOpen = s.DoorOpen, SecretOpen = s.SecretOpen, HasKeycard = s.HasKeycard, Visited = s.Visited, PowerRestored = s.PowerRestored };
             foreach (var i in s.Taken) st.Taken.Add(i);
             foreach (var i in s.Killed) st.Killed.Add(i);
             _stations.States[s.Id] = st;

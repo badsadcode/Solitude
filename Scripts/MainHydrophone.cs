@@ -68,7 +68,7 @@ public partial class Main
         foreach (var v in _terrain.VentsNear(p, 500f)) { if (++vents > 6) break; AddSource(SoundClass.Vent, v, 0.45f, 500f); }
         var heard = new HashSet<long>();
         foreach (var s in _stations.Directory.Near(p, 1500f))
-            if (heard.Add(s.Id)) AddSource(SoundClass.Station, s.Position, StationInterior.IsPowered(s) ? 0.55f : 0.2f, 1500f, 4f);
+            if (heard.Add(s.Id)) AddSource(SoundClass.Station, s.Position, StationInterior.IsPowered(s) || _stations.States.TryGetValue(s.Id, out var st) && st.PowerRestored ? 0.55f : 0.2f, 1500f, 4f);
 
         // The Listener: a huge, smeared, wandering presence once it's paying attention.
         _listenerBrg = Hydrophone.Wrap(_listenerBrg + ((float)_hydroRng.NextDouble() - 0.5f) * 20f * dt);

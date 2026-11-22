@@ -124,6 +124,10 @@ public partial class Main
             {
                 var l = _station.ToLocal(_player.GlobalPosition);
                 GD.Print($"[stairs] t={k * 0.5f:0.0} local=({l.X:0.00}, {l.Y:0.00}, {l.Z:0.00}) onFloor={_player.IsOnFloor()} onWall={_player.IsOnWall()} step={Solitude.Core.Stepper.Why}");
+                if (k == 2 && OS.GetCmdlineUserArgs().Any(x => x == "--stairs-restore")) { _systems.Hold.Add(ItemId.PowerCell); _station.DebugUseJunction(); }
+                if (k == 12)
+                    foreach (var arg in OS.GetCmdlineUserArgs())
+                        if (arg.StartsWith("--stairs-shot2=")) GetViewport().GetTexture().GetImage().SavePng(arg.Substring(15));
                 if (k == (_stairsWalkIn ? 5 : 1))
                     foreach (var arg in OS.GetCmdlineUserArgs())
                         if (arg.StartsWith("--stairs-shot=")) GetViewport().GetTexture().GetImage().SavePng(arg.Substring(14));

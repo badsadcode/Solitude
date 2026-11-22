@@ -122,11 +122,11 @@ public partial class StationInterior
                     node.Transform = new Transform3D(basis, pos);
                     AddChild(node);
                     // Live screens and tanks spill a little light, so they read as machines in a dark room.
-                    if (Powered && !broken && glows < 14 && cls is "console" or "server_rack" or "specimen_tank" or "grow_rack" or "reactor_core")
+                    if (!broken && glows < 14 && cls is "console" or "server_rack" or "specimen_tank" or "grow_rack" or "reactor_core")
                     {
                         glows++;
                         var tint = cls switch { "specimen_tank" => new Color(0.3f, 0.8f, 0.75f), "grow_rack" => new Color(0.4f, 0.9f, 0.4f), "reactor_core" => new Color(0.5f, 0.7f, 1f), _ => new Color(0.35f, 1f, 0.55f) };
-                        AddChild(new OmniLight3D { Position = pos + basis * new Vector3(0, fp.Y * 0.8f, fp.Z * 0.5f + 0.3f), LightColor = tint, LightEnergy = 0.35f, OmniRange = 2.6f, OmniAttenuation = 1.6f });
+                        _glowSpots.Add((pos + basis * new Vector3(0, fp.Y * 0.8f, fp.Z * 0.5f + 0.3f), tint));
                     }
                     if (PropFactory.Solid(cls, mount, fp, flat))
                         bodies.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = fp }, Transform = new Transform3D(basis, pos + Vector3.Up * fp.Y / 2f) });
@@ -166,6 +166,9 @@ public partial class StationInterior
                         AddChild(new OmniLight3D { Position = pos + Vector3.Up * 0.4f, LightColor = new Color(0.5f, 0.7f, 1f), LightEnergy = 0.6f, OmniRange = 4f });
                     break;
                 }
+                case "power_junction":
+                    AddJunction(new Transform3D(basis, pos), Vec3(Field(extras, "footprint"), new Vector3(0.6f, 0.25f, 0.8f)));
+                    break;
                 case "airlock":
                 {
                     var mb = new MeshBuilder();
@@ -182,6 +185,7 @@ public partial class StationInterior
                 }
             }
         }
+        AddGlows();
     }
 
     private static Node3D Porthole(Vector3 fp, Transform3D at)
@@ -256,7 +260,8 @@ public partial class SlideDoor : Node3D
     public bool Want;
     public Action<string, Vector3> Sound;
     private readonly float _w, _h;
-    private readonly bool _powered;
+    private bool _powered;
+    private MeshInstance3D _lampRed, _lampGreen;
     private Node3D _left, _right;
     private CollisionShape3D _lc, _rc;
     private float _open;
@@ -271,8 +276,11 @@ public partial class SlideDoor : Node3D
         frame.Box(new Vector3(-_w / 2f - 0.1f, _h / 2f, 0), new Vector3(0.2f, _h, 0.3f), new Color(0.3f, 0.31f, 0.3f));
         frame.Box(new Vector3(_w / 2f + 0.1f, _h / 2f, 0), new Vector3(0.2f, _h, 0.3f), new Color(0.3f, 0.31f, 0.3f));
         frame.Box(new Vector3(0, _h + 0.1f, 0), new Vector3(_w + 0.4f, 0.2f, 0.3f), new Color(0.3f, 0.31f, 0.3f));
-        frame.Box(new Vector3(0, _h + 0.1f, 0.16f), new Vector3(0.2f, 0.06f, 0.02f), _powered ? new Color(0.3f, 1f, 0.4f, 0.5f) : new Color(1f, 0.2f, 0.1f, 0.5f));
         AddChild(new MeshInstance3D { Mesh = frame.Build(Art.Machine) });
+        MeshInstance3D Lamp(Color c) { var lm = new MeshBuilder(); lm.Box(new Vector3(0, _h + 0.1f, 0.16f), new Vector3(0.2f, 0.06f, 0.02f), c); var mi = new MeshInstance3D { Mesh = lm.Build(Art.Machine) }; AddChild(mi); return mi; }
+        _lampGreen = Lamp(new Color(0.3f, 1f, 0.4f, 0.5f));
+        _lampRed = Lamp(new Color(1f, 0.2f, 0.1f, 0.5f));
+        _lampGreen.Visible = _powered; _lampRed.Visible = !_powered;
         var body = new StaticBody3D { CollisionLayer = Layers.Interior, CollisionMask = 0 };
         AddChild(body);
         (_left, _lc) = Leaf(-1f, body);
@@ -302,6 +310,13 @@ public partial class SlideDoor : Node3D
         _right.Position = new Vector3(off, 0, 0);
         _lc.Position = new Vector3(-off, _h / 2f, 0);
         _rc.Position = new Vector3(off, _h / 2f, 0);
+    }
+
+    /// <summary>The station's power came back: the door works again (from wherever it was jammed).</summary>
+    public void PowerOn()
+    {
+        _powered = true;
+        if (_lampGreen != null) { _lampGreen.Visible = true; _lampRed.Visible = false; }
     }
 
     public override void _Process(double delta)

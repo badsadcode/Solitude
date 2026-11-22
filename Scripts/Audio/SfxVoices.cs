@@ -52,6 +52,7 @@ public sealed class SfxVoice : Voice
             "reel" => (0.06f, 0.25f),
             "spearhit" => (0.4f, 0.6f),
             "listener" => (7.0f, 0.55f),
+            "powerup" => (4.0f, 0.6f),
             _ => (0.2f, 0.2f),
         };
         Gain *= gain;
@@ -224,6 +225,20 @@ public sealed class SfxVoice : Voice
                 _clk *= 0.993f;
                 float crackle = _bp1.Process(w) * 2.5f * _clk;
                 s = (buzz + crackle) * MathF.Min(1f, T * 80f) * MathF.Exp(-T * 4f);
+                break;
+            }
+            case "powerup":
+            {
+                // A heavy relay clunk, then a machine spinning up: a hum rising from nothing to mains,
+                // with the high whine of something large getting up to speed.
+                float clunk = MathF.Sin(T * 60f * MathF.Tau) * MathF.Exp(-T * 18f) * 1.5f + _bp1.Process(w) * MathF.Exp(-T * 40f) * 2f;
+                float spin = MathF.Min(1f, MathF.Max(0f, T - 0.3f) / 2.5f);
+                _ph1 += (18f + 32f * spin) * dt; _ph1 -= MathF.Floor(_ph1);
+                _ph2 += (300f + 1500f * spin) * dt; _ph2 -= MathF.Floor(_ph2);
+                float hum = (MathF.Sin(_ph1 * MathF.Tau) + 0.4f * MathF.Sin(_ph1 * 2f * MathF.Tau)) * 0.5f * spin;
+                float whine = MathF.Sin(_ph2 * MathF.Tau) * 0.06f * spin;
+                float tail = MathF.Min(1f, (_dur - T) * 1.5f);
+                s = (clunk + hum + whine) * tail;
                 break;
             }
             case "listener":

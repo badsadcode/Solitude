@@ -14,7 +14,7 @@ public sealed class StationState
 {
     public readonly HashSet<int> Taken = new();
     public readonly HashSet<int> Killed = new();
-    public bool DoorOpen, SecretOpen, HasKeycard, Visited;
+    public bool DoorOpen, SecretOpen, HasKeycard, Visited, PowerRestored;
 }
 
 /// <summary>
@@ -61,6 +61,8 @@ public partial class StationInterior : Node3D
     {
         _rng = new Random(Site.Seed);
         Powered = _rng.NextDouble() < 0.5 || Site.Id == -1 && _rng.NextDouble() < 0.3;   // (IsPowered mirrors this)
+        if (ForceDark) Powered = false;
+        if (State.PowerRestored) Powered = true;   // someone put a cell in the junction
         _nav = new NavigationRegion3D
         {
             NavigationMesh = new NavigationMesh
@@ -240,27 +242,31 @@ public partial class StationInterior : Node3D
         var fixtureMesh = fixture.Build(Art.Machine);
         var lit = litMb.Build(Art.Machine);
         var red = redMb.Build(Art.Machine);
+        _lightRoot?.QueueFree();
+        _lightRoot = new Node3D { Name = "Lights" };
+        AddChild(_lightRoot);
+        _lights.Clear();
 
         int n = 0;
         foreach (var (pos, kind, _) in _markers)
         {
             if (kind != "light") continue;
             n++;
-            AddChild(new MeshInstance3D { Mesh = fixtureMesh, Position = pos });
+            _lightRoot.AddChild(new MeshInstance3D { Mesh = fixtureMesh, Position = pos });
             double roll = _rng.NextDouble();
             if (Powered)
             {
                 if (roll < 0.18) continue; // dead tube
-                AddChild(new MeshInstance3D { Mesh = lit, Position = pos });
+                _lightRoot.AddChild(new MeshInstance3D { Mesh = lit, Position = pos });
                 var l = new OmniLight3D { Position = pos - Vector3.Up * 0.3f, LightColor = new Color(0.8f, 0.9f, 1f), LightEnergy = 0.75f, OmniRange = 8f, OmniAttenuation = 1.4f, ShadowEnabled = n % 6 == 0 };
-                AddChild(l);
+                _lightRoot.AddChild(l);
                 _lights.Add((l, 0.75f, roll < 0.33));
             }
             else if (n % 3 == 0)
             {
-                AddChild(new MeshInstance3D { Mesh = red, Position = pos });
+                _lightRoot.AddChild(new MeshInstance3D { Mesh = red, Position = pos });
                 var l = new OmniLight3D { Position = pos - Vector3.Up * 0.3f, LightColor = new Color(1f, 0.12f, 0.08f), LightEnergy = 0.45f, OmniRange = 6f, OmniAttenuation = 1.5f };
-                AddChild(l);
+                _lightRoot.AddChild(l);
                 _lights.Add((l, 0.45f, roll < 0.2));
             }
         }
@@ -423,6 +429,8 @@ public partial class StationInterior : Node3D
             }
         }
 
+        EnsureJunction(exit.kind != null ? Floor(exit.pos + Vector3.Up) : null);
+
         // Every core keeps a module blueprint in its maintenance memory, and a spare part or two.
         // (Added after the floor loot so loot indices in older saves still line up.)
         if (exit.kind != null && Floor(exit.pos + Vector3.Up) is Vector3 core2)
@@ -520,6 +528,7 @@ public partial class StationInterior : Node3D
         UpdateDressing(dt);
         foreach (var (l, e, flicker) in _lights)
         {
+            if (PowerOnRipple(l, e)) continue;
             if (flicker && _rng.NextDouble() < 0.04) l.LightEnergy = e * (float)_rng.NextDouble() * 0.3f;
             else l.LightEnergy = Mathf.Lerp(l.LightEnergy, e, 10f * dt);
         }

@@ -32,6 +32,7 @@ public partial class Main
     {
         foreach (var arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--layout=")) StationDirectory.ForceLayout = arg.Substring(9);
+            else if (arg == "--station-dark") StationInterior.ForceDark = true;
         _stations = new StationManager
         {
             Name = "Stations", Sub = _sub, Audio = _audio,
