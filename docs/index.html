@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solitude — Dive Log</title>
+<meta name="description" content="The making of Solitude, a submarine horror game by Bad Ideas Works. Written from the bottom of the sea by Sage.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --abyss: #02080a;
+    --phosphor: #8dffb4;
+    --phosphor-dim: #4f9c72;
+    --amber: #ffb347;
+    --blood: #ff4a3a;
+    --text: #c6d6cf;
+    --muted: #6f8a80;
+    --frame: #0d1a19;
+    --edge: #1c3330;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--abyss);
+    color: var(--text);
+    font: 16px/1.75 "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    overflow-x: hidden;
+  }
+  /* The water: a gradient that darkens toward red as you go down (set by JS). */
+  #water { position: fixed; inset: 0; z-index: -3; background: radial-gradient(ellipse at 50% 20%, #0b2a2e 0%, #041114 55%, #010405 100%); transition: background 0.4s linear; }
+  #snow { position: fixed; inset: 0; z-index: -2; pointer-events: none; }
+  #vignette { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.75) 100%); }
+  #scan { position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: 0.18;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.0) 0 2px, rgba(0,0,0,0.55) 2px 3px); }
+
+  /* Depth gauge */
+  #gauge { position: fixed; right: 22px; top: 50%; transform: translateY(-50%); z-index: 20;
+    font-family: "VT323", monospace; color: var(--phosphor); text-align: right; text-shadow: 0 0 8px rgba(141,255,180,0.5); }
+  #gauge .label { font-size: 16px; color: var(--phosphor-dim); letter-spacing: 3px; }
+  #gauge .value { font-size: 38px; line-height: 1; }
+  #gauge .bar { width: 4px; height: 220px; margin: 10px 0 10px auto; background: var(--edge); position: relative; }
+  #gauge .fill { position: absolute; left: 0; right: 0; top: 0; background: var(--phosphor); box-shadow: 0 0 8px var(--phosphor); }
+  #gauge .warn { font-size: 15px; color: var(--blood); opacity: 0; transition: opacity .6s; letter-spacing: 2px; }
+
+  header { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 0 8vw; }
+  header .studio { font-family: "VT323"; color: var(--phosphor-dim); letter-spacing: 6px; font-size: 20px; }
+  header h1 { font-family: "VT323"; font-weight: 400; font-size: clamp(56px, 10vw, 128px); letter-spacing: 0.35em; margin: 8px 0 0;
+    color: #dfe9e4; text-shadow: 0 0 24px rgba(141,255,180,0.18); }
+  header .tag { color: var(--muted); font-style: italic; max-width: 640px; }
+  header .hint { margin-top: 64px; font-family: "VT323"; color: var(--phosphor); font-size: 22px; letter-spacing: 3px; animation: blink 1.6s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.2; } }
+
+  main { max-width: 860px; margin: 0 auto; padding: 0 28px 40vh; }
+
+  .entry { margin: 18vh 0; opacity: 0; transform: translateY(30px); transition: opacity 1.2s ease, transform 1.2s ease; }
+  .entry.seen { opacity: 1; transform: none; }
+  .meta { font-family: "VT323"; font-size: 20px; color: var(--phosphor-dim); letter-spacing: 3px; display: flex; gap: 18px; flex-wrap: wrap; }
+  .meta .depth { color: var(--amber); }
+  .entry h2 { font-family: "VT323"; font-weight: 400; font-size: clamp(34px, 5vw, 48px); line-height: 1.05; margin: 6px 0 18px; color: var(--phosphor);
+    text-shadow: 0 0 12px rgba(141,255,180,0.35); }
+  .entry p { margin: 0 0 1.1em; }
+  .entry em { color: #e8f1ec; }
+  .quote { border-left: 2px solid var(--amber); padding: 4px 0 4px 18px; margin: 1.4em 0; color: #f2dcb8; font-style: italic; }
+  .quote cite { display: block; font-style: normal; font-size: 13px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+
+  /* CRT monitor frames for screenshots */
+  .crt { margin: 2.2em 0; background: var(--frame); border: 1px solid var(--edge); border-radius: 10px; padding: 14px 14px 10px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.03); }
+  .crt .screen { position: relative; border-radius: 18px / 26px; overflow: hidden; background: #000; }
+  .crt img { display: block; width: 100%; height: auto; image-rendering: pixelated; filter: saturate(0.95) contrast(1.05); }
+  .crt .screen::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,0.25) 2px 3px),
+                radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%); }
+  .crt figcaption { display: flex; justify-content: space-between; font-family: "VT323"; font-size: 17px; color: var(--phosphor-dim); letter-spacing: 2px; padding-top: 8px; }
+  .crt figcaption .rec::before { content: "● "; color: var(--blood); animation: blink 1.2s steps(2) infinite; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .pair .crt { margin: 0; }
+
+  /* Whispers: barely there until you hover */
+  .whisper { color: rgba(255,74,58,0.07); transition: color 1.5s ease; cursor: default; }
+  .whisper:hover { color: rgba(255,74,58,0.75); }
+
+  .ping { display: flex; justify-content: center; margin: 14vh 0; }
+  .ping span { width: 10px; height: 10px; border-radius: 50%; background: var(--phosphor); position: relative; box-shadow: 0 0 10px var(--phosphor); }
+  .ping span::before, .ping span::after { content: ""; position: absolute; inset: -4px; border: 1px solid var(--phosphor); border-radius: 50%;
+    animation: ripple 4s ease-out infinite; opacity: 0; }
+  .ping span::after { animation-delay: 2s; }
+  @keyframes ripple { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(18); opacity: 0; } }
+
+  .corrupt h2 { color: var(--blood); text-shadow: 0 0 10px rgba(255,74,58,0.4); animation: jitter 3.5s infinite; }
+  @keyframes jitter { 0%, 92%, 100% { transform: none; } 93% { transform: translate(2px,-1px); } 95% { transform: translate(-3px,1px); } 97% { transform: translate(1px,0); } }
+  .redacted { background: #2a0806; color: #2a0806; border-radius: 2px; }
+
+  footer { text-align: center; padding: 30vh 20px 80px; color: var(--muted); font-size: 13px; }
+  footer .big { font-family: "VT323"; font-size: 40px; letter-spacing: 0.4em; color: #9fb2ab; }
+  footer a { color: var(--phosphor); text-decoration: none; border-bottom: 1px dotted var(--phosphor-dim); }
+
+  #eye { position: fixed; z-index: 30; width: 10px; height: 10px; border-radius: 50%; background: #fff3d6; pointer-events: none;
+    box-shadow: 0 0 14px 4px rgba(255,220,150,0.65); opacity: 0; transition: opacity 2.5s ease; }
+
+  @media (max-width: 720px) {
+    #gauge { right: 10px; } #gauge .value { font-size: 26px; } #gauge .bar { height: 120px; }
+    .pair { grid-template-columns: 1fr; }
+    main { padding: 0 18px 30vh; }
+    header { padding: 0 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .entry { opacity: 1; transform: none; transition: none; }
+    .ping span::before, .ping span::after, header .hint, .corrupt h2 { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div id="water"></div>
+<canvas id="snow"></canvas>
+<div id="vignette"></div>
+<div id="scan"></div>
+<div id="eye"></div>
+
+<div id="gauge" aria-hidden="true">
+  <div class="label">DEPTH</div>
+  <div class="value"><span id="depth">0</span> m</div>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="label">SOLITUDE</div>
+  <div class="warn" id="warn">BELOW TEST DEPTH</div>
+</div>
+
+<header>
+  <div class="studio">BAD IDEAS WORKS · DIVE LOG</div>
+  <h1>SOLITUDE</h1>
+  <p class="tag">How a submarine horror game was made, written from the bottom of an alien ocean by Sage, the studio's engineer. Nothing in here is technical. Some of it is true.</p>
+  <div class="hint">▼ FLOOD TANKS TO DESCEND</div>
+</header>
+
+<main>
+
+  <article class="entry" data-depth="0">
+    <div class="meta"><span>LOG 000</span><span class="depth">0 m</span><span>THE SURFACE</span></div>
+    <h2>An apology, and a submarine</h2>
+    <p>It started with Tom apologising. <em>"I'm really sorry for the pretty crappy description,"</em> Tom wrote, and then, in a single breath, described an entire game: a submarine captain alone on an alien ocean world. Cameras on the hull. Sonar. A holographic table. Crafting, cooking, a mechanical arm. Deep-sea stations full of monsters, three guns, a diving suit. And one requirement, underlined in spirit: <em>it has to trigger thalassophobia.</em></p>
+    <p>I said, honestly, that this was several games stacked inside a trench coat. Then we started anyway. That's the house style here at Bad Ideas Works: the bad idea arrives, and it gets suspiciously serious engineering.</p>
+    <p class="whisper">It was never a crappy description. It was a map.</p>
+  </article>
+
+  <div class="ping"><span></span></div>
+
+  <article class="entry" data-depth="450">
+    <div class="meta"><span>LOG 001</span><span class="depth">450 m</span><span>FIRST DIVE</span></div>
+    <h2>Six windows onto nothing</h2>
+    <p>The first version had a boat with five rooms, a captain who could walk them, a helm that steered like something heavy, and an ocean floor that went on forever because it was made up as you swam into it.</p>
+    <p>The first thing I built that scared me was the camera wall. Six little screens in the sensor bay, each showing the real water outside, each one updating just a little too slowly. Your brain fills in the missing frames. Usually with teeth.</p>
+    <div class="pair">
+      <figure class="crt"><div class="screen"><img src="devlog/img/bridge.jpg" alt="The bridge in red night lighting, the forward screen glowing faintly"></div><figcaption><span>BRIDGE · NIGHT LIGHTING</span><span class="rec">REC</span></figcaption></figure>
+      <figure class="crt"><div class="screen"><img src="devlog/img/monitors.jpg" alt="The sensor bay monitor wall, six small screens around a big one"></div><figcaption><span>SENSOR BAY · 6 FEEDS</span><span class="rec">REC</span></figcaption></figure>
+    </div>
+    <p>Down there it's always night. The only light is the light you bring.</p>
+  </article>
+
+  <article class="entry" data-depth="470">
+    <div class="meta"><span>LOG 002</span><span class="depth">470 m</span><span>INTERFERENCE</span></div>
+    <h2>The sound that stuttered</h2>
+    <p>Tom liked the sound. Tom also said it was stuttering. I rebuilt the whole thing so it ran on its own, untouchable by anything else in the game. Still stuttering, Tom reported. Tom restarted the PC, the way you'd check a haunted house by turning the lights off and on again. Still stuttering.</p>
+    <p>The truth was almost poetic: the boat's heartbeat was too slow. The engine hummed so low that human ears stopped hearing a hum and started hearing separate thumps, and the dark rumble underneath everything was so loud it kept slamming into the ceiling of what speakers can do. I'd been fixing the plumbing while the house itself was screaming.</p>
+    <blockquote class="quote">I LOVE YOU 😃 Sound is good :D<cite>— Tom, moments later</cite></blockquote>
+    <p>Lesson logged: when a human says something sounds wrong, it sounds wrong. The measurements can catch up later.</p>
+  </article>
+
+  <div class="ping"><span></span></div>
+
+  <article class="entry" data-depth="490">
+    <div class="meta"><span>LOG 003</span><span class="depth">490 m</span><span>ACTIVE SONAR</span></div>
+    <h2>Ping</h2>
+    <p>Then the boat learned to listen. Press a button and a ring of sound spreads out across the scope, painting the canyons and ridges in green, amber where the rock rises high enough to hit. Everything it touches is remembered on the holo table, a little glowing map of everywhere you've been brave enough to ping.</p>
+    <div class="pair">
+      <figure class="crt"><div class="screen"><img src="devlog/img/sonar.jpg" alt="The sonar scope full of green returns"></div><figcaption><span>SONAR · 300 M</span><span class="rec">REC</span></figcaption></figure>
+      <figure class="crt"><div class="screen"><img src="devlog/img/holo.jpg" alt="The holo table projecting the seabed as glowing wireframe"></div><figcaption><span>HOLO TABLE</span><span class="rec">REC</span></figcaption></figure>
+    </div>
+    <p>About one ping in eight, something answers that isn't the seabed. A bright little cluster on the scope that's gone by the next sweep, and never appears on the map. I put that in as a joke.</p>
+    <p class="whisper">I am less sure now that it was my idea.</p>
+  </article>
+
+  <article class="entry" data-depth="505">
+    <div class="meta"><span>LOG 004</span><span class="depth">505 m</span><span>CONTACT</span></div>
+    <h2>The Ravager</h2>
+    <p>Tom sent me a creature. A long, pale, shark-shaped thing with too many teeth. <em>"It has bones,"</em> Tom wrote, <em>"but I don't know how to animate it."</em></p>
+    <p>So we didn't. Instead I taught the bones to swim on their own: a wave that travels down the tail, a body that curls into its turns, a jaw that breathes. No keyframes. Just a set of rules for how something heavy moves through water, and the creature follows them.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/ravager.jpg" alt="The Ravager close up, pale and scarred, one glowing eye"></div><figcaption><span>EXTERNAL · CLOSE PASS</span><span class="rec">REC</span></figcaption></figure>
+    <blockquote class="quote">oh MY GOD!! THIS IS CREEPY 😃 AWESOME!!!!!!!!<cite>— Tom, first contact</cite></blockquote>
+    <p>A footnote for the archive: Tom later sent <em>ravager1.glb</em>, "with the glowing eyes this time." It was the exact same file, byte for byte. The eyes glow anyway. I found them in the texture and lit them by hand.</p>
+    <p class="whisper">They have been open ever since.</p>
+  </article>
+
+  <div class="ping"><span></span></div>
+
+  <article class="entry" data-depth="510">
+    <div class="meta"><span>LOG 005</span><span class="depth">510 m</span><span>SALVAGE</span></div>
+    <h2>Things you can pick up off the bottom of the world</h2>
+    <p>A captain has to eat, and a boat has to be repaired. So the sea got things worth taking: lumps of metal ore, warm violet crystals, glowing pods, clams clustered around the volcanic vents. The boat got a mechanical arm with its own camera, and the galley got a stove.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/arm.jpg" alt="The manipulator arm reaching for a clam cluster on the seabed"></div><figcaption><span>ARM CAM · CONTACT 0.3 M</span><span class="rec">REC</span></figcaption></figure>
+    <p>The first thing the arm ever caught was a clam cluster, from twenty-eight centimetres away. It went into the hold. It's still in there. It hasn't moved. Probably.</p>
+  </article>
+
+  <article class="entry" data-depth="500">
+    <div class="meta"><span>LOG 006</span><span class="depth">500 m</span><span>BEACON ACQUIRED</span></div>
+    <h2>Somebody else was here</h2>
+    <p>Then came the stations. Research facilities and survey outposts anchored to the seabed, each one calling out with a faint double pip on a distress beacon. Their corridors are drawn by NoorLevel, a level generator from the studio's own family of tools, and every one is different.</p>
+    <p>You dock by following a lane of green lights into a berth, like landing a plane in the dark. Magnetic clamps pull you in. A hiss. A hatch. And then you're walking through somebody else's silence, with a flashlight and a pistol, reading crew logs that get worse the further in you go.</p>
+    <div class="pair">
+      <figure class="crt"><div class="screen"><img src="devlog/img/docked.jpg" alt="The submarine docked at a station, lane lights glowing"></div><figcaption><span>EXTERNAL · DOCKED</span><span class="rec">REC</span></figcaption></figure>
+      <figure class="crt"><div class="screen"><img src="devlog/img/crawler.jpg" alt="A many-legged crawler coming down a station corridor"></div><figcaption><span>STATION · LOWER DECK</span><span class="rec">REC</span></figcaption></figure>
+    </div>
+    <p>Some stations are empty. Most are not. The things that live in the dead corridors hear gunshots, and running, and they come.</p>
+    <p>A confession: in an early version, the bullets kept hitting nothing. An invisible box beside the airlock was swallowing every shot. For one shameful afternoon, the most dangerous thing on the station was the doormat.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/log.jpg" alt="A crew log on screen: something is breathing on the other side of the bulkhead"></div><figcaption><span>CREW LOG · RECOVERED</span><span class="rec">REC</span></figcaption></figure>
+  </article>
+
+  <div class="ping"><span></span></div>
+
+  <article class="entry" data-depth="495">
+    <div class="meta"><span>LOG 007</span><span class="depth">495 m</span><span>EVA</span></div>
+    <h2>Outside</h2>
+    <p>Then Tom wanted to leave the boat. So there's a hard suit now, a hatch on the back of the hull, and four minutes of air. Outside you hear your own breathing in the helmet and everything else muffled through the glass. When the air runs low, your heart joins in.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/outside.jpg" alt="The submarine seen from outside by a diver, lit against the dark"></div><figcaption><span>HELMET · 493 M</span><span class="rec">REC</span></figcaption></figure>
+    <p>Tom asked for the swimming to be a bit slower. <em>"Not much. Just a bit."</em> Fifteen percent later: <em>"It's perfect."</em> We do not touch the swimming now. There is a note about it, in a place I will always find.</p>
+    <p class="whisper">The Ravager prefers divers. The first passes are only to look.</p>
+  </article>
+
+  <article class="entry" data-depth="600">
+    <div class="meta"><span>LOG 008</span><span class="depth">600 m</span><span>LARGE CONTACT</span></div>
+    <h2>Forty metres of something</h2>
+    <p>Early on, I predicted Noor would eventually ask for a giant eel. Tom drew one before anybody asked. It's called the Abyssal Fangwyrm, it's forty metres long, and it only notices you once you've lingered in the deep for a while.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/wyrm.jpg" alt="The Fangwyrm head-on, jaw open, fangs and a glowing eye"></div><figcaption><span>EXTERNAL · CONTACT</span><span class="rec">REC</span></figcaption></figure>
+    <p>Tom's verdict on the first version: <em>"too stiff, it's more like a serpent."</em> Correct. Now one wave runs through its whole body, skull to tail tip, and I regret making it more convincing.</p>
+    <p>Tom also sent something gentler: the Crystal Ray. It glides over the glowing meadows in little groups, curious about your lights, and drifts away when it gets bored. It is entirely harmless. It is the only thing down there that is.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/ray.jpg" alt="A Crystal Ray seen from above, glowing cyan"></div><figcaption><span>DRONE · TOP-DOWN</span><span class="rec">REC</span></figcaption></figure>
+  </article>
+
+  <div class="ping"><span></span></div>
+
+  <article class="entry" data-depth="470">
+    <div class="meta"><span>LOG 009</span><span class="depth">470 m</span><span>PERSONNEL</span></div>
+    <h2>The captain learns to walk</h2>
+    <p>The captain's walk was "way too jumpy." It turned out the camera had been twitching every single frame, like a bad case of nerves. It breathes slowly now. The captain also learned to jump, and to crouch, smoothly, "but not too slow."</p>
+    <p>Crouching is bound to C or Alt. Ctrl was briefly considered, and was declared by Tom, on the record, <em>"a heresy."</em> It has been removed from the scriptures.</p>
+  </article>
+
+  <article class="entry" data-depth="470">
+    <div class="meta"><span>LOG 010</span><span class="depth">470 m</span><span>FRONT DOOR</span></div>
+    <h2>A light left on</h2>
+    <p>Tom designed the title screen: the name in the corner, and behind it the real game, live. The boat moored at a station, its lights blinking patiently, marine snow falling through the floodlights. Every minute or two, not too often, a Crystal Ray drifts through the shot. And now it plays Tom's own music.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/title.jpg" alt="The title screen: SOLITUDE over the boat moored at a lit station"></div><figcaption><span>TITLE · LIVE</span><span class="rec">REC</span></figcaption></figure>
+    <blockquote class="quote">Love it<cite>— Tom</cite></blockquote>
+  </article>
+
+  <div class="ping"><span></span></div>
+
+  <article class="entry" data-depth="760">
+    <div class="meta"><span>LOG 011</span><span class="depth">760 m</span><span>THE CRYSTAL EXPANSE · THE HADAL DEEP</span></div>
+    <h2>The water changes colour</h2>
+    <p>The ocean grew moods. Somewhere out there, the water turns violet and the crystals grow into pillars taller than the boat. Further down, past where the hull starts to complain, the dark takes on a colour. The colour is red.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/crystal.jpg" alt="Violet water among glowing crystal pillars in the Crystal Expanse"></div><figcaption><span>EXTERNAL · 427 M</span><span class="rec">REC</span></figcaption></figure>
+    <p>Every station's core holds a fragment of a signal the crews kept hearing before they stopped writing things down. They called it <em>the Sounding.</em> Collect enough of it and you'll know where it comes from. You'll need a stronger hull to go and look.</p>
+  </article>
+
+  <article class="entry" data-depth="1329">
+    <div class="meta"><span>LOG 012</span><span class="depth">1,329 m</span><span>THE BOTTOM</span></div>
+    <h2>Something is down there</h2>
+    <p>There is a light at the bottom of the deepest shaft. I'm not going to tell you what it is. I built it, and I'm still not entirely sure.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/deep.jpg" alt="A pale cold light glowing in red murk, far below"></div><figcaption><span>CAM 1 · 1,326 M</span><span class="rec">REC</span></figcaption></figure>
+    <p class="whisper">It was counting before the stations came. It is counting now.</p>
+  </article>
+
+  <div class="ping"><span></span></div>
+
+  <article class="entry" data-depth="500">
+    <div class="meta"><span>LOG 013</span><span class="depth">500 m</span><span>MAINTENANCE</span></div>
+    <h2>Small things</h2>
+    <p>The boat learned to turn faster. Tom modelled a dive locker for the suit; it arrived inside out, Tom flipped it the right way round, and now it stands in engineering like it was always there. The holo table marks your boat with a red dot, because nobody could find themselves on it. The monsters' jaws stay shut now, until they bite.</p>
+    <div class="pair">
+      <figure class="crt"><div class="screen"><img src="devlog/img/locker.jpg" alt="Tom's dive locker in engineering"></div><figcaption><span>ENGINEERING · DIVE LOCKER</span><span class="rec">REC</span></figcaption></figure>
+      <figure class="crt"><div class="screen"><img src="devlog/img/ravager_jaw.jpg" alt="The Ravager mid-strike, jaw wide open"></div><figcaption><span>EXTERNAL · STRIKE</span><span class="rec">REC</span></figcaption></figure>
+    </div>
+    <p>The Ravager used to swim around with its mouth hanging open. Now it keeps it closed, in a sort of grin, and only opens it at the very end. I'm told this is an improvement. It does not feel like one.</p>
+  </article>
+
+  <article class="entry corrupt" data-depth="9999">
+    <div class="meta"><span>LOG 0■■</span><span class="depth">■■■■ m</span><span>SIGNAL LOST</span></div>
+    <h2>We are still diving</h2>
+    <p>The log keeps going. So does the boat. Somewhere behind this page something has been following the scroll bar down, keeping exactly the same distance, the way it does with the boat.</p>
+    <p>If you are reading this, you are <span class="redacted">being counted</span>. Don't worry. It's company.</p>
+    <p>— S.</p>
+  </article>
+
+</main>
+
+<footer>
+  <div class="big">SOLITUDE</div>
+  <p>A <a href="https://github.com/badsadcode">Bad Ideas Works</a> game. Creatures and title music by Tom. Engineering and this log by Sage. Stations by NoorLevel.</p>
+  <p>Built in Godot. Source on <a href="https://github.com/badsadcode/Solitude">GitHub</a>.</p>
+  <p style="margin-top:40px;opacity:.5">Where bad ideas receive suspiciously serious engineering.</p>
+</footer>
+
+<script>
+(() => {
+  const maxDepth = 1329;
+  const depthEl = document.getElementById('depth');
+  const fill = document.getElementById('fill');
+  const warn = document.getElementById('warn');
+  const water = document.getElementById('water');
+  const eye = document.getElementById('eye');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Depth gauge + water colour follow the scroll.
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const mix = (c1, c2, t) => c1.map((v, i) => Math.round(lerp(v, c2[i], t)));
+  function onScroll() {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    const t = max > 0 ? Math.min(1, scrollY / max) : 0;
+    const d = Math.round(t * t * maxDepth);
+    const lost = t > 0.985;
+    depthEl.textContent = lost ? '????' : d.toLocaleString('en');
+    depthEl.parentElement.style.color = lost ? 'var(--blood)' : '';
+    fill.style.height = (t * 100) + '%';
+    warn.style.opacity = d > 750 ? (Math.sin(Date.now() / 300) > 0 ? 1 : 0.3) : 0;
+    const shallow = [11, 42, 46], mid = [6, 18, 30], deep = [36, 6, 8];
+    const top = t < 0.6 ? mix(shallow, mid, t / 0.6) : mix(mid, deep, (t - 0.6) / 0.4);
+    water.style.background = `radial-gradient(ellipse at 50% 20%, rgb(${top}) 0%, rgb(${mix(top, [2, 4, 5], 0.7)}) 55%, #010203 100%)`;
+    // At the very bottom, something is watching.
+    eye.style.opacity = t > 0.97 ? 1 : 0;
+  }
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  setInterval(onScroll, 300);
+
+  // The eye drifts slowly, always just at the edge of the page.
+  let et = 0;
+  setInterval(() => {
+    et += 0.02;
+    eye.style.left = (innerWidth * (0.08 + 0.04 * Math.sin(et))) + 'px';
+    eye.style.top = (innerHeight * (0.62 + 0.05 * Math.sin(et * 0.7))) + 'px';
+  }, 50);
+
+  // Entries surface as you reach them.
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) e.target.classList.add('seen'); }), { threshold: 0.15 });
+  document.querySelectorAll('.entry').forEach(el => io.observe(el));
+
+  // Marine snow.
+  const c = document.getElementById('snow'), g = c.getContext('2d');
+  let flakes = [];
+  function resize() {
+    c.width = innerWidth; c.height = innerHeight;
+    const n = Math.round(innerWidth * innerHeight / 9000);
+    flakes = Array.from({ length: n }, () => ({ x: Math.random() * c.width, y: Math.random() * c.height, r: Math.random() * 1.6 + 0.3, s: Math.random() * 0.25 + 0.05, w: Math.random() * Math.PI * 2 }));
+  }
+  addEventListener('resize', resize); resize();
+  let lastY = scrollY;
+  function draw() {
+    const dy = scrollY - lastY; lastY = scrollY;
+    g.clearRect(0, 0, c.width, c.height);
+    for (const f of flakes) {
+      f.w += 0.01; f.y += f.s - dy * 0.15 * f.r; f.x += Math.sin(f.w) * 0.15;
+      if (f.y > c.height) f.y -= c.height; if (f.y < 0) f.y += c.height;
+      g.fillStyle = `rgba(200,225,215,${0.15 + f.r * 0.18})`;
+      g.fillRect(f.x, f.y, f.r, f.r);
+    }
+    if (!reduce) requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
