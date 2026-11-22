@@ -20,8 +20,43 @@ public partial class Crawler
 {
     /// <summary>Set before adding to the tree: Tom's abyssal crawler instead of the procedural one.</summary>
     public bool Abyssal;
+    /// <summary>Which of Tom's versions (any number; wraps) and how big this one grew (≈0.9..1.15).</summary>
+    public int Variant;
+    public float SizeJitter = 1f;
 
-    private const string AbyssalScene = "res://assets/Abyssal_Crawler.glb";
+    private static string[] _variants;
+    /// <summary>
+    /// Every assets/Abyssal_Crawler*.glb is a variant (Tom: "different versions of it"): drop in
+    /// Abyssal_Crawler_Whatever.glb with the same rig and it appears in the stations. Sorted, so a
+    /// variant number always means the same file. (Exported builds list *.glb.import, hence the trim.)
+    /// </summary>
+    public static string[] AbyssalVariants
+    {
+        get
+        {
+            if (_variants != null) return _variants;
+            var list = new List<string>();
+            using var dir = DirAccess.Open("res://assets");
+            if (dir != null)
+                foreach (var f in dir.GetFiles())
+                {
+                    string name = f.EndsWith(".import") ? f[..^7] : f;
+                    if (name.StartsWith("Abyssal_Crawler") && name.EndsWith(".glb") && !list.Contains(name)) list.Add(name);
+                }
+            list.Sort(StringComparer.Ordinal);
+            if (list.Count == 0) list.Add("Abyssal_Crawler.glb");
+            return _variants = list.ToArray();
+        }
+    }
+    private string AbyssalScene => "res://assets/" + AbyssalVariants[Math.Abs(Variant) % AbyssalVariants.Length];
+    /// <summary>
+    /// Glow strength per variant: Tom paints the glow textures by hand, and the spiked one's spikes
+    /// glow too (three times the glowing area), so it runs at half strength to keep them from burning white.
+    /// </summary>
+    private float GlowEnergy => Spiked ? 1.1f : 2.2f;
+
+    /// <summary>Spiked ones are tougher.</summary>
+    private bool Spiked => AbyssalScene.Contains("Spiked");
     private const float AbyssalScale = 1.45f;              // the model is ~0.95 m across; this makes it ~1.4 m
     private static readonly Color BaseTint = new(1.35f, 1.3f, 1.35f);   // brightens Tom's dark texture a little
     private Skeleton3D _skel;
@@ -40,7 +75,9 @@ public partial class Crawler
         var pivot = new Node3D { RotationDegrees = new Vector3(0, 180, 0), Position = new Vector3(0, 0.27f * AbyssalScale, 0) };
         _abyssRoot.AddChild(pivot);
         pivot.AddChild(model);
-        model.Scale = Vector3.One * AbyssalScale;
+        model.Scale = Vector3.One * AbyssalScale * SizeJitter;
+        pivot.Position *= SizeJitter;
+        if (Spiked) Health *= 1.3f;
 
         _mat = new ShaderMaterial { Shader = GD.Load<Shader>("res://Shaders/creature.gdshader") };
         foreach (var mi in Find<MeshInstance3D>(model))
@@ -53,7 +90,7 @@ public partial class Crawler
                 {
                     _mat.SetShaderParameter("use_emission_tex", true);
                     _mat.SetShaderParameter("emission_tex", src.EmissionTexture);
-                    _mat.SetShaderParameter("emission_tex_energy", 2.2f);
+                    _mat.SetShaderParameter("emission_tex_energy", GlowEnergy);
                 }
             }
             mi.MaterialOverride = _mat;
@@ -64,7 +101,7 @@ public partial class Crawler
         // brighter, and a softer glow so the eyes are eyes rather than blobs.
         _mat.SetShaderParameter("wet_spec", 0.12f);
         _mat.SetShaderParameter("roughness_v", 0.85f);
-        _mat.SetShaderParameter("emission_tex_energy", 2.2f);
+        _mat.SetShaderParameter("emission_tex_energy", GlowEnergy);
         _mat.SetShaderParameter("tint", BaseTint);
 
         foreach (var s in Find<Skeleton3D>(model)) { _skel = s; break; }

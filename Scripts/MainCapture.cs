@@ -129,7 +129,7 @@ public partial class Main
                     if (k == 1 && arg.StartsWith("--stairs-crawler="))
                     {
                         Vector3 ahead = -_player.GlobalBasis.Z; ahead.Y = 0;
-                        _station.DebugSpawnCrawler(_player.GlobalPosition + ahead.Normalized() * 5f + Vector3.Up * 0.3f, arg.EndsWith("abyssal")); _player.RotateY(0.55f); _player.SetLook(0f, -0.25f);
+                        _station.DebugSpawnCrawler(_player.GlobalPosition + ahead.Normalized() * 5f + Vector3.Up * 0.3f, arg.Contains("abyssal"), arg.Contains(":") ? int.Parse(arg[(arg.LastIndexOf(':') + 1)..]) : 0); _player.RotateY(0.55f); _player.SetLook(0f, -0.25f);
                         Input.ActionRelease(GameInput.Forward);
                     }
                     if (arg.StartsWith("--stairs-shots=")) GetViewport().GetTexture().GetImage().SavePng($"{arg.Substring(15)}_{k:00}.png");

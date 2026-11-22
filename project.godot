@@ -20,6 +20,10 @@ window/stretch/mode="disabled"
 
 project/assembly_name="Solitude"
 
+[filesystem]
+
+import/blender/enabled=false
+
 [physics]
 
 common/physics_ticks_per_second=60

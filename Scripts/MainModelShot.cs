@@ -15,6 +15,14 @@ public partial class Main
 {
     private void ModelShot(string path, string outDir)
     {
+        // Check the model loads before touching the world: a failed load used to leave two sun lamps
+        // shining into the title screen.
+        if (!ResourceLoader.Exists(path) || GD.Load<PackedScene>(path) == null)
+        {
+            GD.PrintErr($"[model-shot] can't load {path} (not imported yet?)");
+            GetTree().Quit(1);
+            return;
+        }
         DirAccess.MakeDirRecursiveAbsolute(outDir);
         var stage = new Node3D { Name = "ModelStage", Position = new Vector3(0, 4000, 0) };
         _game.AddChild(stage);

@@ -79,13 +79,14 @@ public partial class StationInterior
     public static bool ForceDark;
 
     /// <summary>Dev / capture: a crawler of the chosen species at a global point.</summary>
-    public void DebugSpawnCrawler(Vector3 globalPos, bool abyssal)
+    public void DebugSpawnCrawler(Vector3 globalPos, bool abyssal, int variant = 0)
     {
-        var c = new Solitude.Creatures.Crawler { Abyssal = abyssal, Player = Player, Index = 900 + Crawlers.Count };
+        var c = new Solitude.Creatures.Crawler { Abyssal = abyssal, Variant = variant, Player = Player, Index = 900 + Crawlers.Count };
         AddChild(c);
         c.GlobalPosition = globalPos;
         c.Sound = (kind, pos) => Sound?.Invoke(kind, pos);
         Crawlers.Add(c);
+        GD.Print($"[crawler] spawned {(abyssal ? Solitude.Creatures.Crawler.AbyssalVariants[variant % Solitude.Creatures.Crawler.AbyssalVariants.Length] : "procedural")} (variants: {string.Join(", ", Solitude.Creatures.Crawler.AbyssalVariants)})");
     }
 
     /// <summary>Dev / capture: use the first junction.</summary>
