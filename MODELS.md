@@ -78,6 +78,7 @@ These are "blockout" furniture: the level generator already builds them as rough
 - [ ] **Harpoon gun**: held in the diving suit. Origin at the grip, barrel pointing forward (−Y in Blender). You stare at it the whole dive.
 - [ ] **Multi-tool**: the welder held in hand.
 - [ ] **Loot items**: datapad, keycard, medkit box, power cell.
+- [ ] **The Gloam** (working name, rename it if you like): the deep hunter that comes for light. About **24 m** long, an armoured, segmented swimmer (think giant isopod crossed with a centipede): 12–14 overlapping arched plates, a pair of long oar-like paddles on each segment, a flat shovel head with a crown of **six small pale eyes** (emission), two long feelers and hooked mandibles folded underneath. Dark, wet plates, pale belly. Rig: a bone chain head → tail (one bone per segment is perfect), plus one bone per paddle if you can; unanimated is fine, Sage rows the paddles. Save as `assets/Gloam.glb`. Right now it's a procedural placeholder in Scripts/Creatures/Gloam.cs.
 - [ ] **More sea creatures**: whatever you dream up. Rigged and unanimated is fine; Sage animates on the bones.
 
 ---

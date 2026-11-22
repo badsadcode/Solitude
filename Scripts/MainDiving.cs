@@ -57,6 +57,7 @@ public partial class Main
     {
         if (_ravager != null && _ravager.IsInsideTree() && _ravager.Visible) yield return _ravager;
         foreach (var r in _creatures.Rays) if (r.IsInsideTree()) yield return r;
+        if (_gloam != null && _gloam.IsInsideTree()) yield return _gloam;
         if (_creatures.Wyrm is { } w && w.IsInsideTree()) yield return w;
     }
 
@@ -141,7 +142,7 @@ public partial class Main
                 _hud.Message($"Bagged: {Items.Name(got)} ({_diver.Bag.Count}/{Diver.BagSize}).", 3f);
             }
         }
-        if (Input.IsActionJustPressed(GameInput.Flashlight)) { _diver.Lamp.Visible = !_diver.Lamp.Visible; _audio.PlayAt("empty", 0.3f, 0.6f); }
+        if (Input.IsActionJustPressed(GameInput.Flashlight) && (_diver.Lamp.Visible || !LampLocked())) { _diver.Lamp.Visible = !_diver.Lamp.Visible; _audio.PlayAt("empty", 0.3f, 0.6f); }
 
         // Helmet readouts
         var h = _hud.Helmet;
@@ -163,7 +164,8 @@ public partial class Main
         // Panic: low air, or something enormous close by.
         float air = Mathf.Clamp((35f - _diver.Oxygen) / 35f, 0f, 1f);
         float near = Mathf.Max(Mathf.Clamp((40f - _ravager.DistanceToDiver) / 30f, 0f, 1f),
-                               Mathf.Clamp((90f - _creatures.ApexDistance) / 60f, 0f, 1f)); // the wyrm is felt from further away
+                               Mathf.Max(Mathf.Clamp((90f - _creatures.ApexDistance) / 60f, 0f, 1f),   // the wyrm is felt from further away
+                                         Mathf.Clamp((70f - GloamDistance) / 50f, 0f, 1f)));
         float panic = Mathf.Max(air, near);
         _audio.Heartbeat = panic;
         _audio.Exertion = _diver.Exertion;

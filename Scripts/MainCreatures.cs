@@ -46,6 +46,7 @@ public partial class Main
         {
             var list = new List<Vector3>(previous?.Invoke() ?? new List<Vector3>());
             list.AddRange(_creatures.Bodies());
+            if (_gloam != null) list.AddRange(_gloam.SonarPoints());
             return list;
         };
     }

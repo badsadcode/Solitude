@@ -54,10 +54,11 @@ public sealed class SfxVoice : Voice
             "listener" => (7.0f, 0.55f),
             "powerup" => (4.0f, 0.6f),
             "whalesong" => (9.0f, 0.5f),
+            "gloam" => (2.4f, 0.55f),
             _ => (0.2f, 0.2f),
         };
         Gain *= gain;
-        _bp1 = new BandPass(kind switch { "chitter" => 2600f * jitter, "shotgun" => 900f, "rifle" => 1500f, "pistol" => 1800f, "door" => 300f, "knock" => 220f * jitter, "weld" => 4200f, "shock" => 3600f, "reel" => 2400f, "spearhit" => 500f, _ => 1200f * jitter }, kind == "chitter" ? 12f : 2.5f, rate);
+        _bp1 = new BandPass(kind switch { "chitter" => 2600f * jitter, "shotgun" => 900f, "rifle" => 1500f, "pistol" => 1800f, "door" => 300f, "knock" => 220f * jitter, "weld" => 4200f, "shock" => 3600f, "reel" => 2400f, "spearhit" => 500f, "gloam" => 850f * jitter, _ => 1200f * jitter }, kind == "chitter" ? 12f : 2.5f, rate);
         _bp2 = new BandPass(kind switch { "pistol" => 2900f, "rifle" => 3400f, "shotgun" => 2100f, "knock" => 160f * jitter, _ => 700f }, 30f, rate);
         _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, "klaxon" => 1800f, "breach" => 600f, "harpoon" => 900f, "listener" => 260f, "whalesong" => 900f, _ => 4000f }, rate);
     }
@@ -268,6 +269,19 @@ public sealed class SfxVoice : Voice
                             + MathF.Sin(_ph1 * 2f * MathF.Tau) * 0.2f;
                 float grind = _lp.Process(w) * (0.5f + 0.5f * MathF.Sin(T * 3.1f));
                 s = (tones * 0.8f + grind * 1.2f) * env;
+                break;
+            }
+            case "gloam":
+            {
+                // The Gloam: dozens of armour plates knocking together as it turns. A dry rattle that
+                // speeds up and slows, over a hollow knock, like someone running a stick along a fence.
+                float rate = 9f + 26f * MathF.Sin(MathF.PI * u) * (0.7f + 0.3f * MathF.Sin(T * 5f));
+                _clk += rate * dt;
+                float imp = 0f;
+                if (_clk >= 1f) { _clk -= 1f; imp = 0.6f + (float)Rng.NextDouble() * 0.8f; }
+                _ph1 += 46f * dt;
+                float knock = MathF.Sin(_ph1 * MathF.Tau) * imp * 0.8f;
+                s = (_bp1.Process(imp + w * 0.03f) * 2.6f + _bp2.Process(imp) * 1.5f + knock) * MathF.Pow(MathF.Sin(MathF.PI * u), 0.5f);
                 break;
             }
             case "reel":

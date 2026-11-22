@@ -709,6 +709,7 @@ public partial class Main : Node
 		UpdateListener(dt);
 		UpdateHydrophoneWorld(dt);
 		UpdateEyeEncounter(dt);
+		UpdateGloam(dt);
 		UpdateProximity(dt);
 		if (_mode != Mode.Monitors) _camServo = Mathf.MoveToward(_camServo, 0f, dt * 6f);
 		UpdateCapture(dt);
@@ -780,7 +781,7 @@ public partial class Main : Node
 		HelmDocking();
 		if (Input.IsActionJustPressed(GameInput.IntakeToggle)) _systems.ToggleIntake();
 		if (Input.IsActionJustPressed(GameInput.CenterControls)) { _sub.Rudder = 0f; _sub.Planes = 0f; _audio.PlayBlip(400f, 0.05f); }
-		if (Input.IsActionJustPressed(GameInput.Lights)) { _sub.LightsOn = !_sub.LightsOn; _audio.PlayBlip(220f, 0.04f, 0.8f); }
+		if (Input.IsActionJustPressed(GameInput.Lights) && (_sub.LightsOn || !FloodsLocked())) { _sub.LightsOn = !_sub.LightsOn; _audio.PlayBlip(220f, 0.04f, 0.8f); }
 		if (Input.IsActionJustPressed(GameInput.CameraCycle))
 		{
 			_view = (HelmView)(((int)_view + 1) % 3);

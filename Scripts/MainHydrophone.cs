@@ -65,6 +65,7 @@ public partial class Main
         foreach (var r in _creatures.Rays) if (r.IsInsideTree()) AddSource(SoundClass.Ray, r.GlobalPosition, 0.5f, 350f);
         if (_creatures.Wyrm is { } w && w.IsInsideTree()) AddSource(SoundClass.Wyrm, w.GlobalPosition, 1f, 1400f, 7f);
         if (_creatures.Whale is { } wh && wh.IsInsideTree()) AddSource(SoundClass.Whale, wh.GlobalPosition, 1f, 2000f, 9f);
+        if (_gloam != null && _gloam.IsInsideTree()) AddSource(SoundClass.Gloam, _gloam.Head, _gloam.Current == Creatures.Gloam.State.Prowl ? 0.5f : 0.85f, 700f, 5f);
         int vents = 0;
         foreach (var v in _terrain.VentsNear(p, 500f)) { if (++vents > 6) break; AddSource(SoundClass.Vent, v, 0.45f, 500f); }
         var heard = new HashSet<long>();
@@ -227,7 +228,7 @@ public partial class Main
         // Close enough to see it (or sitting next to it) identifies it.
         bool identify = s.Class switch
         {
-            SoundClass.Ravager or SoundClass.Ray or SoundClass.Wyrm => s.Distance < 70f,
+            SoundClass.Ravager or SoundClass.Ray or SoundClass.Wyrm or SoundClass.Gloam => s.Distance < 70f,
             SoundClass.Whale => s.Distance < 150f,   // impossible to miss at that range
             SoundClass.Station => s.Distance < 300f,
             SoundClass.Vent => s.Distance < 120f,

@@ -657,6 +657,48 @@ public partial class Main
             (t += 0.5f, () => { Shot("40g_mast_manual"); GD.Print($"[capture] mast {_rig.AimText(5)}"); }),
             (t += 0.1f, () => { _feedFullscreen = false; _hud.ShowFeed(null, null, 1f); EnterWalking(); _creatures.DismissWhale(); }),
             (t += 1.0f, () => { }),
+            // --- The Gloam: hunts by light. Floods on: it comes. Floods off: it searches, then leaves.
+            (t += 0.1f, CaptureMarkGloam),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                var sp = _sub.GlobalPosition;
+                _terrain.GenerateImmediate(sp, 2);
+                _sub.GlobalPosition = new Vector3(sp.X, _gen.Height(sp.X, sp.Z) + 25f, sp.Z);
+                _sub.LinearVelocity = Vector3.Zero; _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = true;
+                EnterHelm(); _view = HelmView.Chase; ApplyHelmView();
+                SummonGloam(110f);
+                LogGloam("summoned");
+            }),
+            (t += 5f, () => { Shot("41a_gloam_drawn"); LogGloam("5s"); }),
+            (t += 4f, () => { Shot("41b_gloam_close"); LogGloam("9s"); }),
+            (t += 4f, () => { Shot("41c_gloam_after"); LogGloam("13s"); }),
+            (t += 4f, () => { LogGloam("17s"); }),
+            (t += 0.1f, () => { _sub.LightsOn = false; LogGloam("floods off by hand"); }),
+            (t += 10f, () => { Shot("41d_gloam_dark"); LogGloam("dark 10s"); }),
+            (t += 20f, () => LogGloam("dark 30s")),
+            (t += 25f, () => LogGloam("dark 55s")),
+            (t += 0.1f, () =>
+            {
+                // A good look at it: the doc camera with its own lamp (the Gloam ignores this light).
+                _docTarget = _gloam?.Body; _docScale = 0.75f; _docSide = 1f; _docForward = 2f;
+                _docCam = new Camera3D { Fov = 60f, Far = 300f };
+                _docCam.AddChild(new SpotLight3D { SpotRange = 90f, SpotAngle = 50f, LightEnergy = 14f });
+                _game.AddChild(_docCam); _docCam.MakeCurrent();
+            }),
+            (t += 1.0f, () => Shot("41e_gloam_side")),
+            (t += 0.1f, () => { _docSide = -1f; _docScale = 0.4f; _docForward = 6f; }),
+            (t += 1.0f, () => Shot("41f_gloam_head")),
+            (t += 0.1f, () => { _docSide = 2f; _docScale = 0.8f; _docForward = 0f; }),
+            (t += 1.0f, () => Shot("41g_gloam_top")),
+            (t += 0.1f, () =>
+            {
+                _docCam.QueueFree(); _docCam = null; _docTarget = null;
+                if (_gloam != null) { _gloam.Hurt(30f, _sub.GlobalPosition, false); LogGloam("speared"); _gloam.Hurt(5f, _sub.GlobalPosition, true); LogGloam("prodded"); }
+                _gloam?.QueueFree(); _gloam = null;
+                _view = HelmView.Bridge; ApplyHelmView(); EnterWalking();
+            }),
+            (t += 1.0f, () => { }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -927,6 +969,12 @@ public partial class Main
     private void CaptureMarkHarpoon() => CaptureSection("harpoon");
     private void CaptureMarkTest() => CaptureSection("test");
     private void CaptureMarkProx() => CaptureSection("prox");
+    private void CaptureMarkGloam() => CaptureSection("gloam");
+    private void LogGloam(string what)
+    {
+        GD.Print(_gloam == null ? $"[capture] gloam {what}: none" :
+            $"[capture] gloam {what}: state {_gloam.Current} dist {GloamDistance:0} m, hull {_sub.Hull:0}%, floods {(_sub.LightsOn ? "ON" : "off")}, trip {_floodTrip:0} s, breaches {_hull.ActiveBreaches}");
+    }
     private void LogProx()
     {
         if (_prox == null) return;
@@ -969,7 +1017,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);
