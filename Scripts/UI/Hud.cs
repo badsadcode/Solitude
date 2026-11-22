@@ -306,6 +306,23 @@ public partial class Hud : CanvasLayer
 
     public void ShowHelmet(bool on) => Helmet.Visible = on;
 
+    private HideOverlay _hide;
+    /// <summary>The view from inside a locker / under a desk.</summary>
+    public HideOverlay Hide
+    {
+        get
+        {
+            if (_hide == null)
+            {
+                _hide = new HideOverlay { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+                _hide.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+                _root.AddChild(_hide);
+                _root.MoveChild(_hide, _fade.GetIndex());
+            }
+            return _hide;
+        }
+    }
+
     // ------------------------------------------------------------ title screen
 
     private Control _titleGroup;

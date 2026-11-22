@@ -85,6 +85,7 @@ public partial class StationInterior
         AddChild(c);
         c.GlobalPosition = globalPos;
         c.Sound = (kind, pos) => Sound?.Invoke(kind, pos);
+        c.Sniff = Sniffed;
         Crawlers.Add(c);
         GD.Print($"[crawler] spawned {(abyssal ? Solitude.Creatures.Crawler.AbyssalVariants[variant % Solitude.Creatures.Crawler.AbyssalVariants.Length] : "procedural")} (variants: {string.Join(", ", Solitude.Creatures.Crawler.AbyssalVariants)})");
     }

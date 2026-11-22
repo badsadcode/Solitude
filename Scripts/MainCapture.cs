@@ -116,16 +116,27 @@ public partial class Main
             if (!_stairsAirlock || _stairsWalkIn) Input.ActionPress(GameInput.Forward);
             GD.Print($"[stairs] start local {local} layout {_station.Site.Layout}");
         }));
-        for (int i = 1; i <= 12; i++)
+        for (int i = 1; i <= 20; i++)
         {
             tw.TweenInterval(0.5);
             int k = i;
             tw.TweenCallback(Callable.From(() =>
             {
                 var l = _station.ToLocal(_player.GlobalPosition);
-                GD.Print($"[stairs] t={k * 0.5f:0.0} local=({l.X:0.00}, {l.Y:0.00}, {l.Z:0.00}) onFloor={_player.IsOnFloor()} onWall={_player.IsOnWall()} step={Solitude.Core.Stepper.Why}");
+                GD.Print($"[stairs] t={k * 0.5f:0.0} local=({l.X:0.00}, {l.Y:0.00}, {l.Z:0.00}) onFloor={_player.IsOnFloor()} onWall={_player.IsOnWall()} step={Solitude.Core.Stepper.Why} hidden={_player.Hidden} crawler={(_station.Crawlers.Count > 0 ? $"{_station.Crawlers[^1].Current} {_station.NearestCrawler():0.0} m" : "-")} hp={_player.Health:0}");
                 foreach (var arg in OS.GetCmdlineUserArgs())
                 {
+                    if (k == 1 && arg.StartsWith("--stairs-hide="))
+                    {
+                        // Hide, then send a crawler to where we were last "heard".
+                        bool ok = _station.DebugHide(int.Parse(arg.Substring(14)));
+                        if (OS.GetCmdlineUserArgs().Any(x => x == "--stairs-torch")) _player.Flashlight.Visible = true;
+                        GD.Print($"[hide] hid={ok} spots={_station.HidingSpotCount} hidden={_player.Hidden}");
+                        Vector3 back = _player.GlobalBasis.Z; back.Y = 0;
+                        var away = _player.GlobalPosition + new Vector3(6f, 0.3f, 0f);
+                        _station.DebugSpawnCrawler(away, true);
+                        _station.Crawlers[^1].Hear(_player.GlobalPosition, 50f);
+                    }
                     if (k == 1 && arg.StartsWith("--stairs-crawler="))
                     {
                         Vector3 ahead = -_player.GlobalBasis.Z; ahead.Y = 0;

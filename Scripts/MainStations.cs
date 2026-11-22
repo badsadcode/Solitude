@@ -219,11 +219,39 @@ public partial class Main
         _station = null;
     }
 
+    // ------------------------------------------------------------------ hiding
+
+    /// <summary>The view through the slats, your breathing, and your heart when something comes close.</summary>
+    private void UpdateHidingSenses()
+    {
+        bool hidden = _player.Hidden && _station != null;
+        _hud.Hide.Visible = hidden;
+        _audio.Hiding = hidden;
+        if (!hidden)
+        {
+            // Just came out: hands and heart back to normal.
+            if (_hidingHeart) { _audio.Heartbeat = 0f; _audio.BreathHeld = false; _weapons.Visible = true; _hidingHeart = false; }
+            return;
+        }
+        _weapons.Visible = false;   // both hands on the door
+        float near = _station.NearestCrawler();
+        float fear = Mathf.Clamp((9f - near) / 7f, 0f, 1f);
+        _hud.Hide.Desk = _station.HidingUnderDesk;
+        _hud.Hide.Breath01 = _station.Breath01;
+        _hud.Hide.Holding = _station.HoldingBreath;
+        _hud.Hide.Fear = fear;
+        _audio.BreathHeld = _station.HoldingBreath;
+        _audio.Heartbeat = fear;
+        _hidingHeart = true;
+    }
+    private bool _hidingHeart;
+
     // ------------------------------------------------------------------ aboard
 
     private void UpdateAboard(float dt)
     {
-        if (!_player.InStation || _player.Dead || !_player.InputEnabled) return;
+        UpdateHidingSenses();
+        if (!_player.InStation || _player.Dead || !_player.InputEnabled || _player.Hidden) return;
         bool held = Input.IsMouseButtonPressed(MouseButton.Left) && Input.MouseMode == Input.MouseModeEnum.Captured;
         bool pressed = held && !_firePrev;
         _firePrev = held;
@@ -281,6 +309,7 @@ public partial class Main
 
     private void OnPlayerDied()
     {
+        _player.Unhide();   // never wake up stuck in a locker
         if (_diver.Active) _diver.SetPhysicsProcess(false);
         _player.InputEnabled = false;
         _weapons.SetActive(false);

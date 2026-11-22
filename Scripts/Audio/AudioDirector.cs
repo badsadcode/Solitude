@@ -40,6 +40,8 @@ public partial class AudioDirector : Node
     public volatile float Spray;      // 0..1, open hull breaches: water forcing in
     // Hydrophone headphones: when on, the boat is muffled and the beam's sound is synthesised.
     public volatile bool Hydro;
+    /// <summary>Hiding in a locker: your own breathing, loud (silent while you hold it).</summary>
+    public volatile bool Hiding, BreathHeld;
     public volatile float HydLow, HydMid, HydHigh, HydPulseHz, HydDuty = 1f, HydToneHz, HydTone, HydSelf;
     private float _hydOn, _hydPulsePh, _hydTonePh, _hLo, _hMi, _hHi;
     private readonly BandPass _hydLowBp = new(140f, 1.2f, Rate), _hydMidBp = new(900f, 1.6f, Rate), _hydHighBp = new(3600f, 2.2f, Rate);
@@ -295,6 +297,11 @@ public partial class AudioDirector : Node
                 r = _muffleR.Process(r) * 0.85f;
                 float b = Breath(inv, w);
                 l += b; r += b;
+            }
+            if (Hiding && !Diving && !BreathHeld)
+            {
+                float hbr = Breath(inv, w) * 1.3f;
+                l += hbr; r += hbr;
             }
             float hb = Heart(inv);
             l += hb; r += hb;

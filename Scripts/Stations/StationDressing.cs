@@ -166,6 +166,9 @@ public partial class StationInterior
                         AddChild(new OmniLight3D { Position = pos + Vector3.Up * 0.4f, LightColor = new Color(0.5f, 0.7f, 1f), LightEnergy = 0.6f, OmniRange = 4f });
                     break;
                 }
+                case "hiding_spot":
+                    AddHidingSpot(pos, extras);
+                    break;
                 case "power_junction":
                     AddJunction(new Transform3D(basis, pos), Vec3(Field(extras, "footprint"), new Vector3(0.6f, 0.25f, 0.8f)));
                     break;
@@ -232,6 +235,7 @@ public partial class StationInterior
     private void UpdateDressing(float dt)
     {
         if (Player == null || !Player.InStation) return;
+        UpdateHiding(dt);
         Vector3 me = ToLocal(Player.GlobalPosition);
         foreach (var d in _bulkheads)
         {

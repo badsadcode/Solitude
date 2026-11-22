@@ -456,6 +456,7 @@ public partial class StationInterior : Node3D
             var c = new Crawler { Abyssal = abyssal, Variant = variant, SizeJitter = size, Player = Player, Index = i, Position = cp + Vector3.Up * 0.3f, Rotation = new Vector3(0, (float)_rng.NextDouble() * Mathf.Tau, 0) };
             c.Sound = (kind, pos) => Sound?.Invoke(kind, pos);
             c.Killed = k => State.Killed.Add(k.Index);
+            c.Sniff = Sniffed;
             AddChild(c);
             if (State.Killed.Contains(i)) c.SetCorpse();
             Crawlers.Add(c);

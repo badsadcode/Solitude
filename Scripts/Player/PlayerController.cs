@@ -42,6 +42,39 @@ public partial class PlayerController : CharacterBody3D
     private const float JumpVelocity = 4.0f, FallGravityScale = 1.3f;
     private const float StandHeight = 1.75f, CrouchHeight = 1.15f, CrouchEye = 0.98f;
     public bool Crouching { get; private set; }
+
+    // ---- hiding (station lockers and desks)
+    public bool Hidden { get; private set; }
+    private Transform3D _hideExit;
+    private float _hideYaw;
+
+    /// <summary>Into a hiding place: the body goes in (no collision), the view faces out, looking is limited.</summary>
+    public void Hide(Vector3 floorPos, float yaw, bool crouched, Transform3D exit)
+    {
+        Hidden = true;
+        _hideExit = exit;
+        _hideYaw = yaw;
+        Velocity = Vector3.Zero;
+        CollisionLayer = 0; CollisionMask = 0;
+        SetCrouch(crouched);
+        // Under a desk the eyes sit lower than a crouch: sink the body to put them ~0.6 m up.
+        GlobalPosition = floorPos - (crouched ? Vector3.Up * (CrouchEye - 0.6f) : Vector3.Up * (EyeHeight - 1.55f));
+        Rotation = Vector3.Zero;
+        _yaw.Rotation = new Vector3(0, yaw, 0);
+        // Look down through the vents: what comes for you comes along the floor.
+        _pitch.Rotation = new Vector3(crouched ? -0.05f : -0.6f, 0, 0);
+        _hideCrouched = crouched;
+    }
+    private bool _hideCrouched;
+
+    public void Unhide()
+    {
+        if (!Hidden) return;
+        Hidden = false;
+        GlobalTransform = new Transform3D(Basis.Identity, _hideExit.Origin);
+        CollisionLayer = Layers.Player; CollisionMask = Layers.Interior;
+        SetCrouch(false);
+    }
     public event Action Jumped;
     public event Action<float> Landed;   // impact speed (m/s)
 
@@ -93,6 +126,13 @@ public partial class PlayerController : CharacterBody3D
         _yaw.RotateY(-rel.X * MouseSensitivity);
         float p = Mathf.Clamp(_pitch.Rotation.X - rel.Y * MouseSensitivity, -1.45f, 1.45f);
         _pitch.Rotation = new Vector3(p, 0, 0);
+        if (Hidden)
+        {
+            // Only as far as the slats (or the gap under the desk) let you.
+            float off = Mathf.Wrap(_yaw.Rotation.Y - _hideYaw, -Mathf.Pi, Mathf.Pi);
+            _yaw.Rotation = new Vector3(0, _hideYaw + Mathf.Clamp(off, -0.45f, 0.45f), 0);
+            _pitch.Rotation = new Vector3(_hideCrouched ? Mathf.Clamp(_pitch.Rotation.X, -0.3f, 0.25f) : Mathf.Clamp(_pitch.Rotation.X, -0.85f, -0.1f), 0, 0);
+        }
     }
 
     public void AddShake(float amount) => _shake = Mathf.Min(_shake + amount, 1.2f);
@@ -124,6 +164,7 @@ public partial class PlayerController : CharacterBody3D
 
     public override void _PhysicsProcess(double delta)
     {
+        if (Hidden) { Velocity = Vector3.Zero; return; }   // in a locker: perfectly still
         float dt = (float)delta;
         Vector3 v = Velocity;
 

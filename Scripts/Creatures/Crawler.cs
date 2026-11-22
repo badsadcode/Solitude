@@ -22,6 +22,9 @@ public partial class Crawler : CharacterBody3D, IDamageable
     public int Index;                                // stable id within its station (for persistence)
     public Action<string, Vector3> Sound;            // "chitter", "screech", "hiss", "hurt", "die"
     public Action<Crawler> Killed;
+    /// <summary>Hiding: it has been sniffing at your hiding place; the station decides (true = found you).</summary>
+    public Func<Crawler, bool> Sniff;
+    private float _sniff = -1f, _sniffCd;
 
     public State Current { get; private set; } = State.Dormant;
     public float Health = 70f;
@@ -182,12 +185,41 @@ public partial class Crawler : CharacterBody3D, IDamageable
         {
             Vector3 pp = Player.GlobalPosition;
             float d = GlobalPosition.DistanceTo(pp);
-            bool sees = d < 16f && CanSee(pp);
+            bool hidden = Player.Hidden;
+            bool sees = !hidden && d < 16f && CanSee(pp);
 
-            switch (Current)
+            // Hiding: it can't see you, but if it comes right up to your hiding place it stops and sniffs.
+            _sniffCd -= dt;
+            if (hidden && _sniff < 0f && _sniffCd <= 0f && (Current == State.Hunt || Current == State.Search) && d < 2.3f)
+            {
+                _sniff = 2.6f + (float)_rng.NextDouble() * 1.5f;
+                Sound?.Invoke("chitter", GlobalPosition);
+            }
+            if (_sniff >= 0f)
+            {
+                _facing = (pp - GlobalPosition) with { Y = 0 };
+                _sniff -= dt;
+                if (!hidden) _sniff = -1f;                       // you got out: back to the hunt below
+                else if (_sniff < 0f)
+                {
+                    if (Sniff?.Invoke(this) ?? false) { _lastKnown = pp; BeginHunt(); Current = State.Attack; _windup = 0.25f; }
+                    else
+                    {
+                        // Nothing. It turns away from your hiding place and wanders off to look elsewhere.
+                        _sniffCd = 15f;
+                        Vector3 away = GlobalPosition - pp; away.Y = 0;
+                        away = away.LengthSquared() > 0.01f ? away.Normalized() : Vector3.Forward;
+                        away = away.Rotated(Vector3.Up, ((float)_rng.NextDouble() - 0.5f) * 2f);
+                        _lastKnown = GlobalPosition + away * 7f;
+                        _lostTimer = 0f;
+                        Current = State.Search;
+                    }
+                }
+            }
+            else switch (Current)
             {
                 case State.Dormant:
-                    if ((sees && d < 12f) || d < 3.5f) { _lastKnown = pp; BeginHunt(); }
+                    if (!hidden && ((sees && d < 12f) || d < 3.5f)) { _lastKnown = pp; BeginHunt(); }
                     _chitterTimer -= dt;
                     if (_chitterTimer <= 0f) { Sound?.Invoke("chitter", GlobalPosition); _chitterTimer = 4f + (float)_rng.NextDouble() * 9f; }
                     break;
@@ -216,7 +248,9 @@ public partial class Crawler : CharacterBody3D, IDamageable
                     desired = PathTo(_lastKnown, dt);
                     speed = SearchSpeed;
                     if (sees) BeginHunt();
-                    if (GlobalPosition.DistanceTo(_lastKnown) < 1.5f) Current = State.Dormant;
+                    _lostTimer += dt;
+                    // Got there, or couldn't (a wall, a closed door): either way it settles down to wait.
+                    if (GlobalPosition.DistanceTo(_lastKnown) < 1.5f || _lostTimer > 8f) Current = State.Dormant;
                     break;
             }
         }

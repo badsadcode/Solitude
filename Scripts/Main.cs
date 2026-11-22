@@ -707,6 +707,13 @@ public partial class Main : Node
 
 	private void UpdateWalking()
 	{
+		if (_player.Hidden)
+		{
+			// In a locker / under a desk: E gets out; everything else waits.
+			_hud.SetPrompt("[E] Get out    [SPACE] hold your breath");
+			if (Input.IsActionJustPressed(GameInput.Interact)) _station?.LeaveHiding();
+			return;
+		}
 		_hud.SetPrompt(_player.Focused != null ? $"[E] {_player.Focused.Prompt}" : "");
 		if (Input.IsActionJustPressed(GameInput.Interact) && _player.Focused != null)
 			_player.Focused.Use();
