@@ -12,6 +12,8 @@ namespace Solitude;
 public partial class Main
 {
     private Diver _diver;
+    private Harpoon _harpoon;
+    private float _zap;
     private bool _suitOn;
     private OmniLight3D _hatchLight;
     private float _hatchBlink;
@@ -38,8 +40,24 @@ public partial class Main
             _audio.PlayImpact(1.5f);
             _hud.Message("Something hit you very hard.", 4f);
         };
+        _harpoon = new Harpoon
+        {
+            Name = "Harpoon", Diver = _diver,
+            Targets = HarpoonTargets,
+            Sound = PlaySpatial,
+            Message = m => _hud.Message(m, 3f),
+            SelfShock = dmg => { _player.Damage(dmg); _zap = 1f; _audio.PlayAt("hurt", 0f, 0.5f); },
+        };
+        _game.AddChild(_harpoon);
         _hatchLight = new OmniLight3D { Position = HatchLocal + Vector3.Up * 0.6f, LightColor = new Color(1f, 0.7f, 0.25f), OmniRange = 7f, LightEnergy = 0f };
         _sub.AddChild(_hatchLight);
+    }
+
+    private System.Collections.Generic.IEnumerable<Creatures.IHarpoonable> HarpoonTargets()
+    {
+        if (_ravager != null && _ravager.IsInsideTree() && _ravager.Visible) yield return _ravager;
+        foreach (var r in _creatures.Rays) if (r.IsInsideTree()) yield return r;
+        if (_creatures.Wyrm is { } w && w.IsInsideTree()) yield return w;
     }
 
     /// <summary>Focus for terrain streaming and marine snow: the diver while outside, else the boat.</summary>
@@ -88,6 +106,7 @@ public partial class Main
         _diver.Place(hatch + Vector3.Up * 1.4f + f * 0.5f, Mathf.Atan2(-f.X, -f.Z));
         _diver.Camera.MakeCurrent();
         _diver.Lamp.Visible = true;
+        _harpoon.SetActive(true);
         _ravager.Diver = _diver;
         _rig.MonitorsActive = false;
         _rig.BridgeActive = false;
@@ -95,7 +114,7 @@ public partial class Main
         _audio.Diving = true;
         _hud.ShowHelmet(true);
         _hud.SetCrosshair(false);
-        _hud.SetHelp("WASD swim where you look · SPACE up · C down · SHIFT boost (more air) · F lamp · E collect / enter airlock");
+        _hud.SetHelp("WASD swim · SPACE/C up/down · SHIFT boost · F lamp · E collect/airlock · LMB fire · Q spear/prod");
         _hud.FadeTo(0f, 1.5f);
         _hud.Message("Outside. The light stops a few metres from your face.", 5f);
         Input.MouseMode = Input.MouseModeEnum.Captured;
@@ -133,6 +152,13 @@ public partial class Main
         h.HomeDistance = toHatch;
         Vector3 rel = _diver.Camera.GlobalBasis.Inverse() * (hatch - _diver.Camera.GlobalPosition);
         h.HomeBearing = Mathf.RadToDeg(Mathf.Atan2(rel.X, -rel.Z));
+        Vector3 aim = _harpoon.AimPoint;
+        h.ReticleOn = !_diver.Camera.IsPositionBehind(aim);
+        h.Reticle = _diver.Camera.UnprojectPosition(aim) * PixelScale;
+        h.Weapon = _harpoon.Status;
+        h.WeaponReady = _harpoon.Current == Harpoon.Mode.Spear ? _harpoon.SpearReady : _harpoon.Charge >= 1f;
+        _zap = Mathf.MoveToward(_zap, 0f, dt * 2.5f);
+        h.ZapFlash = _zap;
 
         // Panic: low air, or something enormous close by.
         float air = Mathf.Clamp((35f - _diver.Oxygen) / 35f, 0f, 1f);
@@ -169,6 +195,7 @@ public partial class Main
     private void EndDive()
     {
         _diver.SetActive(false);
+        _harpoon.SetActive(false);
         _ravager.Diver = null;
         _audio.Diving = false;
         _audio.Heartbeat = 0f;

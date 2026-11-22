@@ -13,6 +13,11 @@ public partial class HelmetOverlay : Control
     public int Bag, BagSize = 6;
     public bool Lamp;
     public float Fog;               // 0..1 visor condensation when panicking / low air
+    public Vector2 Reticle;         // where the (lagging) harpoon points, window pixels
+    public bool ReticleOn;
+    public string Weapon = "";      // harpoon status line
+    public bool WeaponReady;
+    public float ZapFlash;          // 0..1 blue-white flash when the prod bites you
 
     private float _t;
     private static readonly Color Frame = new(0.01f, 0.012f, 0.012f, 1f);
@@ -70,6 +75,19 @@ public partial class HelmetOverlay : Control
             }
         }
 
+        // Harpoon reticle: a small bracket where the gun really points (it drifts as the gun lags).
+        if (ReticleOn)
+        {
+            Color rc = WeaponReady ? Ink : new Color(Ink, 0.35f);
+            Vector2 r = Reticle;
+            DrawLine(r + new Vector2(-9, -9), r + new Vector2(-4, -9), rc, 1.5f); DrawLine(r + new Vector2(-9, -9), r + new Vector2(-9, -4), rc, 1.5f);
+            DrawLine(r + new Vector2(9, -9), r + new Vector2(4, -9), rc, 1.5f); DrawLine(r + new Vector2(9, -9), r + new Vector2(9, -4), rc, 1.5f);
+            DrawLine(r + new Vector2(-9, 9), r + new Vector2(-4, 9), rc, 1.5f); DrawLine(r + new Vector2(-9, 9), r + new Vector2(-9, 4), rc, 1.5f);
+            DrawLine(r + new Vector2(9, 9), r + new Vector2(4, 9), rc, 1.5f); DrawLine(r + new Vector2(9, 9), r + new Vector2(9, 4), rc, 1.5f);
+            DrawCircle(r, 1.5f, rc);
+        }
+        if (ZapFlash > 0.01f) DrawRect(new Rect2(Vector2.Zero, s), new Color(0.7f, 0.85f, 1f, ZapFlash * 0.5f));
+
         // Readouts along the bottom of the visor
         var font = ThemeDB.FallbackFont;
         float y = c.Y + ry * 0.62f;   // inside the visor, clear of the frame
@@ -82,6 +100,8 @@ public partial class HelmetOverlay : Control
         DrawString(font, new Vector2(c.X - barW / 2f, y - 6f), $"O2 {Oxygen:0}%", HorizontalAlignment.Left, -1, 14, o2c);
         DrawString(font, new Vector2(c.X + barW / 2f - 90f, y - 6f), $"{Depth:0} m", HorizontalAlignment.Right, 90, 14, Ink);
         DrawString(font, new Vector2(c.X - barW / 2f, y + 26f), $"BAG {Bag}/{BagSize}   LAMP {(Lamp ? "ON" : "OFF")} [F]", HorizontalAlignment.Left, -1, 13, Ink);
+        if (Weapon.Length > 0)
+            DrawString(font, new Vector2(c.X - barW / 2f, y + 44f), $"{Weapon}  [Q] swap", HorizontalAlignment.Left, -1, 13, WeaponReady ? Ink : new Color(Ink, 0.5f));
 
         // Homing chevron toward the boat's hatch
         string home = HomeDistance > 999f ? "—" : $"{HomeDistance:0} m";

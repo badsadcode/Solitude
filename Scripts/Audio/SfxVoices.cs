@@ -47,12 +47,16 @@ public sealed class SfxVoice : Voice
             "steam" => (1.6f, 0.32f),
             "weld" => (0.35f, 0.25f),
             "breach" => (1.8f, 0.7f),
+            "harpoon" => (0.7f, 0.55f),
+            "shock" => (0.55f, 0.45f),
+            "reel" => (0.06f, 0.25f),
+            "spearhit" => (0.4f, 0.6f),
             _ => (0.2f, 0.2f),
         };
         Gain *= gain;
-        _bp1 = new BandPass(kind switch { "chitter" => 2600f * jitter, "shotgun" => 900f, "rifle" => 1500f, "pistol" => 1800f, "door" => 300f, "knock" => 220f * jitter, "weld" => 4200f, _ => 1200f * jitter }, kind == "chitter" ? 12f : 2.5f, rate);
+        _bp1 = new BandPass(kind switch { "chitter" => 2600f * jitter, "shotgun" => 900f, "rifle" => 1500f, "pistol" => 1800f, "door" => 300f, "knock" => 220f * jitter, "weld" => 4200f, "shock" => 3600f, "reel" => 2400f, "spearhit" => 500f, _ => 1200f * jitter }, kind == "chitter" ? 12f : 2.5f, rate);
         _bp2 = new BandPass(kind switch { "pistol" => 2900f, "rifle" => 3400f, "shotgun" => 2100f, "knock" => 160f * jitter, _ => 700f }, 30f, rate);
-        _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, "klaxon" => 1800f, "breach" => 600f, _ => 4000f }, rate);
+        _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, "klaxon" => 1800f, "breach" => 600f, "harpoon" => 900f, _ => 4000f }, rate);
     }
 
     public override float Next(out bool alive)
@@ -196,6 +200,40 @@ public sealed class SfxVoice : Voice
                 float crack = MathF.Sin(_ph1 * MathF.Tau) * MathF.Exp(-T * 3f) * 1.4f + w * MathF.Exp(-T * 30f);
                 float rush = _lp.Process(w) * MathF.Min(1f, T * 3f) * 0.8f;
                 s = crack + rush;
+                break;
+            }
+            case "harpoon":
+            {
+                // Gas-driven spear: a muffled pneumatic thump, a bubbling whoosh, line paying out.
+                _ph1 += (85f - 40f * u) * dt;
+                float thump = MathF.Sin(_ph1 * MathF.Tau) * MathF.Exp(-T * 14f) * 1.6f;
+                float whoosh = _lp.Process(w) * MathF.Exp(-T * 5f) * 1.2f;
+                _clk += (60f - 50f * u) * dt;
+                float tick = 0f;
+                if (_clk >= 1f) { _clk -= 1f; tick = 0.6f; }
+                s = thump + whoosh + _bp2.Process(tick) * 2f * MathF.Exp(-T * 3f);
+                break;
+            }
+            case "shock":
+            {
+                // Electric discharge in water: buzz at mains-ish frequency, ripped through with crackle.
+                _ph1 += 95f * dt; _ph1 -= MathF.Floor(_ph1);
+                float buzz = (_ph1 < 0.5f ? 1f : -1f) * 0.35f;
+                if (Rng.NextDouble() < 0.04) _clk = 1f;
+                _clk *= 0.993f;
+                float crackle = _bp1.Process(w) * 2.5f * _clk;
+                s = (buzz + crackle) * MathF.Min(1f, T * 80f) * MathF.Exp(-T * 4f);
+                break;
+            }
+            case "reel":
+                // One ratchet click of the reel.
+                s = _bp1.Process(w) * MathF.Exp(-T * 150f) * 3f;
+                break;
+            case "spearhit":
+            {
+                // Barbed steel into something: a dull thock, a short wet tear.
+                _ph1 += (140f - 60f * u) * dt;
+                s = MathF.Sin(_ph1 * MathF.Tau) * MathF.Exp(-T * 18f) * 1.4f + _bp1.Process(w) * MathF.Exp(-T * 12f) * 1.5f;
                 break;
             }
         }

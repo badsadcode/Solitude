@@ -38,6 +38,7 @@ public static class GameInput
     public const string Reload = "reload";
     public const string Flashlight = "flashlight";
     public const string UseMedkit = "use_medkit";
+    public const string HarpoonMode = "harpoon_mode";
 
     // Debug
     public const string SummonCreature = "debug_summon_creature";
@@ -72,6 +73,7 @@ public static class GameInput
         Bind(Lights, Godot.Key.L);
         Bind(Ping, Godot.Key.P);
         Bind(SonarRange, Godot.Key.Q);
+        Bind(HarpoonMode, Godot.Key.Q);   // diving only: spear <-> shock prod
         Bind(SummonCreature, Godot.Key.F9);
         Bind(SummonRays, Godot.Key.F8);
         Bind(DebugBreach, Godot.Key.F7);

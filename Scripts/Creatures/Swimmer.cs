@@ -13,7 +13,7 @@ namespace Solitude.Creatures;
 ///
 /// Interest: the creature pays attention to Focus (the diver if one is outside, else the boat).
 /// </summary>
-public partial class Swimmer : Node3D
+public partial class Swimmer : Node3D, IHarpoonable
 {
     public CreatureProfile Profile;
     public TerrainGenerator Gen;
@@ -98,6 +98,40 @@ public partial class Swimmer : Node3D
     {
         BeginPass();
         if (teleport) { GlobalPosition = _passStart; _fwd = (_passCross - _passStart).Normalized(); _state = State.Pass; }
+    }
+
+    // ---------------------------------------------------------------- the diver's harpoon
+    private float _fleeT, _stunT, _spears;
+    private Vector3 _fleeFrom;
+    public Vector3 Head => GlobalPosition - GlobalBasis.Z * Profile.Length * 0.45f;
+    public Vector3 Tail => GlobalPosition + GlobalBasis.Z * Profile.Length * 0.45f;
+    public float BodyRadius => Profile.Length * 0.09f;
+    public Node3D Body => this;
+
+    /// <summary>
+    /// Grazers just swim away, offended. The apex shrugs off a spear or two — but a shock, or a third
+    /// spear, makes it break off whatever it was doing and circle far out for a good while.
+    /// </summary>
+    public void Hurt(float damage, Vector3 from, bool shock)
+    {
+        _fleeFrom = from;
+        if (Profile.Temperament != Temperament.Apex)
+        {
+            _fleeT = 10f; _state = State.Wander; _timer = 0f;
+            Vector3 away = (GlobalPosition - from); away.Y = 0;
+            Anchor = GlobalPosition + away.Normalized() * 70f;
+            return;
+        }
+        if (shock) _stunT = 1.2f; else _spears++;
+        if (shock || _spears >= 3)
+        {
+            _spears = 0;
+            _fleeT = 8f;
+            _biteCd = Math.Max(_biteCd, 40f);
+            _state = State.Lurk;
+            _timer = Profile.PassIntervalMax + (float)_rng.NextDouble() * 60f;
+            Audio?.PlayAt("screech", 0f, 0.8f);
+        }
     }
 
     /// <summary>Apex: leave for good after a while (the director despawns it out of sight).</summary>
@@ -197,6 +231,15 @@ public partial class Swimmer : Node3D
                 break;
         }
 
+        _fleeT -= dt; _stunT -= dt;
+        if (_fleeT > 0f)
+        {
+            Vector3 away = pos - _fleeFrom; away.Y = 0;
+            _target = pos + away.Normalized() * 80f + Vector3.Up * 3f;
+            targetSpeed = Math.Max(Profile.PassSpeed, Profile.CruiseSpeed * 2.5f);
+        }
+        if (_stunT > 0f) targetSpeed = Profile.CruiseSpeed * 0.2f;
+
         // Steering: limited turn rate, limited pitch, keep clear of the seabed.
         Vector3 desired = (_target - pos).Normalized();
         if (Gen != null)
@@ -211,7 +254,7 @@ public partial class Swimmer : Node3D
         _fwd = _fwd.Normalized();
         Vector3 newFlat = new Vector3(_fwd.X, 0, _fwd.Z).Normalized();
         _yawRate = Mathf.Lerp(_yawRate, oldFlat.SignedAngleTo(newFlat, Vector3.Up) / Mathf.Max(dt, 1e-4f), 3f * dt);
-        _speed = Mathf.MoveToward(_speed, targetSpeed, 1.0f * dt);
+        _speed = Mathf.MoveToward(_speed, targetSpeed, (_fleeT > 0f ? 3f : 1.0f) * dt);
         pos += _fwd * _speed * dt;
         if (Gen != null) pos.Y = Math.Max(pos.Y, Gen.Height(pos.X, pos.Z) + 2f);
         _bank = Mathf.Lerp(_bank, Math.Clamp(-_yawRate * 0.9f, -0.45f, 0.45f), 2f * dt);

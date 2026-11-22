@@ -256,7 +256,7 @@ public partial class Main
     /// <summary>Pan and attenuate a world-space sound for the listener (the player camera).</summary>
     private void PlaySpatial(string kind, Vector3 pos)
     {
-        var cam = _player.Camera;
+        var cam = _diver != null && _diver.Active ? _diver.Camera : _player.Camera;
         Vector3 rel = cam.GlobalBasis.Inverse() * (pos - cam.GlobalPosition);
         float dist = rel.Length();
         float range = kind switch
@@ -266,6 +266,8 @@ public partial class Main
             "chitter" or "steam" => 22f,
             "drip" => 9f,
             "weld" => 12f,
+            "reel" or "harpoon" => 14f,
+            "shock" or "spearhit" => 35f,
             _ => 30f,
         };
         float gain = Mathf.Pow(Mathf.Clamp(1f - dist / range, 0f, 1f), 1.4f);

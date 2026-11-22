@@ -20,7 +20,7 @@ namespace Solitude.Creatures;
 /// Behaviour (test build): lurks 60–90 m out, circling; periodically crosses in front of
 /// the bow through the floodlights. ForcePass() (F9) summons a crossing.
 /// </summary>
-public partial class Ravager : Node3D
+public partial class Ravager : Node3D, IHarpoonable
 {
     public Submarine Sub;
     public TerrainGenerator Gen;
@@ -145,6 +145,37 @@ public partial class Ravager : Node3D
     private bool _hadDiver;
     private float _biteCooldown;
 
+    // ------------------------------------------------------------------ getting hurt (the diver's harpoon)
+
+    private float _hp = 100f, _fleeT, _stunT;
+    public Vector3 Head => GlobalPosition - GlobalBasis.Z * Length * 0.42f;
+    public Vector3 Tail => GlobalPosition + GlobalBasis.Z * Length * 0.42f;
+    public float BodyRadius => Length * 0.13f;
+    public Node3D Body => this;
+    public bool Stunned => _stunT > 0f;
+
+    /// <summary>
+    /// It doesn't die. It recoils, flees, and stays away for a while — and when its strength is
+    /// gone it vanishes into the dark for minutes. It remembers.
+    /// </summary>
+    public void Hurt(float damage, Vector3 from, bool shock)
+    {
+        _hp -= damage;
+        if (shock) _stunT = 1.6f;
+        _fleeT = shock ? 12f : 18f;
+        _state = State.Lurk;
+        _passTimer = 50f + (float)_rng.NextDouble() * 30f;
+        _biteCooldown = 30f;
+        Audio?.PlayAt("screech", 0f, 0.9f);
+        if (_hp <= 0f)
+        {
+            // Gone for a long time. It will come back healed.
+            _hp = 100f;
+            _fleeT = 25f;
+            _passTimer = 240f + (float)_rng.NextDouble() * 120f;
+        }
+    }
+
     /// <summary>A slow pass close by the diver: the first ones only look; later ones may bite.</summary>
     public void DiverPass()
     {
@@ -184,7 +215,9 @@ public partial class Ravager : Node3D
 
         // Bites: only once the diver has overstayed, only during a pass, and only up close.
         _biteCooldown -= dt;
-        if (diver && _state == State.Pass && _biteCooldown <= 0f && (DiverTimeOutside?.Invoke() ?? 0f) > 150f
+        _fleeT -= dt;
+        _stunT -= dt;
+        if (_fleeT <= 0f && _stunT <= 0f && diver && _state == State.Pass && _biteCooldown <= 0f && (DiverTimeOutside?.Invoke() ?? 0f) > 150f
             && pos.DistanceTo(sp) < Length * 0.35f)
         {
             _biteCooldown = 20f;
@@ -215,6 +248,15 @@ public partial class Ravager : Node3D
                 targetSpeed = 3.5f;
                 break;
         }
+
+        // Hurt: bolt away from whatever hurt it, fast, for a while. Stunned: drift, twitching.
+        if (_fleeT > 0f)
+        {
+            Vector3 away = (pos - sp); away.Y = 0;
+            target = pos + away.Normalized() * 60f + Vector3.Up * 4f;
+            targetSpeed = 9f;
+        }
+        if (_stunT > 0f) targetSpeed = 0.4f;
 
         // --- steering: turn-rate limited, pitch limited, keep off the seabed
         Vector3 desired = (target - pos).Normalized();

@@ -275,6 +275,45 @@ public partial class Main
             (t += 10.0f, () => Shot("10_chase_turning")),
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
+            // --- The diver's harpoon: lag, spear on a tether, the shock prod
+            (t += 0.1f, CaptureMarkHarpoon),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                _suitOn = false; OnSuit();
+                _sub.TelegraphIndex = 2; _sub.ApplyTelegraph();
+                _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+                _player.Transform = new Transform3D(Basis.Identity, SubHatchSpot);
+                TryDiveFromHatch();
+            }),
+            (t += 3.2f, () => { _diver.Place(_diver.GlobalPosition + Vector3.Up * 3f, 0.3f); _diver.Look(new Vector2(0, -260)); }),
+            (t += 1.2f, () => { Shot("27a_harpoon_idle"); GD.Print($"[capture] harpoon: {_harpoon.Status} diving={_diver.Active}"); }),
+            (t += 0.1f, () => _diver.Look(new Vector2(260, 0))),
+            (t += 0.12f, () => Shot("27b_harpoon_lag_turn")),
+            (t += 1.2f, () =>
+            {
+                // Bring the ravager right in front, side-on, and shoot it.
+                Vector3 f = -_diver.Camera.GlobalBasis.Z;
+                _ravager.GlobalPosition = _diver.Camera.GlobalPosition + f * 14f;
+                _ravager.LookAt(_ravager.GlobalPosition + _diver.Camera.GlobalBasis.X, Vector3.Up);
+            }),
+            (t += 0.6f, () => { Shot("27c_aim_at_ravager"); _harpoon.Fire(); }),
+            (t += 0.25f, () => { Shot("27d_spear_flying"); GD.Print($"[capture] spear: {_harpoon.Status}"); }),
+            (t += 0.5f, () => { Shot("27e_spear_stuck"); GD.Print($"[capture] after shot: {_harpoon.Status}, ravager to diver {_ravager.DistanceToDiver:0.0} m"); }),
+            (t += 1.6f, () => Shot("27f_reeling")),
+            (t += 2.5f, () => { GD.Print($"[capture] reeled: {_harpoon.Status}, ravager to diver {_ravager.DistanceToDiver:0.0} m"); _harpoon.Swap(); }),
+            (t += 1.0f, () => { Shot("27g_prod"); GD.Print($"[capture] mode {_harpoon.Current}: {_harpoon.Status}"); }),
+            (t += 0.1f, () =>
+            {
+                Vector3 f = -_diver.Camera.GlobalBasis.Z;
+                _ravager.GlobalPosition = _diver.Camera.GlobalPosition + f * 2.6f;
+                _ravager.LookAt(_ravager.GlobalPosition + _diver.Camera.GlobalBasis.X, Vector3.Up);
+                _harpoon.Fire();
+            }),
+            (t += 0.08f, () => { Shot("27h_zap"); GD.Print($"[capture] zap: stunned={_ravager.Stunned} {_harpoon.Status}"); }),
+            (t += 0.1f, () => { _diver.Place(_sub.GlobalTransform * HatchLocal + Vector3.Up * 1.5f, 0f); }),
+            (t += 0.3f, () => ExitDive()),
+            (t += 2.6f, () => { }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -506,6 +545,7 @@ public partial class Main
 
     private void CaptureMarkCreatures() => GD.Print("[capture] --- creatures section ---");
     private void CaptureMarkBiomes() => GD.Print("[capture] --- biomes section ---");
+    private void CaptureMarkHarpoon() => GD.Print("[capture] --- harpoon section ---");
     private void CaptureMarkTest() => GD.Print("[capture] --- test section ---");
     private float _captureHeading0;
     private void CaptureMarkStory() => GD.Print("[capture] --- story section ---");
@@ -541,7 +581,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);
