@@ -30,6 +30,8 @@ public partial class Main
 
     private void SetupStations(Vector3 spawn)
     {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--layout=")) StationDirectory.ForceLayout = arg.Substring(9);
         _stations = new StationManager
         {
             Name = "Stations", Sub = _sub, Audio = _audio,

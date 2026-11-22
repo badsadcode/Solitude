@@ -82,7 +82,7 @@ public partial class StationInterior : Node3D
 
     private void LoadBlockout()
     {
-        var scene = GD.Load<PackedScene>($"res://assets/stations/{Site.Layout}.glb");
+        var scene = GD.Load<PackedScene>($"res://assets/stations/{StationDirectory.ForceLayout ?? Site.Layout}.glb");
         var root = scene.Instantiate<Node3D>();
         AddChild(root);
         var meshes = new List<MeshInstance3D>();
@@ -174,7 +174,9 @@ public partial class StationInterior : Node3D
             }
             if (best < 0) continue;
             if (!groups.TryGetValue(best, out var mb)) { groups[best] = mb = new MeshBuilder(); faces[best] = new List<Vector3>(); }
-            mb.TriWorld(a, b, c, Colors.White);
+            // Imported arrays are already in Godot's clockwise-front winding; TriWorld expects
+            // counter-clockwise, so swap two corners (this was the "inverted door" bug).
+            mb.TriWorld(a, c, b, Colors.White);
             faces[best].Add(a); faces[best].Add(c); faces[best].Add(b);
         }
         foreach (var (i, mb) in groups)

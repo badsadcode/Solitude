@@ -72,6 +72,9 @@ public sealed class StationDirectory
         return best;
     }
 
+    /// <summary>Dev: `-- --layout=outpost_01` makes every station use that blockout.</summary>
+    public static string ForceLayout;
+
     private StationSite MakeSite(long id, Vector3 pos, int salt, int seed)
     {
         int h = (int)(Perlin.Hash((int)(id & 0xFFFF), (int)(id >> 16), seed + salt) * int.MaxValue);

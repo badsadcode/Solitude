@@ -36,6 +36,8 @@ public partial class Main
         foreach (var arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--start=")) start = arg.Substring(8);
         if (start == null) return;
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--stairs-test=")) StairsTest(arg.Substring(14));
 
         var tw = CreateTween();
         tw.TweenInterval(1.0);
@@ -61,6 +63,57 @@ public partial class Main
                 t2.TweenCallback(Callable.From(() => { _player.Transform = new Transform3D(Basis.Identity, SubHatchSpot); OnHatch(); }));
             }
         }));
+    }
+
+    /// <summary>
+    /// Dev: `-- --start=station --layout=outpost_01 --stairs-test=29.5,1.6,-65,0` puts the player at a
+    /// station-local spot facing yaw (deg), holds W for 6 s and prints the height every half second.
+    /// </summary>
+    private void StairsTest(string spec)
+    {
+        var p = spec.Split(',');
+        var local = new Vector3(float.Parse(p[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture), float.Parse(p[2], System.Globalization.CultureInfo.InvariantCulture));
+        float yaw = Mathf.DegToRad(float.Parse(p[3], System.Globalization.CultureInfo.InvariantCulture));
+        // Wait until we're really inside a station.
+        var poll = new Timer { WaitTime = 0.5, Autostart = true };
+        AddChild(poll);
+        float waited = 0f;
+        poll.Timeout += () =>
+        {
+            waited += 0.5f;
+            if (Mathf.PosMod(waited, 5f) < 0.01f) GD.Print($"[stairs] waiting: docked={_stations.DockedAt?.Name ?? "no"} station={_station != null} inStation={_player.InStation} input={_player.InputEnabled} mode={_mode}");
+            if (waited > 40f) { GD.Print("[stairs] never got inside a station"); GetTree().Quit(); }
+            if (_station == null || !_player.InStation || !_player.InputEnabled) return;
+            poll.QueueFree();
+            StairsWalk(local, yaw);
+        };
+    }
+
+    private void StairsWalk(Vector3 local, float yaw)
+    {
+        var tw = CreateTween();
+        tw.TweenInterval(1.0);
+        tw.TweenCallback(Callable.From(() =>
+        {
+            _player.GlobalTransform = new Transform3D(new Basis(Vector3.Up, yaw), _station.ToGlobal(local));
+            _player.SetLook(0f, OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--stairs-shot=")) ? 0.05f : -0.3f);
+            Input.ActionPress(GameInput.Forward);
+            GD.Print($"[stairs] start local {local} layout {_station.Site.Layout}");
+        }));
+        for (int i = 1; i <= 12; i++)
+        {
+            tw.TweenInterval(0.5);
+            int k = i;
+            tw.TweenCallback(Callable.From(() =>
+            {
+                var l = _station.ToLocal(_player.GlobalPosition);
+                GD.Print($"[stairs] t={k * 0.5f:0.0} local=({l.X:0.00}, {l.Y:0.00}, {l.Z:0.00}) onFloor={_player.IsOnFloor()} onWall={_player.IsOnWall()} step={Solitude.Core.Stepper.Why}");
+                if (k == 1)
+                    foreach (var arg in OS.GetCmdlineUserArgs())
+                        if (arg.StartsWith("--stairs-shot=")) GetViewport().GetTexture().GetImage().SavePng(arg.Substring(14));
+            }));
+        }
+        tw.TweenCallback(Callable.From(() => { Input.ActionRelease(GameInput.Forward); GetTree().Quit(); }));
     }
 
     private void SetupCapture()
