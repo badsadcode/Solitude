@@ -35,6 +35,8 @@ public partial class Gloam : Node3D, IHarpoonable
     /// <summary>The target's speed (m/s): moving in the dark still gives you away up close.</summary>
     public Func<float> TargetSpeed;
     public Func<bool> TargetIsDiver;
+    /// <summary>Dev export (`--export-gloam=`): plain vertex-colour materials and readable node names, for Blender.</summary>
+    public bool ForExport;
 
     /// <summary>It hit the target. Argument = strength (1 = a solid hit).</summary>
     public event Action<float> Struck;
@@ -286,6 +288,12 @@ public partial class Gloam : Node3D, IHarpoonable
         var plate = Art.World(Art.PanelTexture(77, new Color(0.3f, 0.28f, 0.27f)), Colors.White, uvScale: 0.6f, roughness: 0.6f, jitter: 200f);
         _eyeMat = Art.World(Art.FlatTexture(new Color(0.2f, 0.2f, 0.2f)), Colors.White, roughness: 0.6f, jitter: 200f)
             .Glow(new Color(0.75f, 0.85f, 0.7f), 0.6f, fromAlpha: true);
+        Material plateMat = plate, headMat = _eyeMat;
+        if (ForExport)
+        {
+            plateMat = new StandardMaterial3D { ResourceName = "Gloam_Plate", VertexColorUseAsAlbedo = true, Roughness = 0.6f };
+            headMat = new StandardMaterial3D { ResourceName = "Gloam_Head", VertexColorUseAsAlbedo = true, Roughness = 0.6f };
+        }
         Color shell = new(0.22f, 0.2f, 0.19f), seam = new(0.08f, 0.07f, 0.07f), pale = new(0.5f, 0.47f, 0.42f);
 
         for (int i = 0; i < Segments; i++)
@@ -335,14 +343,14 @@ public partial class Gloam : Node3D, IHarpoonable
                 foreach (int s in new[] { -1, 1 })
                     mb.BoxOriented(new Transform3D(new Basis(Vector3.Up, s * 0.25f), new Vector3(s * 0.8f, -0.1f, -Spacing * 1.1f - 2.2f)), new Vector3(0.07f, 0.07f, 4.4f), pale);
             }
-            node.AddChild(new MeshInstance3D { Mesh = mb.Build(i == 0 ? _eyeMat : plate) });
+            node.AddChild(new MeshInstance3D { Name = i == 0 ? "Head_Mesh" : $"Seg{i}_Mesh", Mesh = mb.Build(i == 0 ? headMat : plateMat) });
 
             // Paddles on every segment but the tail tip.
             if (i > 0 && i < Segments - 1)
             {
                 foreach (int s in new[] { -1, 1 })
                 {
-                    var pivot = new Node3D { Position = new Vector3(s * w * 0.5f, -h * 0.25f, 0) };
+                    var pivot = new Node3D { Name = $"Paddle{i}_{(s < 0 ? "L" : "R")}", Position = new Vector3(s * w * 0.5f, -h * 0.25f, 0) };
                     node.AddChild(pivot);
                     var pb = new MeshBuilder();
                     // A long jointed oar: shaft, then a broad fringed blade.
@@ -351,7 +359,7 @@ public partial class Gloam : Node3D, IHarpoonable
                     pb.Box(new Vector3(s * plen * 0.78f, -0.05f, 0.05f), new Vector3(plen * 0.45f, 0.05f, Spacing * 0.5f), shell.Darkened(0.2f));
                     for (int k = 0; k < 3; k++)
                         pb.Box(new Vector3(s * plen * (0.62f + k * 0.14f), -0.06f, Spacing * 0.32f), new Vector3(0.05f, 0.04f, 0.35f), pale.Darkened(0.35f));
-                    pivot.AddChild(new MeshInstance3D { Mesh = pb.Build(plate) });
+                    pivot.AddChild(new MeshInstance3D { Name = $"Paddle{i}_{(s < 0 ? "L" : "R")}_Mesh", Mesh = pb.Build(plateMat) });
                     _paddles.Add((pivot, i, s));
                 }
             }

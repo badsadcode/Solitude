@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Solitude.Creatures;
 using Godot;
 
 namespace Solitude;
@@ -13,6 +14,26 @@ namespace Solitude;
 /// </summary>
 public partial class Main
 {
+    /// <summary>
+    /// `-- --export-gloam=F:/path/Gloam_blockout.glb`: writes the Gloam's procedural placeholder body as a
+    /// GLB for Tom to model over. Straight pose, head at -Z (forward), metres, +Y up. One node per segment
+    /// (Seg0 = head ... Seg13 = tail tip) and one pivot per paddle (Paddle{seg}_L / _R), placed where the
+    /// joints would go, so it doubles as a guide for the armature. Then quits.
+    /// </summary>
+    private void ExportGloam(string path)
+    {
+        var g = new Gloam { Name = "Gloam", ForExport = true };
+        _game.AddChild(g);
+        g.GlobalTransform = Transform3D.Identity;
+        g.Place(new Vector3(0, 0, -Gloam.Length * 0.5f), Vector3.Forward);
+        var doc = new GltfDocument();
+        var state = new GltfState();
+        var err = doc.AppendFromScene(g, state);
+        if (err == Error.Ok) err = doc.WriteToFilesystem(state, path);
+        GD.Print(err == Error.Ok ? $"[export-gloam] wrote {path}" : $"[export-gloam] FAILED: {err}");
+        GetTree().Quit(err == Error.Ok ? 0 : 1);
+    }
+
     private void ModelShot(string path, string outDir)
     {
         // Check the model loads before touching the world: a failed load used to leave two sun lamps

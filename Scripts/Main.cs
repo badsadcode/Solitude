@@ -219,6 +219,8 @@ public partial class Main : Node
 				if (arg.StartsWith("--model-shot=")) mPath = arg.Substring(13);
 				if (arg.StartsWith("--model-out=")) mOut = arg.Substring(12);
 			}
+			foreach (var arg in OS.GetCmdlineUserArgs())
+				if (arg.StartsWith("--export-gloam=")) { string gp = arg.Substring(15); CallDeferred(MethodName.ExportGloam, gp); }
 			if (mPath != null) { var tw = CreateTween(); tw.TweenInterval(1.5); tw.TweenCallback(Callable.From(() => ModelShot(mPath, mOut ?? "user://model_shot"))); }
 		}
 		ApplyModules();
