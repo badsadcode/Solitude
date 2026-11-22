@@ -35,6 +35,9 @@ public partial class SubInterior : Node3D
     public Texture2D LogTexture;
     public ShaderMaterial LogScreen;
     public Transform3D TerminalView { get; private set; }
+    public Transform3D LabView { get; private set; }
+    /// <summary>The lab bench's little status screen (text set by the director).</summary>
+    public Label3D LabScreen;
     public Action OnArm;
     public Action<string> OnPanel;
     public Action OnHatch;
@@ -584,6 +587,31 @@ public partial class SubInterior : Node3D
         Interactable.Create(this, new Vector3(-1.7f, 1.2f, 11.6f), new Vector3(0.4f, 2.0f, 1.1f), "Open locker: put on / take off the hard suit",
             () => OnSuit?.Invoke());
         Label("DIVE LOCKER", new Vector3(-HalfW + 0.02f, 2.3f, 10.3f), Mathf.Pi / 2f, 36);
+
+        // The sample lab (an idea from BALE IX): a bench against the port wall, forward of the locker.
+        // A scope, a rack of glowing sample jars, a tiny amber status screen.
+        Solid(_machine, new Vector3(-2.05f, 0.45f, 9.95f), new Vector3(0.75f, 0.9f, 1.3f), Grey.Shade(0.88f));
+        _wall.Box(new Vector3(-2.02f, 0.92f, 9.95f), new Vector3(0.8f, 0.04f, 1.36f), new Color(0.78f, 0.79f, 0.74f));
+        _machine.Box(new Vector3(-2.15f, 0.98f, 10.2f), new Vector3(0.28f, 0.06f, 0.24f), Grey.Shade(0.5f));            // scope foot
+        _machine.Box(new Vector3(-2.25f, 1.17f, 10.2f), new Vector3(0.07f, 0.34f, 0.07f), Grey.Shade(0.5f));            // column
+        _machine.BoxOriented(new Transform3D(new Basis(Vector3.Back, -0.5f), new Vector3(-2.13f, 1.33f, 10.2f)), new Vector3(0.07f, 0.24f, 0.07f), new Color(0.15f, 0.15f, 0.16f)); // tube
+        _machine.Box(new Vector3(-2.1f, 1.08f, 10.2f), new Vector3(0.16f, 0.02f, 0.14f), new Color(0.55f, 0.55f, 0.6f)); // stage
+        for (int i = 0; i < 5; i++)
+        {
+            Color jar = i switch { 0 => new Color(0.3f, 1f, 0.8f, 0.5f), 2 => new Color(0.75f, 0.45f, 1f, 0.5f), 4 => new Color(0.4f, 0.8f, 1f, 0.5f), _ => new Color(0.5f, 0.55f, 0.5f) };
+            _machine.Box(new Vector3(-2.3f, 1.03f, 9.45f + i * 0.13f), new Vector3(0.08f, 0.14f, 0.08f), jar);
+        }
+        _dark.Box(new Vector3(-HalfW + 0.05f, 1.55f, 9.7f), new Vector3(0.08f, 0.34f, 0.5f), new Color(0.08f, 0.08f, 0.08f));
+        LabScreen = new Label3D
+        {
+            Text = "LAB IDLE", Position = new Vector3(-HalfW + 0.1f, 1.55f, 9.7f), Rotation = new Vector3(0, Mathf.Pi / 2f, 0),
+            FontSize = 32, PixelSize = 0.005f, Modulate = new Color(1f, 0.65f, 0.25f),
+            TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest,
+        };
+        AddChild(LabScreen);
+        Label("LAB", new Vector3(-HalfW + 0.02f, 2.0f, 9.95f), Mathf.Pi / 2f, 36);
+        Interactable.Create(this, new Vector3(-1.9f, 1.1f, 9.95f), new Vector3(0.8f, 0.5f, 1.3f), "Use the lab bench", () => OnPanel?.Invoke("lab"));
+        LabView = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f) * new Basis(Vector3.Right, -0.4f), new Vector3(-1.0f, 1.6f, 9.95f));
 
         // Ladder and ceiling hatch
         for (int i = 0; i < 7; i++)

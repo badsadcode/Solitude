@@ -215,6 +215,7 @@ public partial class Main : Node
 		SetupListener();
 		SetupHydrophone();
 		SetupCurrents();
+		SetupLab();
 		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--station-sweep") CallDeferred(MethodName.StationSweep);
 		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--eye-test") CallDeferred(MethodName.EyeTest);
 		{
@@ -407,6 +408,7 @@ public partial class Main : Node
 		{
 			"galley" => _interior.GalleyView,
 			"workbench" => _interior.WorkbenchView,
+			"lab" => _interior.LabView,
 			_ => _interior.EngineeringView,
 		};
 		MoveStationCam(_interior.GlobalTransform * view);
@@ -455,6 +457,9 @@ public partial class Main : Node
 					var def = m;
 					_panelActions.Add(() => FabricateModule(def));
 				}
+				break;
+			case "lab":
+				title = LabPanel(opts);
 				break;
 			case "galley":
 				title = "GALLEY  —  cook & eat";
@@ -721,6 +726,7 @@ public partial class Main : Node
 		UpdateEyeEncounter(dt);
 		UpdateGloam(dt);
 		UpdateSilt(dt);
+		UpdateLab(dt);
 		UpdateTerminalWorld(dt);
 		UpdateProximity(dt);
 		if (_mode != Mode.Monitors) _camServo = Mathf.MoveToward(_camServo, 0f, dt * 6f);
@@ -793,7 +799,15 @@ public partial class Main : Node
 		HelmDocking();
 		if (Input.IsActionJustPressed(GameInput.IntakeToggle)) _systems.ToggleIntake();
 		if (Input.IsActionJustPressed(GameInput.CenterControls)) { _sub.Rudder = 0f; _sub.Planes = 0f; _audio.PlayBlip(400f, 0.05f); }
-		if (Input.IsActionJustPressed(GameInput.Lights) && (_sub.LightsOn || !FloodsLocked())) { _sub.LightsOn = !_sub.LightsOn; _audio.PlayBlip(220f, 0.04f, 0.8f); }
+		if (Input.IsActionJustPressed(GameInput.Lights) && (_sub.LightsOn || !FloodsLocked()))
+		{
+			// off -> white -> (red, once the lab has worked out why) -> off
+			if (!_sub.LightsOn) { _sub.LightsOn = true; _sub.RedFloods = false; }
+			else if (!_sub.RedFloods && _lab.Has(Discovery.RedFloods)) _sub.RedFloods = true;
+			else { _sub.LightsOn = false; _sub.RedFloods = false; }
+			_audio.PlayBlip(220f, 0.04f, 0.8f);
+		}
+		if (Input.IsActionJustPressed(GameInput.Lure)) ReleaseLure();
 		if (Input.IsActionJustPressed(GameInput.CameraCycle))
 		{
 			_view = (HelmView)(((int)_view + 1) % 3);

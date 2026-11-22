@@ -34,6 +34,8 @@ public partial class Ravager : Node3D, IHarpoonable
     /// <summary>Debug/capture: force the jaw angle.</summary>
     public float? JawOverride;
     private State _state = State.Lurk;
+    /// <summary>The lab's nerve map: the shock prod holds it longer.</summary>
+    public static float StunFactor = 1f;
 
     private Skeleton3D _skel;
     private ShaderMaterial _mat;
@@ -161,7 +163,7 @@ public partial class Ravager : Node3D, IHarpoonable
     public void Hurt(float damage, Vector3 from, bool shock)
     {
         _hp -= damage;
-        if (shock) _stunT = 1.6f;
+        if (shock) _stunT = 1.6f * StunFactor;
         _fleeT = shock ? 12f : 18f;
         _state = State.Lurk;
         _passTimer = 50f + (float)_rng.NextDouble() * 30f;

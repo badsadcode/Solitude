@@ -34,6 +34,8 @@ public sealed class SaveData
     /// <summary>The ship's log terminal: dive clock, log lines, notes read (added after v2; missing = empty).</summary>
     public float Clock;
     public List<string> LogEntries = new(), Notes = new();
+    /// <summary>The lab: studied sample kinds, plus "RUN|item|seconds left" for one under the scope.</summary>
+    public List<string> Lab = new();
 }
 
 public sealed class StationSave
@@ -192,6 +194,7 @@ public partial class Main
         };
         foreach (var (id, count) in _systems.Hold.All()) d.Hold[id.ToString()] = count;
         d.Clock = _shipLog.Clock; d.LogEntries = _shipLog.SaveEntries(); d.Notes = _shipLog.SaveNotes();
+        d.Lab = _lab.Save();
         foreach (var s in _stations.Directory.Generated) if (s.Known) d.KnownStations.Add(s.Id);
         foreach (var (id, st) in _stations.States)
             d.Stations.Add(new StationSave
@@ -206,6 +209,8 @@ public partial class Main
     private void ApplySave(SaveData d)
     {
         _shipLog.Load(d.Clock, d.LogEntries, d.Notes);
+        _lab.Load(d.Lab);
+        ApplyDiscoveries();
         foreach (var m in d.Modules) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Fitted.Add(id);
         foreach (var m in d.Blueprints) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Known.Add(id);
         // v1 saves: the old engineering upgrades become fitted modules (and known blueprints).

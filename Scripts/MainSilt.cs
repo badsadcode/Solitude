@@ -32,6 +32,8 @@ public partial class Main
     private readonly Random _siltRng = new();
 
     public bool SiltStorm => _siltPhase is SiltPhase.Storm;
+    /// <summary>How long the rumble comes before the front (much longer once the lab has studied sediment).</summary>
+    private float SiltWarnLen => _lab.Has(Discovery.SiltForecast) ? 100f : 35f;
 
     private void SetupCurrents()
     {
@@ -71,7 +73,7 @@ public partial class Main
                 _siltPhaseT += dt;
                 switch (_siltPhase)
                 {
-                    case SiltPhase.Warning when _siltPhaseT > 35f:
+                    case SiltPhase.Warning when _siltPhaseT > SiltWarnLen:
                         _siltPhase = SiltPhase.Storm; _siltPhaseT = 0f;
                         _siltLen = 100f + (float)_siltRng.NextDouble() * 80f;
                         _hud.Message(_diver.Active
@@ -91,7 +93,7 @@ public partial class Main
 
         float target = _siltPhase switch
         {
-            SiltPhase.Warning => 0.05f * Mathf.Clamp(_siltPhaseT / 35f, 0f, 1f),
+            SiltPhase.Warning => 0.05f * Mathf.Clamp(_siltPhaseT / SiltWarnLen, 0f, 1f),
             SiltPhase.Storm => 1f,
             SiltPhase.Clearing => 1f - Mathf.Clamp(_siltPhaseT / 45f, 0f, 1f),
             _ => 0f,
@@ -108,7 +110,7 @@ public partial class Main
         _ocean.Flow = WaterAt(focus);
         _rig.Murk = _silt;
         _sonar.Clutter = _silt;
-        _audio.Silt = title ? 0f : (_siltPhase == SiltPhase.Warning ? Mathf.Clamp(_siltPhaseT / 35f, 0f, 1f) * 0.25f : _silt) * (_player.InStation ? 0.3f : 1f);
+        _audio.Silt = title ? 0f : (_siltPhase == SiltPhase.Warning ? Mathf.Clamp(_siltPhaseT / SiltWarnLen, 0f, 1f) * 0.25f : _silt) * (_player.InStation ? 0.3f : 1f);
         if (!_sub.Freeze) _sub.Water = title ? Vector3.Zero : WaterAt(_sub.GlobalPosition);
         else _sub.Water = Vector3.Zero;
     }
@@ -130,7 +132,9 @@ public partial class Main
         if (down.LengthSquared() < 1e-3f) { float a = (float)_siltRng.NextDouble() * Mathf.Tau; down = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)); }
         _stormDir = down.Normalized();
         _stormPush = 1.1f + (float)_siltRng.NextDouble() * 0.7f;
-        _hud.Message("HYDROPHONE: a long, low rumble upslope. It's getting louder.", 6f);
+        _hud.Message(_lab.Has(Discovery.SiltForecast)
+            ? "HYDROPHONE: a long, low rumble upslope. It's getting louder. (Silt signature: the front is maybe a minute and a half out.)"
+            : "HYDROPHONE: a long, low rumble upslope. It's getting louder.", 7f);
         _audio.PlayGroan(0.6f);
     }
 
@@ -139,7 +143,7 @@ public partial class Main
     {
         Vector3 p = FocusPoint();
         at = p - _stormDir * (_siltPhase == SiltPhase.Warning ? 400f - _siltPhaseT * 10f : 40f);
-        level = _siltPhase switch { SiltPhase.Warning => 0.4f + 0.5f * Mathf.Clamp(_siltPhaseT / 35f, 0f, 1f), SiltPhase.Storm => 1f, SiltPhase.Clearing => _silt, _ => 0f };
+        level = _siltPhase switch { SiltPhase.Warning => 0.4f + 0.5f * Mathf.Clamp(_siltPhaseT / SiltWarnLen, 0f, 1f), SiltPhase.Storm => 1f, SiltPhase.Clearing => _silt, _ => 0f };
         return level > 0.02f;
     }
 

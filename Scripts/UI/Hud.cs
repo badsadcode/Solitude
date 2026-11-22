@@ -246,7 +246,7 @@ public partial class Hud : CanvasLayer
         sb.AppendLine($"HEADING  {Mathf.RoundToInt(sub.Heading) % 360,7:000}°");
         sb.AppendLine($"PITCH    {sub.PitchDeg,7:+0.0;-0.0}°   ROLL {sub.RollDeg:+0.0;-0.0}°");
         sb.AppendLine($"BALLAST  {sub.Ballast,7:+0.00;-0.00}   {(sub.BallastInput > 0 ? "BLOWING" : sub.BallastInput < 0 ? "FLOODING" : "")}");
-        sb.AppendLine($"HULL     {sub.Hull,6:0}%    {(sub.LightsOn ? "FLOODS ON" : "FLOODS OFF")}");
+        sb.AppendLine($"HULL     {sub.Hull,6:0}%    {(sub.LightsOn ? (sub.RedFloods ? "FLOODS RED" : "FLOODS ON") : "FLOODS OFF")}");
         sb.Append($"VIEW     {viewName}");
         _helmLeft.Text = sb.ToString();
 

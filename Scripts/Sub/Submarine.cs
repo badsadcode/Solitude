@@ -90,6 +90,9 @@ public partial class Submarine : RigidBody3D
     private Vector3 _prevVel;
     private Node3D _prop;
     private SpotLight3D[] _floods;
+    private Color _floodColor = Colors.White;
+    /// <summary>Floods refitted to deep red (the lab's study of the plate fragment).</summary>
+    public bool RedFloods;
     private OmniLight3D _beacon;
     private float _beaconT;
     private float _impactCooldown;
@@ -129,6 +132,7 @@ public partial class Submarine : RigidBody3D
             MakeSpot(new Vector3(0, -3.2f, -5.5f), new Vector3(-Mathf.Pi / 2f + 0.25f, 0, 0), 65f, 55f, 6f, false),
         };
 
+        _floodColor = _floods[0].LightColor;
         AddChild(new OmniLight3D { Position = new Vector3(-3.3f, 0.2f, -2f), LightColor = new Color(1f, 0.1f, 0.05f), LightEnergy = 1.2f, OmniRange = 4f });
         AddChild(new OmniLight3D { Position = new Vector3(3.3f, 0.2f, -2f), LightColor = new Color(0.1f, 1f, 0.25f), LightEnergy = 1.2f, OmniRange = 4f });
         _beacon = new OmniLight3D { Position = new Vector3(0, 7.5f, -2.2f), LightColor = new Color(1f, 0.95f, 0.8f), LightEnergy = 0f, OmniRange = 9f };
@@ -257,7 +261,11 @@ public partial class Submarine : RigidBody3D
         float dt = (float)delta;
         _prop.RotateZ(EngineOutput * 9f * dt);
 
-        foreach (var s in _floods) s.Visible = LightsOn;
+        foreach (var s in _floods)
+        {
+            s.Visible = LightsOn;
+            s.LightColor = RedFloods ? new Color(1f, 0.1f, 0.05f) : _floodColor;
+        }
 
         _beaconT += dt;
         float blink = Mathf.PosMod(_beaconT, 2.6f);

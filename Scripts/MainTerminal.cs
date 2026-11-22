@@ -53,7 +53,7 @@ public partial class Main
         "Recorded:", "Same signature", "IDENTIFIED", "It's very faint",
         "THE CRYSTAL EXPANSE", "THE HADAL DEEP", "THE PALE SHELF",
         "The Sounding has stopped", "The light turns toward you",
-        "HYDROPHONE: a long, low rumble", "SILT.", "The silt is settling",
+        "HYDROPHONE: a long, low rumble", "SILT.", "The silt is settling", "Something came back on the barbs",
     };
 
     private void OnHudMessage(string m)
@@ -270,6 +270,14 @@ public partial class Main
             any = true;
         }
         if (!any) l.Add(new Line("Nothing waiting. Station cores hold more.", 2));
+
+        l.Add(new Line(""));
+        l.Add(new Line("LAB", 1));
+        if (_lab.Running is ItemId under) l.Add(new Line($"[~] {Items.Name(under)} under the scope: {_lab.Progress * 100f:0}%"));
+        var waiting = new List<string>();
+        foreach (var st in Lab.All) if (!_lab.Done.Contains(st.Item) && _systems.Hold.Count(st.Item) > 0) waiting.Add(Items.Name(st.Item));
+        if (waiting.Count > 0) l.Add(new Line($"[ ] Waiting in the hold: {string.Join(", ", waiting)}"));
+        l.Add(new Line($"Studied {_lab.Done.Count}. Field notes are with the NOTES.", 2));
 
         l.Add(new Line(""));
         l.Add(new Line("HYDROPHONE", 1));

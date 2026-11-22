@@ -22,6 +22,10 @@ public enum ItemId
     // Fabricated modules (fitted into the rack in engineering; see Modules.cs)
     ModFrameI, ModFrameII, ModAblative, ModBattery, ModThermal, ModLongSonar, ModFloods,
     ModHoldRacks, ModBilge, ModSuitTank, ModRebreather, ModReelMotor, ModCapacitor, ModExpander, ModSilent,
+    // Specimens: scraps the harpoon brings back (for the lab)
+    TissueRavager, TissueRay, ScaleWyrm, PlateGloam,
+    // Made in the lab once the lumen is understood
+    LureFlare,
 }
 
 public sealed record ItemInfo(string Name, string Description, int Weight, float Food = 0f);
@@ -54,6 +58,11 @@ public static class Items
         [ItemId.Optics] = new("Sealed optic", "A pressure-proof lens. Something moves in the reflection that isn't behind you.", 1),
         [ItemId.LogicBoard] = new("Logic board", "Station controller. The firmware keeps a log you probably shouldn't read.", 1),
         [ItemId.Impeller] = new("Pump impeller", "Titanium vanes worn smooth. Hair tangled round the hub.", 1),
+        [ItemId.TissueRavager] = new("Ravager tissue", "A strip of grey hide with something cable-like inside. For the lab.", 1),
+        [ItemId.TissueRay] = new("Ray wing-edge", "Still flickering. In a pattern. For the lab.", 1),
+        [ItemId.ScaleWyrm] = new("Fangwyrm scale", "Big as your palm, ringed like a tree stump. For the lab.", 1),
+        [ItemId.PlateGloam] = new("Plate fragment", "A chip of dark armour that came back on the barbs. Something on its underside is wet and looks back. For the lab.", 1),
+        [ItemId.LureFlare] = new("Lure flare", "Lumen gel in a sealant shell. Release from the helm (B): it drifts and glows for a while.", 1),
     };
 
     /// <summary>Module items take their names from the module table.</summary>

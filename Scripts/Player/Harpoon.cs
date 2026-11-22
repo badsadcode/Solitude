@@ -26,6 +26,8 @@ public partial class Harpoon : Node3D
 
     public Diver Diver;
     public Func<IEnumerable<IHarpoonable>> Targets;
+    /// <summary>A spear hit a creature (the director may give the diver a scrap for the lab).</summary>
+    public event Action<IHarpoonable> SpearHit;
     public Action<string, Vector3> Sound;
     public Action<string> Message;
     public Action<float> SelfShock;
@@ -298,6 +300,7 @@ public partial class Harpoon : Node3D
                         if (Hit.ToSegment(next, c.Head, c.Tail) < c.BodyRadius || Hit.ToSegment(_sPos, c.Head, c.Tail) < c.BodyRadius)
                         {
                             c.Hurt(25f, Diver.GlobalPosition, false);
+                            SpearHit?.Invoke(c);
                             StickTo(c.Body, next);
                             Sound?.Invoke("spearhit", next);
                             Message?.Invoke("Hit. It did not like that.");

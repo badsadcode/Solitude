@@ -777,6 +777,42 @@ public partial class Main
             (t += 0.1f, () => { _feedFullscreen = false; _hud.ShowFeed(null, null, 1f); EnterWalking(); _siltPhase = SiltPhase.Clearing; _siltPhaseT = 0f; }),
             (t += 40f, () => LogSilt("clearing 40 s")),
             (t += 10f, () => { _siltPhase = SiltPhase.None; LogSilt("done"); }),
+            // --- The sample lab
+            (t += 0.1f, CaptureMarkLab),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                _systems.Hold.Add(ItemId.Lumen, 2); _systems.Hold.Add(ItemId.Sediment); _systems.Hold.Add(ItemId.Sealant); _systems.Hold.Add(ItemId.PlateGloam);
+                _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.9f, 0.05f, 9.95f));
+                _player.SetLook(0f, -0.25f);
+            }),
+            (t += 1.2f, () => { Shot("44a_lab_bench"); GD.Print($"[capture] focused: {_player.Focused?.Prompt ?? "nothing"}"); _player.Focused?.Use(); }),
+            (t += 1.0f, () => { Shot("44b_lab_panel"); PickPanel(1); GD.Print($"[capture] lab running: {_lab.Running} left {_lab.Left:0}"); }),
+            (t += 1.0f, () => { Shot("44c_lab_running"); _lab.Update(500f, true); GD.Print($"[capture] lab done: {string.Join(",", _lab.Done)} lure={_lab.Has(Discovery.LureFlares)} notes={_shipLog.Notes.Count}"); }),
+            (t += 1.0f, () => { Shot("44d_lab_after"); _lab.Start(ItemId.PlateGloam); _systems.Hold.Remove(ItemId.PlateGloam); _lab.Update(999f, true); _lab.Start(ItemId.Sediment); _lab.Update(999f, true);
+                GD.Print($"[capture] red floods={_lab.Has(Discovery.RedFloods)} forecast={_lab.Has(Discovery.SiltForecast)} warn={SiltWarnLen} sonar recharge={_sonar.Recharge}"); }),
+            (t += 0.1f, () => { CloseLog(); EnterWalking(); OpenJournal(); }),
+            (t += 0.8f, () => Shot("44e_journal_fieldnote")),
+            (t += 0.1f, () =>
+            {
+                CloseTerminal();
+                _systems.Hold.Add(ItemId.LureFlare);
+                var sp = _sub.GlobalPosition;
+                _terrain.GenerateImmediate(sp, 2);
+                _sub.GlobalPosition = new Vector3(sp.X, Mathf.Max(_gen.Height(sp.X, sp.Z) + 25f, sp.Y), sp.Z);
+                _sub.LinearVelocity = Vector3.Zero; _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = true; _sub.RedFloods = false;
+                EnterHelm(); _view = HelmView.Chase; ApplyHelmView();
+                SummonGloam(130f); _gloam.Provoke();
+                ReleaseLure();
+                _sub.LightsOn = false;   // go dark, let the flare do the shouting
+            }),
+            (t += 3f, () => { Shot("44f_lure_out"); GD.Print($"[capture] lure: gloam {_gloam.Current}, to lure {_gloam.Head.DistanceTo(_lure?.GlobalPosition ?? Vector3.Zero):0} m, to boat {_gloam.Head.DistanceTo(_sub.GlobalPosition):0} m"); }),
+            (t += 8f, () => GD.Print($"[capture] lure 11s: gloam {_gloam?.Current}, lure alive {_lure != null}, to boat {_gloam?.Head.DistanceTo(_sub.GlobalPosition):0} m, hull {_sub.Hull:0}")),
+            (t += 10f, () => GD.Print($"[capture] lure 21s: gloam {_gloam?.Current}, lure alive {_lure != null}, to boat {_gloam?.Head.DistanceTo(_sub.GlobalPosition):0} m, hull {_sub.Hull:0}")),
+            (t += 0.1f, () => { _gloam?.QueueFree(); _gloam = null; _sub.LightsOn = true; _sub.RedFloods = true; GD.Print($"[capture] red floods: gloam would see {GloamBrightness():0.00}"); }),
+            (t += 1.5f, () => Shot("44g_red_floods")),
+            (t += 0.1f, () => { _sub.RedFloods = false; _view = HelmView.Bridge; ApplyHelmView(); EnterWalking(); }),
+            (t += 0.5f, () => { }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -1050,6 +1086,7 @@ public partial class Main
     private void CaptureMarkGloam() => CaptureSection("gloam");
     private void CaptureMarkTerminal() => CaptureSection("terminal");
     private void CaptureMarkSilt() => CaptureSection("silt");
+    private void CaptureMarkLab() => CaptureSection("lab");
     private Vector3 _siltMark;
     private void LogSilt(string what)
     {
@@ -1110,7 +1147,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

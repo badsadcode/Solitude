@@ -77,10 +77,11 @@ public partial class Main
         _gloam = new Gloam
         {
             Name = "Gloam", Gen = _gen, Audio = _audio,
-            Target = FocusPoint,
-            Brightness = GloamBrightness,
-            TargetSpeed = () => _diver.Active ? _diver.Velocity.Length() : _sub.LinearVelocity.Length(),
-            TargetIsDiver = () => _diver.Active,
+            // While a lure flare burns where it can see it, the flare is the light it wants.
+            Target = () => LureVisible ? _lure.GlobalPosition : FocusPoint(),
+            Brightness = () => LureVisible ? 1.2f : GloamBrightness(),
+            TargetSpeed = () => LureVisible ? 0f : _diver.Active ? _diver.Velocity.Length() : _sub.LinearVelocity.Length(),
+            TargetIsDiver = () => !LureVisible && _diver.Active,
         };
         _game.AddChild(_gloam);
         Vector3 f = FocusPoint();
@@ -97,7 +98,7 @@ public partial class Main
     /// <summary>What the Gloam can see of you: 1 = floods / lamp on, 0 = dark.</summary>
     private float GloamBrightness()
     {
-        float murk = 1f - 0.85f * _silt;   // light doesn't carry far in silt
+        float murk = (1f - 0.85f * _silt) * (_sub.RedFloods && !_diver.Active ? 0.12f : 1f);   // light doesn't carry far in silt; deep red barely registers
         if (_diver.Active) return _diver.Lamp.Visible ? 0.6f * murk : 0f;
         return _sub.LightsOn ? murk : 0f;
     }
@@ -121,6 +122,7 @@ public partial class Main
 
     private void OnGloamStruck(float strength)
     {
+        if (LureVisible && _gloam.Head.DistanceTo(_lure.GlobalPosition) < 16f) { LureEaten(); return; }
         if (_diver.Active)
         {
             _player.Damage(40f * strength);

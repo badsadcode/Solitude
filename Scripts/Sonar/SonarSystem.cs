@@ -41,7 +41,8 @@ public partial class SonarSystem : Node
     public float Clutter;
 
     public const float WaveSpeed = 300f;
-    public const float Recharge = 4f;
+    /// <summary>Seconds between pings (the lab's crystal study shortens it).</summary>
+    public float Recharge = 4f;
     public const float ContactLife = 14f;
 
     public readonly SonarMap Map = new();

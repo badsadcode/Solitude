@@ -32,6 +32,8 @@ public partial class ShipSystems : Node
     public float VentRange = 40f, VentRate = 1f;
     public float Food { get; private set; } = 80f;
     public bool IntakeOn { get; private set; }
+    /// <summary>The lab's plankton study warms the intake: more per second.</summary>
+    public float IntakeYield = 1f;
     public bool ArmActive;                 // set by the arm while deployed
     public bool Emergency => Power <= 0.01f;
     public bool Thermal { get; private set; }
@@ -154,7 +156,7 @@ public partial class ShipSystems : Node
         if (IntakeOn)
         {
             float speed = Mathf.Abs(Sub.ForwardSpeed);
-            _plankton += dt * Mathf.Clamp(speed / 3f, 0f, 1f) / 12f;     // ~1 per 12 s at speed
+            _plankton += dt * Mathf.Clamp(speed / 3f, 0f, 1f) / 12f * IntakeYield;     // ~1 per 12 s at speed
             float alt = Gen != null ? Sub.GlobalPosition.Y - Gen.Height(Sub.GlobalPosition.X, Sub.GlobalPosition.Z) : 99f;
             if (alt < 6f && speed > 0.2f && speed < 2.5f) _sediment += dt / 10f;
             if (_plankton >= 1f) { _plankton -= 1f; Collect(ItemId.Plankton, announce: false); Audio?.PlayBlip(660f, 0.03f, 0.25f); }
