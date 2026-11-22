@@ -29,6 +29,9 @@ public static class GameInput
     public const string Ping = "sonar_ping";
     public const string SonarRange = "sonar_range";
 
+    // Debug
+    public const string SummonCreature = "debug_summon_creature";
+
     // Monitor station
     public const string Fullscreen = "feed_fullscreen";
     public const string ToggleFullscreenWindow = "window_fullscreen";
@@ -55,6 +58,7 @@ public static class GameInput
         Bind(Lights, Godot.Key.L);
         Bind(Ping, Godot.Key.P);
         Bind(SonarRange, Godot.Key.Q);
+        Bind(SummonCreature, Godot.Key.F9);
 
         Bind(Fullscreen, Godot.Key.F);
         Bind(ToggleFullscreenWindow, Godot.Key.F11);

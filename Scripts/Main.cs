@@ -2,6 +2,7 @@ using System;
 using Godot;
 using Solitude.Audio;
 using Solitude.Core;
+using Solitude.Creatures;
 using Solitude.Interior;
 using Solitude.Player;
 using Solitude.Sonar;
@@ -45,6 +46,7 @@ public partial class Main : Node
 	private AudioDirector _audio;
 	private Hud _hud;
 	private SonarSystem _sonar;
+	private Ravager _ravager;
 	private SubViewport _sonarScope;
 	private float _holoYaw = 0.6f, _holoPitch = 0.75f;
 
@@ -163,6 +165,11 @@ public partial class Main : Node
 		_hud = new Hud { Name = "Hud" };
 		AddChild(_hud);
 		_sonar.Audio = _audio;
+
+		// ---- creatures
+		_ravager = new Ravager { Name = "Ravager", Sub = _sub, Gen = _gen, Audio = _audio };
+		_game.AddChild(_ravager);
+		_sonar.Bodies = () => new[] { _ravager.GlobalPosition };
 
 		_sub.Impact += s =>
 		{
@@ -405,6 +412,12 @@ public partial class Main : Node
 		{
 			var m = DisplayServer.WindowGetMode();
 			DisplayServer.WindowSetMode(m == DisplayServer.WindowMode.Fullscreen ? DisplayServer.WindowMode.Windowed : DisplayServer.WindowMode.Fullscreen);
+		}
+
+		if (Input.IsActionJustPressed(GameInput.SummonCreature))
+		{
+			_ravager.ForcePass(40f, teleport: true);
+			_hud.Message("[debug] something is crossing your bow", 3f);
 		}
 
 		switch (_mode)

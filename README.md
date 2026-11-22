@@ -18,6 +18,10 @@ A [Bad Ideas Works](https://github.com/badsadcode) production.
 - **Holo table** — a wireframe projection of everything the sonar has ever seen (persistent map
   memory), revealed in step with the wavefront. Orbit it with the mouse, zoom with the wheel.
 
+- **First creature: the ravager** — a 15 m predator (model by Tom) animated procedurally: tail wave,
+  turning curl, gaping jaw, eyes that glow in the dark. It circles out of sight and sometimes crosses
+  your bow. It answers sonar. **F9** (debug) summons a pass.
+
 ## Milestone 1: the vertical slice
 
 - **Walkable interior** — bridge, sensor bay, galley, quarters/workshop, engineering. The room

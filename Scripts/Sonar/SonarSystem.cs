@@ -29,6 +29,8 @@ public partial class SonarSystem : Node
     public TerrainGenerator Gen;
     public Submarine Sub;
     public AudioDirector Audio;
+    /// <summary>Positions of things that swim (creatures). Sampled at ping time.</summary>
+    public Func<IEnumerable<Vector3>> Bodies;
 
     public static readonly float[] Ranges = { 150f, 300f, 500f };
     public int RangeIndex = 1;
@@ -78,6 +80,21 @@ public partial class SonarSystem : Node
         double start = PingStart;
         int seed = _rng.Next();
         _task = Task.Run(() => Sample(gen, origin, range, start, seed));
+        // Living things echo too: a tight, bright cluster the map never records.
+        if (Bodies != null)
+            foreach (var b in Bodies())
+            {
+                float d = new Vector2(b.X - origin.X, b.Z - origin.Z).Length();
+                if (d > range || d < 1f) continue;
+                for (int i = 0; i < 6; i++)
+                    Contacts.Add(new SonarContact
+                    {
+                        World = new Vector2(b.X, b.Z) + new Vector2((float)_rng.NextDouble() - 0.5f, (float)_rng.NextDouble() - 0.5f) * 8f,
+                        RevealAt = start + d / WaveSpeed,
+                        Strength = 0.95f,
+                        Ghost = true,
+                    });
+            }
         Audio?.PlayPing();
         Pinged?.Invoke();
         return true;

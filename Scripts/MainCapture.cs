@@ -14,6 +14,8 @@ public partial class Main
     private float _captureT;
     private int _captureStep;
     private List<(float at, Action act)> _captureScript;
+    private Camera3D _docCam;
+    private float _docSide = 1f;
 
     private void SetupCapture()
     {
@@ -54,8 +56,21 @@ public partial class Main
             (t += 0.1f, () => EnterWalking()),
             (t += 0.1f, () => { EnterWalking(); EnterHelm(); var p = _sub.GlobalPosition; _sub.GlobalPosition = new Vector3(p.X, _gen.Height(p.X, p.Z) + 7f, p.Z); _sub.TelegraphIndex = 4; _sub.ApplyTelegraph(); }),
             (t += 1.5f, () => Shot("07_helm_bridge")),
-            (t += 0.1f, () => { _view = HelmView.BowCamera; ApplyHelmView(); }),
+            (t += 0.1f, () => { _view = HelmView.BowCamera; ApplyHelmView(); _ravager.ForcePass(26f, teleport: true); }),
             (t += 1.0f, () => Shot("08_bow_camera")),
+            (t += 1.6f, () => Shot("08b_bow_ravager")),
+            (t += 1.6f, () => Shot("08c_bow_ravager")),
+            (t += 0.1f, () => { _view = HelmView.Bridge; ApplyHelmView(); }),
+            (t += 0.6f, () => Shot("08d_bridge_ravager")),
+            // Documentary camera: follow the ravager up close to check skinning and swimming.
+            (t += 0.1f, () => { _docCam = new Camera3D { Fov = 60f, Far = 200f }; _docCam.AddChild(new SpotLight3D { SpotRange = 60f, SpotAngle = 35f, LightEnergy = 6f }); _game.AddChild(_docCam); _docCam.MakeCurrent(); }),
+            (t += 0.8f, () => Shot("12a_ravager_side")),
+            (t += 0.7f, () => Shot("12b_ravager_side")),
+            (t += 0.1f, () => _docSide = -1f),
+            (t += 0.8f, () => Shot("12c_ravager_front")),
+            (t += 0.1f, () => { _docSide = 2f; }),
+            (t += 0.8f, () => Shot("12d_ravager_top")),
+            (t += 0.1f, () => { _docCam.QueueFree(); _docCam = null; _view = HelmView.BowCamera; ApplyHelmView(); }),
             (t += 0.1f, () => { _view = HelmView.Chase; ApplyHelmView(); }),
             (t += 4.0f, () => Shot("09_chase")),
             (t += 0.1f, () => { _sub.Rudder = 1f; _sub.Planes = -0.4f; }),
@@ -70,6 +85,15 @@ public partial class Main
     {
         if (_captureScript == null) return;
         _captureT += dt;
+        if (_docCam != null)
+        {
+            // side (1), head-on (-1) or top-down (2) view of the ravager, lit by the camera's lamp.
+            Transform3D rt = _ravager.GlobalTransform;
+            Vector3 f = -rt.Basis.Z, r = rt.Basis.X;
+            Vector3 offset = _docSide switch { -1f => f * 22f + Vector3.Up * 3f, 2f => Vector3.Up * 26f + f * 2f, _ => r * 24f + Vector3.Up * 4f };
+            _docCam.GlobalPosition = rt.Origin + offset;
+            _docCam.LookAt(rt.Origin, _docSide == 2f ? f : Vector3.Up);
+        }
         while (_captureStep < _captureScript.Count && _captureT >= _captureScript[_captureStep].at)
             _captureScript[_captureStep++].act();
     }
