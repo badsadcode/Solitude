@@ -211,6 +211,7 @@ public partial class Main : Node
 		SetupListener();
 		SetupHydrophone();
 		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--station-sweep") CallDeferred(MethodName.StationSweep);
+		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--eye-test") CallDeferred(MethodName.EyeTest);
 		{
 			string mPath = null, mOut = null;
 			foreach (var arg in OS.GetCmdlineUserArgs())
@@ -702,6 +703,7 @@ public partial class Main : Node
 		UpdateStory(dt);
 		UpdateListener(dt);
 		UpdateHydrophoneWorld(dt);
+		UpdateEyeEncounter(dt);
 		UpdateCapture(dt);
 	}
 

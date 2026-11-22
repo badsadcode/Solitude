@@ -35,6 +35,13 @@ public sealed class CreatureProfile
     public float EmissionEnergy = 3f;
     /// <summary>Surface: the wet sheen (0..1) and roughness. The swimmers' defaults are glossy; skins can be matte.</summary>
     public float WetSpec = 0.6f, Roughness = 0.45f;
+    /// <summary>
+    /// Added eyes (the model has none of its own at this scale): a bone to ride on, the right eye's
+    /// position in model units (the left mirrors it), and the eye radius in metres. Null = no eyes.
+    /// </summary>
+    public string EyeBone;
+    public Godot.Vector3 EyeModel;
+    public float EyeRadius = 0.6f;
 
     public readonly List<(string bone, float amp, float phase, float curl)> Yaw = new();
     public readonly List<(string bone, float amp, float phase)> Pitch = new();
@@ -96,6 +103,9 @@ public sealed class CreatureProfile
             // Tom's glow map: dim teal patches over ~4% of the skin, painted gently, so it can run hot.
             EmissionEnergy = 2.6f,
             WetSpec = 0.1f, Roughness = 0.85f,   // Tom: "specular is too high"
+            // Eyes where a humpback's are: just behind the corner of the mouth, on the side of the head
+            // (measured from the mesh: the head surface is ~1.8 units out at z 6.3).
+            EyeBone = "Bone.005", EyeModel = new Godot.Vector3(1.72f, -0.25f, 6.3f), EyeRadius = 0.6f,
         };
         const float k = 0.7f;
         p.Pitch.Add(("Bone", 0.015f, 0 * k));

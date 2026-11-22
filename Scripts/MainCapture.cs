@@ -457,6 +457,25 @@ public partial class Main
                 GD.Print(w == null ? "[capture] whale: none" : $"[capture] whale relative to boat: {_sub.GlobalTransform.AffineInverse() * w.GlobalPosition} (−Z = ahead), visible={w.IsVisibleInTree()}, leaving={w.Leaving}, scale={w.Scale}");
             }),
             (t += 8.0f, () => { Shot("31f_whale_cam1_later"); EnterWalking(); }),
+            // --- The eye at the window: the whale stops with its eye at CAM 2/3
+            (t += 0.1f, CaptureMarkEye),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                var sp = _sub.GlobalPosition;
+                _sub.GlobalPosition = new Vector3(sp.X, Mathf.Min(_gen.Height(sp.X, sp.Z) + 60f, -420f), sp.Z);
+                _sub.LinearVelocity = Vector3.Zero; _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = true;
+                StartEyeEncounter(false);
+                _player.Position = new Vector3(-0.9f, 0.05f, -3f); EnterMonitors();
+                _feedFullscreen = true; _hud.ShowFeed(_rig.Feeds[_eyeCam].Viewport.GetTexture(), _rig.Feeds[_eyeCam].Name, 1f);
+            }),
+            (t += 20f, () => { Shot("32a_eye_approach"); LogEye(); }),
+            (t += 18f, () => { Shot("32b_eye_arriving"); LogEye(); }),
+            (t += 5f, () => { Shot("32c_eye_1"); LogEye(); }),
+            (t += 3f, () => { Shot("32d_eye_2"); LogEye(); }),
+            (t += 3f, () => { Shot("32e_eye_3"); LogEye(); }),
+            (t += 3f, () => { Shot("32f_eye_4"); LogEye(); }),
+            (t += 10f, () => { Shot("32g_eye_gone"); LogEye(); EnterWalking(); }),
             // --- The hydrophone: waterfall, the Sounding, recording, a creature, own noise
             (t += 0.1f, CaptureMarkHydrophone),
             (t += 0.1f, () =>
@@ -855,6 +874,15 @@ public partial class Main
         GD.Print($"[capture] hydrophone {what}: beam {_beam:0} band {_phone.Filter} level {level:0.00} in beam {(src is HydroSource s ? $"{s.Class} {s.Level:0.00} @ {s.Distance:0} m" : "nothing")} | sources {_hydroSources.Count}: {string.Join(", ", _hydroSources.ConvertAll(x => $"{x.Class}:{x.Level:0.00}@{x.Bearing:0}"))} | lines: {_hydroDisplay.Line2} / {_hydroDisplay.Line3} | recs {_phone.Recordings.Count} noise {_listener.Noise:0.00}");
     }
     private void CaptureMarkWhale() => CaptureSection("whale");
+    private void CaptureMarkEye() => CaptureSection("eye");
+    private void LogEye()
+    {
+        var w = _creatures.Whale;
+        if (w == null) { GD.Print("[capture] eye: no whale"); return; }
+        Vector3 lens = LensWorld(_eyeCam);
+        float d = Mathf.Min(w.EyeWorld(-1).DistanceTo(lens), w.EyeWorld(1).DistanceTo(lens));
+        GD.Print($"[capture] eye: phase {_eyePhase} active {_eyeActive} eye-to-lens {d:0.0} m speed {w.SpeedOverride:0.00} whale {_sub.GlobalTransform.AffineInverse() * w.GlobalPosition}");
+    }
     private void CaptureMarkHydrophone() => CaptureSection("hydrophone");
     private void CaptureMarkListener() => CaptureSection("listener");
     private void CaptureMarkModules() => CaptureSection("modules");
@@ -894,7 +922,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

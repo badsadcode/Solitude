@@ -29,6 +29,12 @@ public partial class Swimmer : Node3D, IHarpoonable
     public bool Leaving { get; private set; }
     /// <summary>Debug/capture: force the jaw angle.</summary>
     public float? JawOverride;
+    /// <summary>The eye encounter: something for the eyes to look at, and a speed to hold.</summary>
+    public Vector3? EyeTarget;
+    public float? SpeedOverride;
+    /// <summary>Hold a scripted line even close to the bottom (the eye encounter).</summary>
+    public bool IgnoreSeabed;
+    private readonly List<Node3D> _eyes = new();
 
     private enum State { Wander, Curious, Lurk, Approach, Pass, Transit }
     private Vector3 _transitTo;
@@ -82,11 +88,58 @@ public partial class Swimmer : Node3D, IHarpoonable
                     (inv * Vector3.Up).Normalized(), (inv * Vector3.Right).Normalized(), (inv * Vector3.Back).Normalized());
             }
 
+        if (Profile.EyeBone != null && _skel != null) BuildEyes();
+
         _speed = Profile.CruiseSpeed;
         _state = Profile.Temperament == Temperament.Apex ? State.Lurk : State.Wander;
         _timer = Profile.Temperament == Temperament.Apex ? 15f + (float)_rng.NextDouble() * 20f : 0f;
         _orbit = (float)_rng.NextDouble() * Mathf.Tau;
         _fwd = new Vector3(MathF.Sin(_orbit), 0, MathF.Cos(_orbit));
+    }
+
+    /// <summary>Two eyes riding the head bone: a dark wet orb, a faint pale iris, a pupil. They turn to look.</summary>
+    private void BuildEyes()
+    {
+        int bi = _skel.FindBone(Profile.EyeBone);
+        if (bi < 0) return;
+        Transform3D boneRest = _skel.GetBoneGlobalRest(bi);
+        float r = Profile.EyeRadius;
+        var orb = new StandardMaterial3D { AlbedoColor = new Color(0.02f, 0.025f, 0.035f), Roughness = 0.04f, MetallicSpecular = 1f };
+        var iris = new StandardMaterial3D { AlbedoColor = new Color(0.55f, 0.5f, 0.3f), EmissionEnabled = true, Emission = new Color(0.7f, 0.62f, 0.35f), EmissionEnergyMultiplier = 0.5f, Roughness = 0.2f };
+        var pupil = new StandardMaterial3D { AlbedoColor = Colors.Black, Roughness = 0.02f, MetallicSpecular = 1f };
+        foreach (float side in new[] { -1f, 1f })
+        {
+            var att = new BoneAttachment3D { BoneName = Profile.EyeBone };
+            _skel.AddChild(att);
+            var socket = new Node3D { Transform = boneRest.AffineInverse() * new Transform3D(Basis.Identity, new Vector3(side * Profile.EyeModel.X, Profile.EyeModel.Y, Profile.EyeModel.Z)) };
+            att.AddChild(socket);
+            // The eye itself is top-level so it can turn freely and keep its size in metres.
+            var eye = new Node3D { TopLevel = true, Name = side < 0 ? "EyeL" : "EyeR" };
+            socket.AddChild(eye);
+            eye.AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = r, Height = 2f * r, RadialSegments = 10, Rings = 6 }, MaterialOverride = orb });
+            eye.AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = r * 0.5f, Height = r * 1f, RadialSegments = 10, Rings = 4 }, MaterialOverride = iris, Position = new Vector3(0, 0, -r * 0.84f), Scale = new Vector3(1f, 1f, 0.35f) });
+            eye.AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = r * 0.22f, Height = r * 0.44f, RadialSegments = 8, Rings = 4 }, MaterialOverride = pupil, Position = new Vector3(0, 0, -r * 0.98f), Scale = new Vector3(1.6f, 1f, 0.3f) });
+            _eyes.Add(eye);
+        }
+    }
+
+    /// <summary>World position of an eye (side −1 left, +1 right), or the body if it has none.</summary>
+    public Vector3 EyeWorld(int side) => _eyes.Count == 2 ? ((Node3D)_eyes[side < 0 ? 0 : 1].GetParent()).GlobalPosition : GlobalPosition;
+
+    private void UpdateEyes(float dt)
+    {
+        foreach (var eye in _eyes)
+        {
+            var socket = (Node3D)eye.GetParent();
+            Vector3 at = socket.GlobalPosition;
+            // Rest: looking straight out of the side of the head. With a target: turning to it.
+            Vector3 outward = at - GlobalPosition; outward -= GlobalBasis.Z * outward.Dot(GlobalBasis.Z); outward.Y = 0;
+            Vector3 look = EyeTarget is Vector3 t && t.DistanceTo(at) < 120f ? (t - at) : outward;
+            if (look.LengthSquared() < 1e-4f) look = Vector3.Forward;
+            Basis want = Basis.LookingAt(look.Normalized(), Vector3.Up);
+            Basis cur = eye.GlobalBasis.Orthonormalized();
+            eye.GlobalTransform = new Transform3D(cur.Slerp(want, Mathf.Clamp(1.5f * dt, 0f, 1f)), at);
+        }
     }
 
     private static IEnumerable<T> FindAll<T>(Node n) where T : Node
@@ -172,6 +225,7 @@ public partial class Swimmer : Node3D, IHarpoonable
         Vector3 f = Focus();
         float dist = pos.DistanceTo(f);
         float targetSpeed = Profile.CruiseSpeed;
+        if (_eyes.Count > 0) UpdateEyes(dt);
         _biteCd -= dt;
 
         switch (_state)
@@ -241,10 +295,11 @@ public partial class Swimmer : Node3D, IHarpoonable
             targetSpeed = Math.Max(Profile.PassSpeed, Profile.CruiseSpeed * 2.5f);
         }
         if (_stunT > 0f) targetSpeed = Profile.CruiseSpeed * 0.2f;
+        if (SpeedOverride is float so) targetSpeed = so;
 
         // Steering: limited turn rate, limited pitch, keep clear of the seabed.
         Vector3 desired = (_target - pos).Normalized();
-        if (Gen != null)
+        if (Gen != null && !IgnoreSeabed)
         {
             Vector3 ahead = pos + _fwd * Mathf.Max(20f, Profile.Length);
             if (ahead.Y < Gen.Height(ahead.X, ahead.Z) + Profile.Length * 0.15f + 3f) desired = (desired + Vector3.Up * 1.3f).Normalized();
