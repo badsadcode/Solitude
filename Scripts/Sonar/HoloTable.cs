@@ -56,7 +56,10 @@ public partial class HoloTable : Node3D
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
                 AlbedoColor = new Color(1f, 0.12f, 0.08f),
                 EmissionEnabled = true, Emission = new Color(1f, 0.1f, 0.05f), EmissionEnergyMultiplier = 3f,
-                NoDepthTest = true, // always visible, even inside the terrain wireframe
+                // Depth-tested (it used to ignore depth and showed through every wall in the boat, Tom
+                // spotted it). The holo terrain is drawn without depth writes, so the dot still shows
+                // inside the wireframe; render it after it.
+                RenderPriority = 1,
             },
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
