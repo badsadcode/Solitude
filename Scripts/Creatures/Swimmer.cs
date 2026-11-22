@@ -200,7 +200,9 @@ public partial class Swimmer : Node3D
         pos += _fwd * _speed * dt;
         if (Gen != null) pos.Y = Math.Max(pos.Y, Gen.Height(pos.X, pos.Z) + 2f);
         _bank = Mathf.Lerp(_bank, Math.Clamp(-_yawRate * 0.9f, -0.45f, 0.45f), 2f * dt);
-        GlobalTransform = new Transform3D(Basis.LookingAt(_fwd, Vector3.Up) * new Basis(Vector3.Forward, _bank), pos);
+        // Serpents snake: the whole body's heading sways with the swim wave (the path stays smooth).
+        float sway = Profile.BodySway * MathF.Sin(_phase);
+        GlobalTransform = new Transform3D(Basis.LookingAt(_fwd, Vector3.Up) * new Basis(Vector3.Up, sway) * new Basis(Vector3.Forward, _bank), pos);
 
         Animate(dt, dist);
     }

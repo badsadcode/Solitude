@@ -37,6 +37,7 @@ public sealed class CreatureProfile
     public readonly List<(string bone, float amp, float phase, float curl)> Yaw = new();
     public readonly List<(string bone, float amp, float phase)> Pitch = new();
     public readonly List<(string bone, float amp, float phase)> Roll = new();
+    public float BodySway;               // whole-body heading sway with the swim cycle (rad), for serpents
     public string Jaw;                   // opens toward targets when close
     public float JawOpen = 0.5f;
 
@@ -57,14 +58,25 @@ public sealed class CreatureProfile
             EmissionEnergy = 4f, Jaw = "Bone.008", JawOpen = 0.45f,
             OrbitRadius = 140f, PassDistance = 32f, PassIntervalMin = 60f, PassIntervalMax = 120f,
         };
-        p.Yaw.Add(("Bone.001", -0.05f, 1.8f, 0.2f));
-        p.Yaw.Add(("Bone.007", -0.06f, 2.4f, 0.15f));
-        p.Yaw.Add(("Bone", 0.04f, 0.9f, 0.1f));
-        p.Yaw.Add(("Bone.002", 0.08f, 0f, 0.15f));
-        p.Yaw.Add(("Bone.003", 0.12f, 0.8f, 0.2f));
-        p.Yaw.Add(("Bone.004", 0.16f, 1.6f, 0.25f));
-        p.Yaw.Add(("Bone.005", 0.2f, 2.4f, 0.3f));
-        p.Yaw.Add(("Bone.006", 0.26f, 3.2f, 0.35f));
+        // Serpentine (anguilliform) swimming, tuned after Tom: "too stiff, it's a serpent".
+        // One travelling wave runs the whole body, skull → tail tip, ~1 wavelength along it.
+        // The head chain points forward (+Z) and the tail chain backward, so the head bones take
+        // the opposite sign to keep the S-curve continuous through the root.
+        const float k = 1.0f; // phase step per joint (radians)
+        p.Yaw.Add(("Bone.007", 0.07f, 0 * k, -0.1f));     // skull: small, keeps the eyes on target
+        p.Yaw.Add(("Bone.001", -0.2f, 1 * k, -0.25f));    // neck
+        p.Yaw.Add(("Bone", -0.18f, 2 * k, -0.2f));        // front body
+        p.Yaw.Add(("Bone.002", 0.21f, 3 * k, 0.25f));     // tail chain
+        p.Yaw.Add(("Bone.003", 0.25f, 4 * k, 0.3f));
+        p.Yaw.Add(("Bone.004", 0.27f, 5 * k, 0.3f));
+        p.Yaw.Add(("Bone.005", 0.3f, 6 * k, 0.35f));
+        p.Yaw.Add(("Bone.006", 0.33f, 7 * k, 0.35f));
+        // A slower vertical ripple down the tail: sea-dragon, not eel-on-a-table.
+        p.Pitch.Add(("Bone.003", 0.05f, 4 * k + 1.6f));
+        p.Pitch.Add(("Bone.004", 0.07f, 5 * k + 1.6f));
+        p.Pitch.Add(("Bone.005", 0.08f, 6 * k + 1.6f));
+        p.Pitch.Add(("Bone.006", 0.1f, 7 * k + 1.6f));
+        p.BodySway = 0.1f;
         return p;
     }
 

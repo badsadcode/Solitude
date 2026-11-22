@@ -67,6 +67,7 @@ public partial class Main
             if (arg.StartsWith("--capture=")) _captureDir = arg.Substring(10);
         if (_captureDir == null) return;
         DirAccess.MakeDirRecursiveAbsolute(_captureDir);
+        CallDeferred(MethodName.ApplyCaptureFrom);
         _audio.StartDebugRecording();
 
         float t = 7f;
@@ -273,6 +274,7 @@ public partial class Main
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
             // --- Tom's new creatures: Crystal Rays and the Fangwyrm
+            (t += 0.1f, CaptureMarkCreatures),
             (t += 0.1f, () => { _sub.LightsOn = true; EnterWalking(); EnterHelm(); _view = HelmView.Chase; ApplyHelmView(); _creatures.SummonRays(); }),
             (t += 4.0f, () =>
             {
@@ -296,7 +298,15 @@ public partial class Main
             }),
             (t += 1.0f, () => Shot("19e_wyrm_side")),
             (t += 1.2f, () => Shot("19f_wyrm_side_later")),
-            (t += 0.1f, () => _docSide = -1f),
+            (t += 0.1f, () =>
+            {
+                _docSide = 2f; _docScale = 1.15f;
+                foreach (var c in _docCam.GetChildren()) if (c is SpotLight3D sl) { sl.LightEnergy = 16f; sl.SpotAngle = 60f; }
+            }),
+            (t += 0.8f, () => Shot("19g1_wyrm_top")),
+            (t += 0.5f, () => Shot("19g2_wyrm_top")),
+            (t += 0.5f, () => Shot("19g3_wyrm_top")),
+            (t += 0.1f, () => { _docSide = -1f; _docScale = 1.1f; }),
             (t += 0.8f, () => Shot("19g_wyrm_front")),
             (t += 0.1f, () => { _docCam.QueueFree(); _docCam = null; _docTarget = null; _view = HelmView.BowCamera; ApplyHelmView(); }),
             (t += 3.0f, () => { Shot("19h_wyrm_from_bow"); GD.Print($"[capture] wyrm distance to boat {_creatures.Wyrm?.DistanceToFocus:0} m"); }),
@@ -342,6 +352,23 @@ public partial class Main
         int n = 0;
         foreach (var s in _stations.Directory.Near(_sub.GlobalPosition, 4000f)) if (s.Known) n++;
         return n;
+    }
+
+    private void CaptureMarkCreatures() => GD.Print("[capture] --- creatures section ---");
+
+    /// <summary>`-- --capture-from=creatures` skips straight to that section (after a short settle).</summary>
+    private void ApplyCaptureFrom()
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+        {
+            if (!arg.StartsWith("--capture-from=")) continue;
+            string section = arg.Substring(15);
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), _ => "" });
+            if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
+            float shift = _captureScript[idx].at - 7f;
+            for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);
+            _captureStep = idx;
+        }
     }
 
     private void UpdateCapture(float dt)
