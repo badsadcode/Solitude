@@ -1,0 +1,7 @@
+﻿{
+    "tool":  "NoorLevel",
+    "preset":  "facility",
+    "seed":  12,
+    "family":  "research",
+    "command":  "noorlevel-cli generate --preset facility --seed 12 --dial openness=0 --set underground=true --set connector_weights.lift=0 --set connector_weights.ladder=0 --set connector_weights.spiral=0 --set ramps=1 --set windows=0 --set skylights=0 --set open_areas=0 --set hazards=0 --set chasms=0 --set floods=0 --set keys=1 --off windows,landmark --format glb --json-result --max-ms 30000 --set map_size=68 --set storeys=3 --set composition=tree --out F:\\Sage\\Solitude\\tools\\..\\assets\\stations\\research_12.glb"
+}

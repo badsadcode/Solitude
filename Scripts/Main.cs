@@ -208,6 +208,7 @@ public partial class Main : Node
 		SetupHullEvents();
 		SetupStory();
 		SetupListener();
+		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--station-sweep") CallDeferred(MethodName.StationSweep);
 		ApplyModules();
 
 		_sub.Impact += s =>

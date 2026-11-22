@@ -348,20 +348,39 @@ public partial class StationInterior : Node3D
         }
         var partRng = new Random(Site.Seed ^ 0x5a17);   // its own stream: older saves keep their loot layout
         int lootCount = 6 + _rng.Next(7);
+        // Each family stocks differently: habitats feed you, outposts arm you, works and relays
+        // are full of machinery, labs hold blueprints. Cumulative thresholds: food, med, blueprint, parts, ammo.
+        var (tFood, tMed, tPrint, tParts, tAmmo) = Site.Family switch
+        {
+            "habitat" => (0.32, 0.47, 0.51, 0.63, 0.78),
+            "outpost" => (0.12, 0.22, 0.26, 0.40, 0.80),
+            "works" => (0.10, 0.17, 0.21, 0.55, 0.70),
+            "deeplab" => (0.10, 0.20, 0.32, 0.55, 0.70),
+            "deck" => (0.12, 0.20, 0.27, 0.55, 0.72),
+            _ => (0.18, 0.28, 0.34, 0.52, 0.74),        // research: the original mix
+        };
+        var familyParts = Site.Family switch
+        {
+            "works" => new[] { ItemId.Servo, ItemId.Valve, ItemId.Impeller, ItemId.Impeller, ItemId.Coil },
+            "deeplab" => new[] { ItemId.Optics, ItemId.LogicBoard, ItemId.Coil, ItemId.Optics },
+            "deck" => new[] { ItemId.LogicBoard, ItemId.Coil, ItemId.Optics, ItemId.Servo },
+            "habitat" => new[] { ItemId.Valve, ItemId.Impeller, ItemId.Servo },
+            _ => Parts,
+        };
         for (int i = 0; i < lootCount && s < spots.Count; i++, s++)
         {
             double r = _rng.NextDouble();
             var p = spots[s] + new Vector3((float)_rng.NextDouble() - 0.5f, 0, (float)_rng.NextDouble() - 0.5f);
-            if (r < 0.18) Loot(p, "Station tin", crate, () => Systems.Collect(ItemId.CannedFood));
-            else if (r < 0.28) Loot(p, "Medkit", medbox, () => Systems.Collect(ItemId.Medkit));
-            else if (r < 0.34) Loot(p, "Blueprint (engineer's datapad)", datapad, () => Blueprint?.Invoke(false));
-            else if (r < 0.52)
+            if (r < tFood) Loot(p, "Station tin", crate, () => Systems.Collect(ItemId.CannedFood));
+            else if (r < tMed) Loot(p, "Medkit", medbox, () => Systems.Collect(ItemId.Medkit));
+            else if (r < tPrint) Loot(p, "Blueprint (engineer's datapad)", datapad, () => Blueprint?.Invoke(false));
+            else if (r < tParts)
             {
                 // Components: stripped out of the station's own machinery.
-                var part = Parts[partRng.Next(Parts.Length)];
+                var part = familyParts[partRng.Next(familyParts.Length)];
                 Loot(p, $"Salvage: {Items.Name(part)}", crate, () => Systems.Collect(part));
             }
-            else if (r < 0.74)
+            else if (r < tAmmo)
             {
                 WeaponId w = (WeaponId)_rng.Next(3);
                 int n = w == WeaponId.Shotgun ? 6 : w == WeaponId.Rifle ? 30 : 12;
@@ -385,7 +404,8 @@ public partial class StationInterior : Node3D
         }
 
         // Infestation: some stations are empty. Most are not.
-        int crawlers = Site.Id == -1 ? 3 : (_rng.NextDouble() < 0.3 ? 0 : 2 + _rng.Next(5));
+        // Outposts and works were overrun hardest; habitats are often just... empty.
+        int crawlers = Site.Id == -1 ? 3 : (_rng.NextDouble() < (Site.Family == "habitat" ? 0.5 : 0.3) ? 0 : 2 + _rng.Next(Site.Family is "outpost" or "works" ? 7 : 5));
         for (int i = 0; i < crawlers && s < spots.Count; i++, s++)
         {
             if (spots[s].DistanceTo(startPos) < 12f) continue;

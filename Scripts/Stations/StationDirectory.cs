@@ -16,6 +16,8 @@ public sealed class StationSite
     public float Yaw;
     public int Seed;             // per-visit content seed (loot, creatures, power)
     public bool Known;           // beacon heard or found on a map fragment
+    /// <summary>The station family, from the layout name: research, outpost, habitat, works, deeplab, deck.</summary>
+    public string Family => Layout.Contains('_') ? Layout.Substring(0, Layout.LastIndexOf('_')) : Layout;
 
     /// <summary>Where the submarine sits when docked (alongside the berth gantry).</summary>
     public Transform3D DockPose => new Transform3D(new Basis(Vector3.Up, Yaw), Position) * StationExterior.DockLocal;
@@ -30,13 +32,22 @@ public sealed class StationDirectory
 {
     public const float CellSize = 900f;
 
-    public static readonly string[] Bank =
-    {
-        "research_01", "research_02", "research_03", "research_04", "research_05", "research_06",
-        "research_07", "research_08", "outpost_01", "outpost_02", "outpost_03", "outpost_04",
-    };
+    /// <summary>Baked blockouts (tools/generate_stations.ps1 writes StationBank.g.cs).</summary>
+    public static string[] Bank => StationBank.All;
 
     private static readonly string[] Prefix = { "RESEARCH STATION", "SURVEY OUTPOST", "MINING PLATFORM", "RELAY STATION", "HABITAT" };
+
+    /// <summary>What a station of each family is called on the beacon.</summary>
+    private static string FamilyPrefix(string layout) => layout.Substring(0, layout.LastIndexOf('_')) switch
+    {
+        "research" => "RESEARCH STATION",
+        "outpost" => "SURVEY OUTPOST",
+        "habitat" => "HABITAT",
+        "works" => "MINING WORKS",
+        "deeplab" => "DEEP LABORATORY",
+        "deck" => "RELAY STATION",
+        _ => "STATION",
+    };
     private static readonly string[] Names =
     {
         "KESTREL", "MERIDIAN", "HOLLOW", "ANSELM", "TETHYS", "VIGIL", "CALDERA", "IRIS", "LANTERN",
@@ -79,11 +90,13 @@ public sealed class StationDirectory
     {
         int h = (int)(Perlin.Hash((int)(id & 0xFFFF), (int)(id >> 16), seed + salt) * int.MaxValue);
         var rng = new Random(h);
+        string layout = id == -1 ? StationBank.Starter[rng.Next(StationBank.Starter.Length)] : Bank[rng.Next(Bank.Length)]; // starter is a research station
+        if (id != -1) rng.Next(Prefix.Length);   // (the old random prefix draw, kept so names stay put)
         return new StationSite
         {
             Id = id,
-            Layout = id == -1 ? Bank[rng.Next(8)] : Bank[rng.Next(Bank.Length)], // starter is a research station
-            Name = $"{(id == -1 ? Prefix[0] : Prefix[rng.Next(Prefix.Length)])} {Names[rng.Next(Names.Length)]}-{rng.Next(1, 9)}",
+            Layout = layout,
+            Name = $"{FamilyPrefix(layout)} {Names[rng.Next(Names.Length)]}-{rng.Next(1, 9)}",
             Position = pos,
             Yaw = (float)rng.NextDouble() * Mathf.Tau,
             Seed = rng.Next(),

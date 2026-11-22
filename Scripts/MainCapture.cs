@@ -71,6 +71,9 @@ public partial class Main
     /// </summary>
     private void StairsTest(string spec)
     {
+        bool airlock = spec == "airlock";   // just stand at the airlock and look (with --stairs-shot)
+        if (airlock) spec = "0,0,0,0";
+        _stairsAirlock = airlock;
         var p = spec.Split(',');
         var local = new Vector3(float.Parse(p[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture), float.Parse(p[2], System.Globalization.CultureInfo.InvariantCulture));
         float yaw = Mathf.DegToRad(float.Parse(p[3], System.Globalization.CultureInfo.InvariantCulture));
@@ -89,15 +92,17 @@ public partial class Main
         };
     }
 
+    private bool _stairsAirlock;
+
     private void StairsWalk(Vector3 local, float yaw)
     {
         var tw = CreateTween();
         tw.TweenInterval(1.0);
         tw.TweenCallback(Callable.From(() =>
         {
-            _player.GlobalTransform = new Transform3D(new Basis(Vector3.Up, yaw), _station.ToGlobal(local));
+            _player.GlobalTransform = _stairsAirlock ? _station.GlobalTransform * _station.AirlockPose : new Transform3D(new Basis(Vector3.Up, yaw), _station.ToGlobal(local));
             _player.SetLook(0f, OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--stairs-shot=")) ? 0.05f : -0.3f);
-            Input.ActionPress(GameInput.Forward);
+            if (!_stairsAirlock) Input.ActionPress(GameInput.Forward);
             GD.Print($"[stairs] start local {local} layout {_station.Site.Layout}");
         }));
         for (int i = 1; i <= 12; i++)
@@ -114,6 +119,50 @@ public partial class Main
             }));
         }
         tw.TweenCallback(Callable.From(() => { Input.ActionRelease(GameInput.Forward); GetTree().Quit(); }));
+    }
+
+    /// <summary>
+    /// Dev: `-- --station-sweep` loads every baked station once (offscreen, at StationOrigin), checks
+    /// there is floor under the airlock and prints what it built, then quits.
+    /// </summary>
+    private void StationSweep()
+    {
+        var names = Solitude.Stations.StationBank.All;
+        int i = -1, bad = 0;
+        Solitude.Stations.StationInterior cur = null;
+        float wait = 0f;
+        ulong t0 = 0;
+        var timer = new Timer { WaitTime = 0.1, Autostart = true };
+        AddChild(timer);
+        timer.Timeout += () =>
+        {
+            if (cur != null && !cur.Ready && (wait += 0.1f) < 15f) return;
+            if (cur != null)
+            {
+                var airlock = cur.GlobalTransform * cur.AirlockPose;
+                var hit = cur.GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(airlock.Origin + Vector3.Up * 0.5f, airlock.Origin + Vector3.Down * 3f, Layers.Interior));
+                bool ok = cur.Ready && hit.Count > 0;
+                if (!ok) bad++;
+                int loot = 0, doors = 0;
+                foreach (var n in cur.GetChildren()) if (n is Interactable it) { if (it.Prompt.Contains("door") || it.Prompt.Contains("panel")) doors++; else loot++; }
+                GD.Print($"[sweep] {names[i],-12} {(ok ? "OK " : "BAD")} ready={cur.Ready} floorUnderAirlock={hit.Count > 0} interactables={loot} crawlers={cur.Crawlers.Count} powered={cur.Powered} {(Time.GetTicksMsec() - t0)} ms");
+                cur.QueueFree();
+                cur = null;
+                return;   // next tick: the next station
+            }
+            if (++i >= names.Length) { GD.Print($"[sweep] done: {names.Length - bad}/{names.Length} OK"); GetTree().Quit(); return; }
+            wait = 0f;
+            t0 = Time.GetTicksMsec();
+            Solitude.Stations.StationDirectory.ForceLayout = names[i];
+            var site = new Solitude.Stations.StationSite { Id = 9000 + i, Layout = names[i], Name = "SWEEP", Seed = 1234 + i };
+            cur = new Solitude.Stations.StationInterior
+            {
+                Name = "Sweep", Site = site, State = new Solitude.Stations.StationState(),
+                Player = _player, Systems = _systems, Weapons = _weapons,
+            };
+            _game.AddChild(cur);
+            cur.GlobalPosition = StationOrigin;
+        };
     }
 
     private void SetupCapture()
