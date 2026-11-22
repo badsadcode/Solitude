@@ -52,6 +52,9 @@ public partial class Main
         bool shielded = _stations.DockedAt != null || _player.InStation;
         float depth = diving ? Mathf.Max(0f, -_diver.GlobalPosition.Y) : _sub.Depth;
         _listener.Update(dt, noise, depth, shielded, StoryUnease * 25f);
+        // The whale's song fills the water: while it's near, the Listener loses track of one small boat.
+        if (_creatures.Whale is { } whale && whale.DistanceToFocus < 500f)
+            _listener.Attention = Mathf.Max(StoryUnease * 25f, _listener.Attention - 1.5f * dt);
 
         // Everything that already scales with "unease" (distant calls, hull knocks) follows attention too.
         _audio.Unease = Mathf.Max(StoryUnease, _listener.Attention / 100f * 0.85f);
