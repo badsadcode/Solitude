@@ -328,6 +328,39 @@ public partial class Main
             (t += 10.0f, () => Shot("10_chase_turning")),
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
+            // --- The Listener: noise, attention, an answered ping, going dark, both encounter endings
+            (t += 0.1f, CaptureMarkListener),
+            (t += 0.1f, () =>
+            {
+                EnterWalking(); EnterHelm();
+                // Open water, well clear of the seabed, so collisions don't pollute the noise.
+                var sp = _sub.GlobalPosition;
+                _sub.GlobalPosition = new Vector3(sp.X, Mathf.Min(_gen.Height(sp.X, sp.Z) + 140f, -420f), sp.Z);
+                _sub.LinearVelocity = Vector3.Zero; _sub.SetHull(100f);
+                _listener.Attention = 0f;
+                _sub.LightsOn = true;
+                _sub.TelegraphIndex = 5; _sub.ApplyTelegraph();   // AHEAD FULL: loud
+            }),
+            (t += 5f, () => LogListener("full ahead 5 s")),
+            (t += 25f, () => LogListener("full ahead 30 s")),
+            (t += 0.1f, () => { _sub.TelegraphIndex = 3; _sub.ApplyTelegraph(); _sub.LightsOn = false; }),
+            (t += 10f, () => LogListener("ahead slow, dark, 10 s (silent running?)")),
+            (t += 0.1f, () => { _listener.Attention = 45f; EnterSonar(); TryPing(); }),
+            (t += 1.5f, () => LogListener("after ping")),
+            (t += 4.5f, () => { Shot("29a_listener_answer"); LogListener("answered? phantoms=" + System.Linq.Enumerable.Count(_sonar.Contacts, c => c.Ghost)); }),
+            (t += 0.1f, () => { EnterWalking(); EnterHelm(); _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = false; }),
+            (t += 15f, () => LogListener("all stop + dark 15 s")),
+            // Encounter 1: go silent and it passes.
+            (t += 0.1f, () => { _capHull = _sub.Hull; _listener.ForceEncounter(); }),
+            (t += 1.0f, () => LogListener("encounter (silent) started")),
+            (t += 0.1f, () => { EnterSonar(); }),
+            (t += 3.0f, () => Shot("29b_encounter_sonar")),
+            (t += 0.1f, () => { EnterWalking(); EnterHelm(); }),
+            (t += 20f, () => LogListener($"encounter (silent) over: hull {_capHull:0} -> {_sub.Hull:0}")),
+            // Encounter 2: stay loud and it finds you.
+            (t += 0.1f, () => { _capHull = _sub.Hull; _listener.ForceEncounter(); _sub.TelegraphIndex = 5; _sub.ApplyTelegraph(); _sub.LightsOn = true; }),
+            (t += 23f, () => { Shot("29c_encounter_found"); LogListener($"encounter (loud) over: hull {_capHull:0} -> {_sub.Hull:0}"); }),
+            (t += 0.1f, () => { _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _listener.Attention = 0f; _sub.SetHull(100f); }),
             // --- Modules: components, blueprints, the workbench, the rack
             (t += 0.1f, CaptureMarkModules),
             (t += 0.1f, () =>
@@ -637,6 +670,10 @@ public partial class Main
 
     private void CaptureMarkCreatures() => GD.Print("[capture] --- creatures section ---");
     private void CaptureMarkBiomes() => GD.Print("[capture] --- biomes section ---");
+    private float _capHull;
+    private void LogListener(string what) =>
+        GD.Print($"[capture] listener {what}: attention {_listener.Attention:0.0} noise {_listener.Noise:0.00} ({NoiseDb:0} dB) tier {_listener.Current} encounter {(_listener.InEncounter ? _listener.EncounterT.ToString("0.0") : "-")} depth {_sub.Depth:0}");
+    private void CaptureMarkListener() => GD.Print("[capture] --- listener section ---");
     private void CaptureMarkModules() => GD.Print("[capture] --- modules section ---");
     private void CaptureMarkHarpoon() => GD.Print("[capture] --- harpoon section ---");
     private void CaptureMarkTest() => GD.Print("[capture] --- test section ---");
@@ -674,7 +711,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

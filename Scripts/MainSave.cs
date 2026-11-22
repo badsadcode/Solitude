@@ -22,6 +22,7 @@ public sealed class SaveData
     /// <summary>v1 only (engineering-panel upgrades); migrated to fitted modules on load.</summary>
     public List<string> Upgrades = new();
     public List<string> Modules = new(), Blueprints = new();
+    public float Listener;
     public List<long> CoreSites = new();
     public List<string> WeaponsOwned = new();
     public Dictionary<string, int> Mag = new(), Reserve = new();
@@ -167,6 +168,7 @@ public partial class Main
             SuitOn = _suitOn, OriginKnown = _originKnown, Ended = _ended,
             Modules = _modules.Fitted.Select(m => m.ToString()).ToList(),
             Blueprints = _modules.Known.Select(m => m.ToString()).ToList(),
+            Listener = _listener.Attention,
             CoreSites = _coreSites.ToList(),
             WeaponsOwned = _weapons.Owned.Select(w => w.ToString()).ToList(),
             Mag = _weapons.Mag.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
@@ -199,6 +201,7 @@ public partial class Main
             };
             if (m is ModuleId id && !_modules.Has(id)) { _modules.Known.Add(id); _modules.Fitted.Add(id); }
         }
+        _listener.Attention = d.Listener;
         // Mk I and Mk II both fitted (old saves had both): keep the better one.
         if (_modules.Has(ModuleId.FrameI) && _modules.Has(ModuleId.FrameII)) _modules.Fitted.Remove(ModuleId.FrameI);
         ApplyModules();

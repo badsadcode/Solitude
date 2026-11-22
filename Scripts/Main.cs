@@ -207,6 +207,7 @@ public partial class Main : Node
 		SetupCreatures();
 		SetupHullEvents();
 		SetupStory();
+		SetupListener();
 		ApplyModules();
 
 		_sub.Impact += s =>
@@ -685,6 +686,7 @@ public partial class Main : Node
 		UpdateTitleCapture(dt);
 		UpdateBiomeNotice(dt);
 		UpdateStory(dt);
+		UpdateListener(dt);
 		UpdateCapture(dt);
 	}
 
@@ -812,7 +814,7 @@ public partial class Main : Node
 	private void UpdateVitals()
 	{
 		string pwr = _systems.Emergency ? "PWR EMERGENCY" : $"PWR {_systems.Power:0}%";
-		_hud.SetVitals($"{pwr}{(_systems.Thermal ? " +THERMAL" : "")}    HULL {_sub.Hull:0}%    FOOD {_systems.Food:0}%    HOLD {_systems.Hold.Weight}/{_systems.Hold.Capacity}{(_systems.IntakeOn ? "    INTAKE" : "")}{StationVitals()}");
+		_hud.SetVitals($"{pwr}{(_systems.Thermal ? " +THERMAL" : "")}    HULL {_sub.Hull:0}%    FOOD {_systems.Food:0}%    HOLD {_systems.Hold.Weight}/{_systems.Hold.Capacity}{(_systems.IntakeOn ? "    INTAKE" : "")}{ListenerVitals()}{StationVitals()}");
 		if (_mode == Mode.Walking && Input.IsActionJustPressed(GameInput.Inventory)) _holdVisible = !_holdVisible;
 		if (_holdVisible && _mode == Mode.Walking)
 		{

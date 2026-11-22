@@ -44,7 +44,7 @@ public partial class Main
         {
             Name = "Harpoon", Diver = _diver,
             Targets = HarpoonTargets,
-            Sound = PlaySpatial,
+            Sound = (k, p) => { PlaySpatial(k, p); if (k is "harpoon" or "shock") _listener.AddPulse(0.2f); },
             Message = m => _hud.Message(m, 3f),
             SelfShock = dmg => { _player.Damage(dmg); _zap = 1f; _audio.PlayAt("hurt", 0f, 0.5f); },
         };

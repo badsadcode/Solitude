@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Solitude.Systems;
 
-public enum ModuleId { FrameI, FrameII, Ablative, Battery, Thermal, LongSonar, Floods, HoldRacks, Bilge, SuitTank, Rebreather, ReelMotor, Capacitor, Expander }
+public enum ModuleId { FrameI, FrameII, Ablative, Battery, Thermal, LongSonar, Floods, HoldRacks, Bilge, SuitTank, Rebreather, ReelMotor, Capacitor, Expander, SilentDrive }
 
 /// <summary>
 /// One module. Bays = rack space it takes; Group = only one of the group fitted at a time
@@ -51,6 +51,8 @@ public static class Modules
             new[] { (ItemId.Servo, 1), (ItemId.Coil, 1), (ItemId.MetalPlate, 1) }),
         new(ModuleId.Capacitor, ItemId.ModCapacitor, "Prod capacitor", "shock prod recharges in 1.2 s and never bites you",
             new[] { (ItemId.Coil, 2), (ItemId.Crystal, 2), (ItemId.LogicBoard, 1) }),
+        new(ModuleId.SilentDrive, ItemId.ModSilent, "Silent drive", "engine noise -60% (the Listener hears far less)",
+            new[] { (ItemId.Impeller, 1), (ItemId.Coil, 1), (ItemId.Sealant, 2), (ItemId.LogicBoard, 1) }),
         new(ModuleId.Expander, ItemId.ModExpander, "Rack expander", "+2 module bays (takes none itself)",
             new[] { (ItemId.StationAlloy, 3), (ItemId.LogicBoard, 2), (ItemId.Servo, 1) }, Bays: 0),
     };
@@ -60,7 +62,7 @@ public static class Modules
 
     /// <summary>Station cores hand out blueprints in this order, so the deep frame comes early.</summary>
     public static readonly ModuleId[] CoreOrder =
-        { ModuleId.FrameII, ModuleId.Thermal, ModuleId.LongSonar, ModuleId.Ablative, ModuleId.ReelMotor, ModuleId.Bilge, ModuleId.Rebreather, ModuleId.Expander, ModuleId.Capacitor, ModuleId.Floods };
+        { ModuleId.FrameII, ModuleId.SilentDrive, ModuleId.Thermal, ModuleId.LongSonar, ModuleId.Ablative, ModuleId.ReelMotor, ModuleId.Bilge, ModuleId.Rebreather, ModuleId.Expander, ModuleId.Capacitor, ModuleId.Floods };
 
     public const int BaseBays = 4;
 

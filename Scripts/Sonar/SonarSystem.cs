@@ -66,6 +66,19 @@ public partial class SonarSystem : Node
         public List<(Vector2I cell, float height, double revealAt)> Cells;
     }
 
+    /// <summary>A cluster of ghost returns at a world point, revealed at a given time (the Listener answering).</summary>
+    public void AddPhantom(Vector2 world, double revealAt, int count, float spread)
+    {
+        for (int i = 0; i < count; i++)
+            Contacts.Add(new SonarContact
+            {
+                World = world + new Vector2((float)_rng.NextDouble() - 0.5f, (float)_rng.NextDouble() - 0.5f) * spread,
+                RevealAt = revealAt,
+                Strength = 0.9f,
+                Ghost = true,
+            });
+    }
+
     public void CycleRange() => RangeIndex = (RangeIndex + 1) % (LongRange ? Ranges.Length : Ranges.Length - 1);
 
     /// <summary>Fire a ping. Returns false while recharging.</summary>

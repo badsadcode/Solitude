@@ -26,6 +26,7 @@ public partial class Main
     private void UpdateHullDebugKeys()
     {
         if (Input.IsActionJustPressed(GameInput.DebugBreach)) _hull.OpenBreach();
+        if (Input.IsActionJustPressed(GameInput.DebugListener)) { _listener.ForceEncounter(); GD.Print("[debug] the Listener is coming"); }
         if (Input.IsActionJustPressed(GameInput.DebugKnock)) _hull.Knock();
     }
 }

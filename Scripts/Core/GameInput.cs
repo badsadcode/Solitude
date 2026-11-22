@@ -45,6 +45,7 @@ public static class GameInput
     public const string SummonRays = "debug_summon_rays";
     public const string DebugBreach = "debug_breach";
     public const string DebugKnock = "debug_knock";
+    public const string DebugListener = "debug_listener";
     public const string SummonWyrm = "debug_summon_wyrm";
 
     // Monitor station
@@ -78,6 +79,7 @@ public static class GameInput
         Bind(SummonRays, Godot.Key.F8);
         Bind(DebugBreach, Godot.Key.F7);
         Bind(DebugKnock, Godot.Key.F6);
+        Bind(DebugListener, Godot.Key.F5);
         Bind(SummonWyrm, Godot.Key.F10);
         Bind(Inventory, Godot.Key.I);
         Bind(IntakeToggle, Godot.Key.G);

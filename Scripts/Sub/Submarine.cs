@@ -166,6 +166,14 @@ public partial class Submarine : RigidBody3D
     /// <summary>Ablative skin module: scales all hull damage.</summary>
     public float DamageScale = 1f;
 
+    /// <summary>Something hit the boat from outside (not a collision): damage, a shove, the usual impact reactions.</summary>
+    public void Strike(float strength, Vector3 impulse)
+    {
+        Damage((strength - 0.8f) * 6f);
+        ApplyCentralImpulse(impulse);
+        Impact?.Invoke(strength);
+    }
+
     public void Damage(float amount)
     {
         Hull = Mathf.Max(0f, Hull - amount * DamageScale);

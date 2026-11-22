@@ -51,12 +51,13 @@ public sealed class SfxVoice : Voice
             "shock" => (0.55f, 0.45f),
             "reel" => (0.06f, 0.25f),
             "spearhit" => (0.4f, 0.6f),
+            "listener" => (7.0f, 0.55f),
             _ => (0.2f, 0.2f),
         };
         Gain *= gain;
         _bp1 = new BandPass(kind switch { "chitter" => 2600f * jitter, "shotgun" => 900f, "rifle" => 1500f, "pistol" => 1800f, "door" => 300f, "knock" => 220f * jitter, "weld" => 4200f, "shock" => 3600f, "reel" => 2400f, "spearhit" => 500f, _ => 1200f * jitter }, kind == "chitter" ? 12f : 2.5f, rate);
         _bp2 = new BandPass(kind switch { "pistol" => 2900f, "rifle" => 3400f, "shotgun" => 2100f, "knock" => 160f * jitter, _ => 700f }, 30f, rate);
-        _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, "klaxon" => 1800f, "breach" => 600f, "harpoon" => 900f, _ => 4000f }, rate);
+        _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, "klaxon" => 1800f, "breach" => 600f, "harpoon" => 900f, "listener" => 260f, _ => 4000f }, rate);
     }
 
     public override float Next(out bool alive)
@@ -223,6 +224,20 @@ public sealed class SfxVoice : Voice
                 _clk *= 0.993f;
                 float crackle = _bp1.Process(w) * 2.5f * _clk;
                 s = (buzz + crackle) * MathF.Min(1f, T * 80f) * MathF.Exp(-T * 4f);
+                break;
+            }
+            case "listener":
+            {
+                // Something vast making a sound below hearing: two slow, beating low tones that swell
+                // and sag in pitch, with a grinding texture riding on top.
+                float env = MathF.Sin(MathF.PI * u) * MathF.Min(1f, T * 1.5f);
+                float sag = 1f - 0.25f * u;
+                _ph1 += 52f * sag * dt; _ph1 -= MathF.Floor(_ph1);
+                _ph2 += 55.5f * sag * dt; _ph2 -= MathF.Floor(_ph2);
+                float tones = MathF.Sin(_ph1 * MathF.Tau) * 0.6f + MathF.Sin(_ph2 * MathF.Tau) * 0.5f
+                            + MathF.Sin(_ph1 * 2f * MathF.Tau) * 0.2f;
+                float grind = _lp.Process(w) * (0.5f + 0.5f * MathF.Sin(T * 3.1f));
+                s = (tones * 0.8f + grind * 1.2f) * env;
                 break;
             }
             case "reel":

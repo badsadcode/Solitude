@@ -21,7 +21,7 @@ public enum ItemId
     Servo, Valve, Coil, Optics, LogicBoard, Impeller,
     // Fabricated modules (fitted into the rack in engineering; see Modules.cs)
     ModFrameI, ModFrameII, ModAblative, ModBattery, ModThermal, ModLongSonar, ModFloods,
-    ModHoldRacks, ModBilge, ModSuitTank, ModRebreather, ModReelMotor, ModCapacitor, ModExpander,
+    ModHoldRacks, ModBilge, ModSuitTank, ModRebreather, ModReelMotor, ModCapacitor, ModExpander, ModSilent,
 }
 
 public sealed record ItemInfo(string Name, string Description, int Weight, float Food = 0f);
