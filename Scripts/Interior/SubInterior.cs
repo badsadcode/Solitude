@@ -28,6 +28,7 @@ public partial class SubInterior : Node3D
     public Action OnHelm;
     public Action OnMonitors;
     public Action OnSonar;
+    public Action OnHydrophone;
     public Action OnHolo;
     public Action OnArm;
     public Action<string> OnPanel;
@@ -41,6 +42,11 @@ public partial class SubInterior : Node3D
     public ShaderMaterial SonarScreen { get; private set; }
     public HoloTable Holo { get; private set; }
     public Transform3D SonarView { get; private set; }
+    public Transform3D HydrophoneView { get; private set; }
+    private ShaderMaterial _hydroScreen;
+
+    /// <summary>The hydrophone's CRT shows this viewport (created by Main after the interior).</summary>
+    public void SetHydrophoneTexture(Texture2D tex) => _hydroScreen?.SetShaderParameter("feed", tex);
     public Vector3 HoloCentre { get; private set; }
     public Transform3D ArmView { get; private set; }
     public Transform3D GalleyView { get; private set; }
@@ -369,6 +375,33 @@ public partial class SubInterior : Node3D
         Interactable.Create(this, new Vector3(2.1f, 1.2f, -0.9f), new Vector3(0.8f, 0.8f, 1.2f), "Use sonar", () => OnSonar?.Invoke());
         SonarView = new Transform3D(new Basis(Vector3.Up, -Mathf.Pi / 2f), new Vector3(1.25f, 1.55f, -0.9f));
         Label("SONAR", new Vector3(HalfW - 0.02f, 2.08f, -0.9f), -Mathf.Pi / 2f, 36);
+
+        // Hydrophone console (an idea from Thalassa): starboard wall, forward of the holo table.
+        // A narrow listening desk, a waterfall CRT, a pair of heavy headphones on a hook.
+        const float hz = -4.9f;
+        Solid(_machine, new Vector3(2.2f, 0.45f, hz), new Vector3(0.6f, 0.9f, 0.95f), Grey.Shade(0.85f));
+        _machine.BoxOriented(new Transform3D(new Basis(Vector3.Back, 0.3f), new Vector3(2.15f, 0.93f, hz)), new Vector3(0.6f, 0.05f, 0.9f), Grey.Shade(0.65f));
+        for (int i = 0; i < 3; i++)
+            _machine.Box(new Vector3(2.02f, 0.98f, hz - 0.25f + i * 0.25f), new Vector3(0.07f, 0.05f, 0.07f), i == 1 ? AmberLamp : GreenLamp);
+        _dark.Box(new Vector3(HalfW - 0.06f, 1.55f, hz), new Vector3(0.1f, 0.66f, 0.66f), new Color(0.1f, 0.1f, 0.1f));
+        _hydroScreen = Art.Crt(null);
+        _hydroScreen.SetShaderParameter("desaturate", 0.1f);
+        _hydroScreen.SetShaderParameter("scan_lines", 128f);
+        _hydroScreen.SetShaderParameter("brightness", 1.4f);
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(0.58f, 0.58f) },
+            Position = new Vector3(HalfW - 0.115f, 1.55f, hz),
+            Rotation = new Vector3(0, -Mathf.Pi / 2f, 0),
+            MaterialOverride = _hydroScreen,
+        });
+        // Headphones: two cups and a band, hung beside the screen.
+        _dark.Box(new Vector3(HalfW - 0.12f, 1.62f, hz + 0.45f), new Vector3(0.06f, 0.1f, 0.1f), new Color(0.08f, 0.08f, 0.09f));
+        _dark.Box(new Vector3(HalfW - 0.12f, 1.62f, hz + 0.62f), new Vector3(0.06f, 0.1f, 0.1f), new Color(0.08f, 0.08f, 0.09f));
+        _dark.Box(new Vector3(HalfW - 0.12f, 1.72f, hz + 0.535f), new Vector3(0.03f, 0.03f, 0.2f), new Color(0.2f, 0.2f, 0.22f));
+        Interactable.Create(this, new Vector3(2.1f, 1.2f, hz), new Vector3(0.8f, 0.8f, 0.95f), "Use hydrophone (listen)", () => OnHydrophone?.Invoke());
+        HydrophoneView = new Transform3D(new Basis(Vector3.Up, -Mathf.Pi / 2f), new Vector3(1.72f, 1.55f, hz));
+        Label("HYDROPHONE", new Vector3(HalfW - 0.02f, 2.0f, hz), -Mathf.Pi / 2f, 28);
 
         Light(new Vector3(0.6f, Height - 0.15f, -3f), new Color(0.6f, 0.8f, 0.85f), 0.45f, 6f);
         Light(new Vector3(-1.2f, 1.9f, -3f), new Color(0.4f, 1f, 0.7f), 0.35f, 3f, fixture: false);

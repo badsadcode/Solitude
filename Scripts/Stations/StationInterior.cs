@@ -60,7 +60,7 @@ public partial class StationInterior : Node3D
     public override void _Ready()
     {
         _rng = new Random(Site.Seed);
-        Powered = _rng.NextDouble() < 0.5 || Site.Id == -1 && _rng.NextDouble() < 0.3;
+        Powered = _rng.NextDouble() < 0.5 || Site.Id == -1 && _rng.NextDouble() < 0.3;   // (IsPowered mirrors this)
         _nav = new NavigationRegion3D
         {
             NavigationMesh = new NavigationMesh
@@ -421,6 +421,13 @@ public partial class StationInterior : Node3D
     }
 
     private static readonly ItemId[] Parts = { ItemId.Servo, ItemId.Valve, ItemId.Coil, ItemId.Optics, ItemId.LogicBoard, ItemId.Impeller };
+
+    /// <summary>Whether a station has power, without building it (the hydrophone hears its machinery).</summary>
+    public static bool IsPowered(StationSite site)
+    {
+        var r = new Random(site.Seed);
+        return r.NextDouble() < 0.5 || site.Id == -1 && r.NextDouble() < 0.3;
+    }
 
     private void BuildCoreTerminal(Vector3 p)
     {

@@ -26,7 +26,7 @@ namespace Solitude;
 /// </summary>
 public partial class Main : Node
 {
-	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading, Diving, Title }
+	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading, Diving, Title, Hydrophone }
 	private enum HelmView { Bridge, BowCamera, Chase }
 
 	[Export] public int PixelScale = 3;
@@ -152,6 +152,7 @@ public partial class Main : Node
 			OnHelm = EnterHelm,
 			OnMonitors = EnterMonitors,
 			OnSonar = EnterSonar,
+			OnHydrophone = EnterHydrophone,
 			OnHolo = EnterHolo,
 			OnArm = EnterArm,
 			OnPanel = EnterPanel,
@@ -208,6 +209,7 @@ public partial class Main : Node
 		SetupHullEvents();
 		SetupStory();
 		SetupListener();
+		SetupHydrophone();
 		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--station-sweep") CallDeferred(MethodName.StationSweep);
 		ApplyModules();
 
@@ -577,6 +579,7 @@ public partial class Main : Node
 			Vector2 rel = mm.Relative * Settings.MouseSensitivity;
 			if (_mode == Mode.Walking) { _player.Look(rel); _weapons.AddSway(rel); }
 			else if (_mode == Mode.Diving) _diver.Look(rel);
+			else if (_mode == Mode.Hydrophone) SteerBeam(rel.X * 0.12f);
 			else if (_mode == Mode.Helm)
 			{
 				_sub.Rudder = Mathf.Clamp(_sub.Rudder + rel.X * 0.0025f, -1f, 1f);
@@ -668,6 +671,7 @@ public partial class Main : Node
 			case Mode.Helm: UpdateHelm(dt); break;
 			case Mode.Monitors: UpdateMonitors(); break;
 			case Mode.Sonar: UpdateSonar(); break;
+			case Mode.Hydrophone: UpdateHydrophone(dt); break;
 			case Mode.Holo: UpdateHolo(); break;
 			case Mode.Arm: UpdateArm(dt); break;
 			case Mode.Panel: UpdatePanel(); break;
@@ -688,6 +692,7 @@ public partial class Main : Node
 		UpdateBiomeNotice(dt);
 		UpdateStory(dt);
 		UpdateListener(dt);
+		UpdateHydrophoneWorld(dt);
 		UpdateCapture(dt);
 	}
 

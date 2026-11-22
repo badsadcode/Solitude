@@ -23,6 +23,8 @@ public sealed class SaveData
     public List<string> Upgrades = new();
     public List<string> Modules = new(), Blueprints = new();
     public float Listener;
+    public List<string> Recordings = new();     // "no|class|bearing|depth|identified"
+    public List<string> Identified = new();
     public List<long> CoreSites = new();
     public List<string> WeaponsOwned = new();
     public Dictionary<string, int> Mag = new(), Reserve = new();
@@ -169,6 +171,8 @@ public partial class Main
             Modules = _modules.Fitted.Select(m => m.ToString()).ToList(),
             Blueprints = _modules.Known.Select(m => m.ToString()).ToList(),
             Listener = _listener.Attention,
+            Recordings = _phone.Recordings.Select(r => $"{r.No}|{r.Class}|{r.TrueBearing:0}|{r.Depth:0}|{r.Identified}").ToList(),
+            Identified = _phone.Identified.Select(c => c.ToString()).ToList(),
             CoreSites = _coreSites.ToList(),
             WeaponsOwned = _weapons.Owned.Select(w => w.ToString()).ToList(),
             Mag = _weapons.Mag.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
@@ -202,6 +206,13 @@ public partial class Main
             if (m is ModuleId id && !_modules.Has(id)) { _modules.Known.Add(id); _modules.Fitted.Add(id); }
         }
         _listener.Attention = d.Listener;
+        foreach (var line in d.Recordings)
+        {
+            var f = line.Split('|');
+            if (f.Length == 5 && Enum.TryParse<SoundClass>(f[1], out var cls))
+                _phone.Recordings.Add(new Recording(int.Parse(f[0]), cls, float.Parse(f[2], System.Globalization.CultureInfo.InvariantCulture), float.Parse(f[3], System.Globalization.CultureInfo.InvariantCulture), f[4] == "True"));
+        }
+        foreach (var c in d.Identified) if (Enum.TryParse<SoundClass>(c, out var cls2)) _phone.Identified.Add(cls2);
         // Mk I and Mk II both fitted (old saves had both): keep the better one.
         if (_modules.Has(ModuleId.FrameI) && _modules.Has(ModuleId.FrameII)) _modules.Fitted.Remove(ModuleId.FrameI);
         ApplyModules();

@@ -256,6 +256,17 @@ public partial class TerrainStreamer : Node3D
                 }
     }
 
+    /// <summary>Vent positions within radius of p (from loaded chunks).</summary>
+    public IEnumerable<Vector3> VentsNear(Vector3 p, float radius)
+    {
+        var c = ChunkData.CoordOf(p);
+        int reach = Mathf.CeilToInt(radius / ChunkData.Size) + 1;
+        for (int dz = -reach; dz <= reach; dz++)
+            for (int dx = -reach; dx <= reach; dx++)
+                if (_vents.TryGetValue(new Vector2I(c.X + dx, c.Y + dz), out var vs))
+                    foreach (var v in vs) if (v.DistanceTo(p) < radius) yield return v;
+    }
+
     public float NearestVentDistance(Vector3 p)
     {
         float best = float.MaxValue;

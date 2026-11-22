@@ -38,6 +38,12 @@ public partial class AudioDirector : Node
     public volatile float Heartbeat;  // 0..1, panic
     public volatile float Unease;     // 0..1, story progress: the distant calls come more often
     public volatile float Spray;      // 0..1, open hull breaches: water forcing in
+    // Hydrophone headphones: when on, the boat is muffled and the beam's sound is synthesised.
+    public volatile bool Hydro;
+    public volatile float HydLow, HydMid, HydHigh, HydPulseHz, HydDuty = 1f, HydToneHz, HydTone, HydSelf;
+    private float _hydOn, _hydPulsePh, _hydTonePh, _hLo, _hMi, _hHi;
+    private readonly BandPass _hydLowBp = new(140f, 1.2f, Rate), _hydMidBp = new(900f, 1.6f, Rate), _hydHighBp = new(3600f, 2.2f, Rate);
+    private readonly OnePole _hydSelfLp = new(220f, Rate);
 
     private AudioStreamGeneratorPlayback _pb;
     private Thread _thread;
@@ -257,6 +263,29 @@ public partial class AudioDirector : Node
                 l += s * (1f - MathF.Max(0f, voice.Pan));
                 r += s * (1f + MathF.Min(0f, voice.Pan));
                 if (!alive) _voices.RemoveAt(v);
+            }
+
+            // Hydrophone headphones: the boat fades back, the sea comes forward.
+            _hydOn += ((Hydro ? 1f : 0f) - _hydOn) * inv * 4f;
+            if (_hydOn > 0.001f)
+            {
+                l *= 1f - 0.75f * _hydOn; r *= 1f - 0.75f * _hydOn;
+                _hLo += (HydLow - _hLo) * inv * 3f; _hMi += (HydMid - _hMi) * inv * 3f; _hHi += (HydHigh - _hHi) * inv * 3f;
+                float env = 1f;
+                float ph = HydPulseHz;
+                if (ph > 0f)
+                {
+                    _hydPulsePh = Wrap(_hydPulsePh + ph * inv);
+                    float duty = MathF.Max(0.05f, HydDuty);
+                    env = _hydPulsePh < duty ? MathF.Sin(MathF.PI * _hydPulsePh / duty) : 0f;
+                    env = 0.15f + 0.85f * env;
+                }
+                _hydTonePh = Wrap(_hydTonePh + MathF.Max(1f, HydToneHz) * inv);
+                float sea = _hydLowBp.Process(w) * _hLo * 0.9f + _hydMidBp.Process(w) * _hMi * 0.7f + _hydHighBp.Process(w) * _hHi * 0.5f;
+                float hTone = MathF.Sin(_hydTonePh * MathF.Tau) * HydTone * 0.08f;
+                float self = _hydSelfLp.Process(w) * HydSelf * 0.9f;
+                float hyd = ((sea + hTone) * env + self + w * 0.004f) * _hydOn;
+                l += hyd; r += hyd;
             }
 
             // In the suit: the world arrives through the helmet (muffled), your breath does not.

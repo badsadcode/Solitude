@@ -377,6 +377,42 @@ public partial class Main
             (t += 10.0f, () => Shot("10_chase_turning")),
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
+            // --- The hydrophone: waterfall, the Sounding, recording, a creature, own noise
+            (t += 0.1f, CaptureMarkHydrophone),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                var sp = _sub.GlobalPosition;
+                _sub.GlobalPosition = new Vector3(sp.X, Mathf.Min(_gen.Height(sp.X, sp.Z) + 140f, -420f), sp.Z);
+                _sub.LinearVelocity = Vector3.Zero; _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = false;
+                _listener.Attention = 0f;
+                _creatures.SummonRays();
+                _ravager.ForcePass(90f);
+                _player.Position = new Vector3(1.2f, 0.05f, -4.9f);
+                EnterHydrophone();
+            }),
+            (t += 20f, () => { Shot("30a_hydrophone_waterfall"); LogHydro("after 20 s"); }),
+            (t += 0.1f, () => { _beam = RelBearing(_gen.Origin); _phone.Filter = Hydrophone.Band.Low; LogHydro("beam on the Origin, LOW band"); Input.ActionPress(GameInput.Reload); }),
+            (t += 4.4f, () => { Input.ActionRelease(GameInput.Reload); LogHydro("after recording the Sounding"); }),
+            (t += 0.2f, () =>
+            {
+                _phone.Filter = Hydrophone.Band.All;
+                var rav = _hydroSources.Find(x => x.Class == SoundClass.Ravager);
+                _beam = rav.Level > 0f ? rav.Bearing : _beam;
+                LogHydro($"beam on the ravager ({rav.Level:0.00} at {rav.Distance:0} m)");
+                Input.ActionPress(GameInput.Reload);
+            }),
+            (t += 4.4f, () => { Input.ActionRelease(GameInput.Reload); Shot("30b_hydrophone_recorded"); LogHydro("after recording the ravager"); }),
+            (t += 0.1f, () => { _sub.TelegraphIndex = 5; _sub.ApplyTelegraph(); _feedFullscreen = true; _hud.ShowFeed(_hydroScope.GetTexture(), "HYDROPHONE  -  PASSIVE", 1f, "[F] close"); }),
+            (t += 10f, () => { Shot("30c_hydrophone_own_noise"); LogHydro("full ahead 10 s"); }),
+            (t += 0.1f, () =>
+            {
+                _sub.TelegraphIndex = 2; _sub.ApplyTelegraph();
+                var json = System.Text.Json.JsonSerializer.Serialize(Capture(), Json);
+                var back = System.Text.Json.JsonSerializer.Deserialize<SaveData>(json, Json);
+                GD.Print($"[capture] hydrophone save: recordings {back.Recordings.Count} [{string.Join("; ", back.Recordings)}] identified [{string.Join(",", back.Identified)}]");
+                _audio.Hydro = false; EnterWalking();
+            }),
             // --- The Listener: noise, attention, an answered ping, going dark, both encounter endings
             (t += 0.1f, CaptureMarkListener),
             (t += 0.1f, () =>
@@ -722,6 +758,12 @@ public partial class Main
     private float _capHull;
     private void LogListener(string what) =>
         GD.Print($"[capture] listener {what}: attention {_listener.Attention:0.0} noise {_listener.Noise:0.00} ({NoiseDb:0} dB) tier {_listener.Current} encounter {(_listener.InEncounter ? _listener.EncounterT.ToString("0.0") : "-")} depth {_sub.Depth:0}");
+    private void LogHydro(string what)
+    {
+        var (src, level) = InBeam();
+        GD.Print($"[capture] hydrophone {what}: beam {_beam:0} band {_phone.Filter} level {level:0.00} in beam {(src is HydroSource s ? $"{s.Class} {s.Level:0.00} @ {s.Distance:0} m" : "nothing")} | sources {_hydroSources.Count}: {string.Join(", ", _hydroSources.ConvertAll(x => $"{x.Class}:{x.Level:0.00}@{x.Bearing:0}"))} | lines: {_hydroDisplay.Line2} / {_hydroDisplay.Line3} | recs {_phone.Recordings.Count} noise {_listener.Noise:0.00}");
+    }
+    private void CaptureMarkHydrophone() => GD.Print("[capture] --- hydrophone section ---");
     private void CaptureMarkListener() => GD.Print("[capture] --- listener section ---");
     private void CaptureMarkModules() => GD.Print("[capture] --- modules section ---");
     private void CaptureMarkHarpoon() => GD.Print("[capture] --- harpoon section ---");
@@ -760,7 +802,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);
