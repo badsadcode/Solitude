@@ -14,7 +14,7 @@ public enum ItemId
     // Food — galley
     Ration, ClamStew, GlowBroth,
     // Found aboard stations
-    CannedFood, Medkit,
+    CannedFood, Medkit, StationAlloy,
 }
 
 public sealed record ItemInfo(string Name, string Description, int Weight, float Food = 0f);
@@ -38,6 +38,7 @@ public static class Items
         [ItemId.ClamStew] = new("Clam stew", "Hot, salty, almost comforting.", 1, 50f),
         [ItemId.GlowBroth] = new("Glow broth", "Your mouth glows for an hour afterwards. You dream in blue.", 1, 35f),
         [ItemId.CannedFood] = new("Station tin", "Label long gone. Best before: the incident.", 1, 40f),
+        [ItemId.StationAlloy] = new("Station alloy", "Pressure-rated plate salvaged from a station. Nothing you can press from nodules is this strong.", 2),
         [ItemId.Medkit] = new("Medkit", "Gauze, sealant spray, something in an autoinjector. Press H to use.", 1),
     };
 
@@ -52,6 +53,11 @@ public sealed class Inventory
     public int Version { get; private set; }
 
     public int Count(ItemId id) => _counts.TryGetValue(id, out int c) ? c : 0;
+
+    public void Clear() { _counts.Clear(); Version++; }
+
+    /// <summary>Restore from a save (ignores the weight limit: the save was valid when written).</summary>
+    public void Set(ItemId id, int n) { if (n > 0) _counts[id] = n; else _counts.Remove(id); Version++; }
 
     public int Weight
     {

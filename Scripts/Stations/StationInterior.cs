@@ -316,6 +316,7 @@ public partial class StationInterior : Node3D
             Loot(core + new Vector3(0.9f, 0, 0), "Map fragment (core memory)", datapad, () => MapFragment?.Invoke(Site));
             Loot(core + new Vector3(-0.9f, 0, 0), "Read crew log", datapad, () => ReadLog?.Invoke(logs[^1]));
             Loot(core + new Vector3(0, 0, 0.9f), "Power cell", crate, () => Systems.Collect(ItemId.PowerCell));
+            Loot(core + new Vector3(0.9f, 0, 0.9f), "Station alloy (core shielding)", crate, () => { Systems.Collect(ItemId.StationAlloy); Systems.Collect(ItemId.StationAlloy); });
         }
 
         // Keycard where NoorLevel put the key.
@@ -356,7 +357,7 @@ public partial class StationInterior : Node3D
             }
             else
             {
-                ItemId[] mats = { ItemId.MetalPlate, ItemId.Circuit, ItemId.Crystal, ItemId.PatchKit, ItemId.PowerCell, ItemId.Sealant };
+                ItemId[] mats = { ItemId.MetalPlate, ItemId.Circuit, ItemId.Crystal, ItemId.PatchKit, ItemId.PowerCell, ItemId.Sealant, ItemId.StationAlloy, ItemId.StationAlloy, ItemId.StationAlloy };
                 var item = mats[_rng.Next(mats.Length)];
                 Loot(p, Items.Name(item), crate, () => Systems.Collect(item));
             }

@@ -93,7 +93,7 @@ public partial class Main
             FreeStation();
             _stations.Undock();
         }
-        else if (!_stations.TryDock(null))
+        else if (!_stations.TryDock(() => Autosave("docked")))
         {
             _hud.Message(_stations.Nearest != null && _stations.NearestDistance < StationManager.GuidanceRange
                 ? "DOCKING: not in the capture zone. Line up with the lane, under 9 m from the berth, below 1.3 m/s."
@@ -204,6 +204,7 @@ public partial class Main
             _rig.BridgeActive = true;
             _hud.FadeTo(0f, 1.0f);
             _hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC release mouse · F11 fullscreen");
+            Autosave("back aboard");
         }));
     }
 
@@ -307,6 +308,7 @@ public partial class Main
 
     private void UpdateReading()
     {
+        if (_endingRunning) return; // the epilogue closes only through its own buttons
         if (Input.IsActionJustPressed(GameInput.Cancel) || Input.IsActionJustPressed(GameInput.Interact)) CloseLog();
     }
 
@@ -347,6 +349,11 @@ public partial class Main
             if (++found >= 2) break;
         }
         _hud.Message($"MAP FRAGMENT: seabed charted for {radius:0} m around {site.Name}." + (found > 0 ? $" {found} more station beacon{(found > 1 ? "s" : "")} plotted on the holo table." : ""), 7f);
+
+        // The core also holds a fragment of the Sounding (milestone 6) — shown a moment later.
+        var tw = CreateTween();
+        tw.TweenInterval(4.0);
+        tw.TweenCallback(Callable.From(() => OnDataCore(site)));
     }
 
     private string StationVitals()

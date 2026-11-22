@@ -101,6 +101,12 @@ public sealed class StationDirectory
             }
     }
 
+    /// <summary>Look a station up by id (for saves). Null if that cell holds none.</summary>
+    public StationSite ById(long id) => id == -1 ? _starter : Site((int)(id >> 32), (int)(uint)id);
+
+    /// <summary>All stations generated so far (the ones the save cares about).</summary>
+    public IEnumerable<StationSite> Generated { get { foreach (var s in _cache.Values) if (s != null) yield return s; } }
+
     private StationSite Site(int cx, int cz)
     {
         long id = ((long)cx << 32) ^ (uint)cz;

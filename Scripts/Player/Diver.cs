@@ -40,7 +40,9 @@ public partial class Diver : CharacterBody3D
 
     // Tuned by Tom's first swim (2026-11-22): "a bit slower" — ~15% off, slightly heavier starts.
     private const float SwimSpeed = 1.6f, BoostSpeed = 2.6f, Accel = 1.35f, Drag = 1.4f;
-    private const float O2PerSecond = 100f / 240f;
+    /// <summary>Minutes of air in the tank (Suit Tank upgrade raises it).</summary>
+    public float TankMinutes = 4f;
+    private float O2PerSecond => 100f / (TankMinutes * 60f);
 
     public override void _Ready()
     {

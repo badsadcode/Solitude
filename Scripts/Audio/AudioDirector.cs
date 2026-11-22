@@ -36,6 +36,7 @@ public partial class AudioDirector : Node
     public volatile bool Diving;      // in the suit: breathing in the helmet, the world muffled
     public volatile float Exertion;   // 0..1, breathing rate
     public volatile float Heartbeat;  // 0..1, panic
+    public volatile float Unease;     // 0..1, story progress: the distant calls come more often
 
     private AudioStreamGeneratorPlayback _pb;
     private Thread _thread;
@@ -340,7 +341,7 @@ public partial class AudioDirector : Node
         if (_callTimer <= 0f)
         {
             _voices.Add(new CallVoice(Rate, _rng));
-            _callTimer = 70f + (float)_rng.NextDouble() * 120f;
+            _callTimer = (70f + (float)_rng.NextDouble() * 120f) * (1f - 0.6f * Unease);
         }
     }
 }

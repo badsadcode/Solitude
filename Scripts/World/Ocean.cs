@@ -136,11 +136,27 @@ public partial class Ocean : Node3D
         _motes.GlobalPosition = f;
 
         // The deeper you go the less ambient light leaks down and the thicker the dark.
+        float dt = (float)delta;
         float depth = Mathf.Max(0f, -f.Y);
         float t = Mathf.Clamp((depth - 200f) / 800f, 0f, 1f);
-        Water.AmbientLightEnergy = Mathf.Lerp(0.9f, 0.35f, t);
-        Water.FogLightColor = new Color(0.012f, 0.045f, 0.055f).Lerp(new Color(0.002f, 0.008f, 0.014f), t);
-        Water.BackgroundColor = Water.FogLightColor;
-        Water.FogDensity = Mathf.Lerp(0.011f, 0.02f, t);
+
+        // Biome tint, eased so crossing a border feels like the water itself changing.
+        float crystalNow = Gen != null ? Gen.CrystalField(f.X, f.Z) : 0f;
+        float hadalNow = TerrainGenerator.HadalFactor(f.Y);
+        _crystalT = Mathf.Lerp(_crystalT, crystalNow, Mathf.Clamp(0.4f * dt, 0f, 1f));
+        _hadalT = Mathf.Lerp(_hadalT, hadalNow, Mathf.Clamp(0.4f * dt, 0f, 1f));
+
+        Water.AmbientLightEnergy = Mathf.Lerp(0.9f, 0.35f, t) * (1f - 0.5f * _hadalT);
+        Color fog = new Color(0.012f, 0.045f, 0.055f).Lerp(new Color(0.002f, 0.008f, 0.014f), t);
+        fog = fog.Lerp(new Color(0.018f, 0.012f, 0.05f), _crystalT * 0.8f);       // violet glow in the Expanse
+        fog = fog.Lerp(new Color(0.01f, 0.002f, 0.003f), _hadalT);                // red-black in the Hadal Deep
+        Water.FogLightColor = fog;
+        Water.BackgroundColor = fog;
+        Water.FogDensity = Mathf.Lerp(0.011f, 0.02f, t) * (1f + 0.25f * _hadalT);
+        Water.VolumetricFogAlbedo = new Color(0.55f, 0.75f, 0.78f).Lerp(new Color(0.68f, 0.55f, 0.95f), _crystalT).Lerp(new Color(0.65f, 0.32f, 0.28f), _hadalT);
+        Water.AmbientLightColor = new Color(0.08f, 0.16f, 0.18f).Lerp(new Color(0.12f, 0.09f, 0.2f), _crystalT).Lerp(new Color(0.1f, 0.03f, 0.03f), _hadalT);
     }
+
+    public TerrainGenerator Gen;
+    private float _crystalT, _hadalT;
 }

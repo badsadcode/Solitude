@@ -134,6 +134,18 @@ public partial class TerrainStreamer : Node3D
         AddMulti(root, Props.Chimney, d.Chimneys, 0f);
         AddMulti(root, Props.TubeWorms, d.Worms, 80f);
         AddMulti(root, Props.WhaleFall, d.WhaleFalls, 0f);
+        AddMulti(root, Props.CrystalPillar, d.CrystalPillars, 0f);
+        if (d.CrystalPillars.Count > 0)
+        {
+            // One soft violet glow per crystal chunk lights the sediment around the pillars.
+            var p = d.CrystalPillars[0];
+            root.AddChild(new OmniLight3D
+            {
+                Position = p.Origin + Vector3.Up * p.Basis.Y.Length() * 0.5f,
+                LightColor = new Color(0.55f, 0.4f, 1f), LightEnergy = 1.4f, OmniRange = 26f,
+                LightVolumetricFogEnergy = 1.5f, ShadowEnabled = false,
+            });
+        }
 
         RegisterPickups(d, root);
         _vents[d.Coord] = d.Vents;
@@ -225,6 +237,23 @@ public partial class TerrainStreamer : Node3D
         _taken.Add(pk.Id);
         pk.Mesh.SetInstanceTransform(pk.Instance, new Transform3D(Basis.FromScale(Vector3.Zero), pk.Position));
         foreach (var list in _pickups.Values) list.Remove(pk);
+    }
+
+    /// <summary>Every pickup id ever taken (for saving).</summary>
+    public IEnumerable<long> TakenIds => _taken;
+
+    /// <summary>Restore taken pickups from a save, hiding any already in loaded chunks.</summary>
+    public void RestoreTaken(IEnumerable<long> ids)
+    {
+        foreach (var id in ids) _taken.Add(id);
+        foreach (var list in _pickups.Values)
+            for (int i = list.Count - 1; i >= 0; i--)
+                if (_taken.Contains(list[i].Id))
+                {
+                    var pk = list[i];
+                    pk.Mesh.SetInstanceTransform(pk.Instance, new Transform3D(Basis.FromScale(Vector3.Zero), pk.Position));
+                    list.RemoveAt(i);
+                }
     }
 
     public float NearestVentDistance(Vector3 p)

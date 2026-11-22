@@ -26,6 +26,8 @@ public partial class ShipSystems : Node
     public readonly Inventory Hold = new();
 
     public float Power { get; private set; } = 100f;
+    /// <summary>Battery bank size relative to stock (the Battery upgrade makes every drain last longer).</summary>
+    public float BatteryCapacity = 1f;
     public float Food { get; private set; } = 80f;
     public bool IntakeOn { get; private set; }
     public bool ArmActive;                 // set by the arm while deployed
@@ -47,6 +49,9 @@ public partial class ShipSystems : Node
         Hold.Add(ItemId.PatchKit, 1);
         Hold.Add(ItemId.PowerCell, 1);
     }
+
+    /// <summary>Restore from a save.</summary>
+    public void SetState(float power, float food) { Power = power; Food = food; }
 
     public bool UsePower(float amount)
     {
@@ -115,7 +120,7 @@ public partial class ShipSystems : Node
         float dt = (float)delta;
 
         // --- power
-        float drain = LifeSupport + Mathf.Abs(Sub.EngineOutput) * EnginePerUnit;
+        float drain = (LifeSupport + Mathf.Abs(Sub.EngineOutput) * EnginePerUnit) / BatteryCapacity;
         if (Sub.LightsOn) drain += Floods;
         if (IntakeOn) drain += IntakeDrain;
         if (ArmActive) drain += ArmDrain;

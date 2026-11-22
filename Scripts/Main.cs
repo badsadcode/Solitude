@@ -69,6 +69,7 @@ public partial class Main : Node
 	public override void _Ready()
 	{
 		GameInput.Setup();
+		if (PendingLoad != null) Seed = PendingLoad.Seed; // CONTINUE: same world as the save
 		if (Seed == 0) Seed = ParseSeed() ?? (int)(GD.Randi() % 1_000_000);
 		GD.Print($"[Solitude] seed {Seed}");
 
@@ -112,6 +113,7 @@ public partial class Main : Node
 
 		_terrain.Focus = FocusPoint;
 		_ocean.Focus = FocusPoint;
+		_ocean.Gen = _gen;
 
 		_rig = new HullCameraRig { Name = "HullCameras", Sub = _sub };
 		_game.AddChild(_rig);
@@ -201,6 +203,8 @@ public partial class Main : Node
 		SetupStations(spawn);
 		SetupDiving();
 		SetupCreatures();
+		SetupStory();
+		ApplyUpgrades();
 
 		_sub.Impact += s =>
 		{
@@ -221,7 +225,15 @@ public partial class Main : Node
 		SetupCapture();
 		SetupDebugStart();
 		// Normal launches open on the title screen; dev launches (--start, --capture) go straight in.
-		if (SkipTitle()) BeginDive();
+		if (PendingLoad != null)
+		{
+			var save = PendingLoad;
+			PendingLoad = null;
+			ApplySave(save);
+			EnterWalking();
+			BeginDive();
+		}
+		else if (SkipTitle()) BeginDive();
 		else EnterTitle();
 	}
 
@@ -426,6 +438,15 @@ public partial class Main : Node
 				_panelActions.Add(_systems.ApplyPatch);
 				opts.Add(($"{(_systems.IntakeOn ? "Close" : "Open")} intake filter", !_systems.Emergency));
 				_panelActions.Add(_systems.ToggleIntake);
+				// Upgrades (milestone 6): installed ones drop off the list.
+				foreach (var u in Upgrades.All)
+				{
+					if (_upgrades.Has(u.Id)) continue;
+					string req = u.Requires is UpgradeId r && !_upgrades.Has(r) ? $"   [needs {Upgrades.Def(r).Name}]" : "";
+					opts.Add(($"UPGRADE {u.Name}: {u.Effect}   <-  {Recipes.CostText(new Recipe(Station.Workbench, ItemId.MetalPlate, 0, u.Cost, 0f, ""))}{req}", _upgrades.CanInstall(u, hold)));
+					var def = u;
+					_panelActions.Add(() => InstallUpgrade(def));
+				}
 				break;
 		}
 
@@ -618,6 +639,8 @@ public partial class Main : Node
 		UpdateHatchBeacon(dt);
 		if (_mode != Mode.Title) UpdateCreatureDebugKeys();
 		UpdateTitleCapture(dt);
+		UpdateBiomeNotice(dt);
+		UpdateStory(dt);
 		UpdateCapture(dt);
 	}
 
@@ -691,7 +714,7 @@ public partial class Main : Node
 
 		float alt = _sub.GlobalPosition.Y - _gen.Height(_sub.GlobalPosition.X, _sub.GlobalPosition.Z);
 		string view = _view switch { HelmView.Bridge => "BRIDGE [V]", HelmView.BowCamera => "CAM 1 BOW [V]", _ => "EXTERNAL [V]" };
-		view += DockingText();
+		view += DockingText() + StoryHelmText();
 		view += _sonar.RechargeLeft > 0 ? $"\nSONAR    CHARGING {_sonar.RechargeLeft:0.0}s" : "\nSONAR    READY [P]";
 		_hud.UpdateHelm(_sub, alt, view);
 	}
@@ -840,8 +863,8 @@ public partial class Main : Node
 	private void UpdateWarnings(float dt)
 	{
 		string warn = "";
-		if (_sub.Depth > Submarine.CrushDepth) warn = "!! CRUSH DEPTH EXCEEDED — HULL FAILING !!";
-		else if (_sub.Depth > Submarine.TestDepth) warn = "HULL STRESS — BELOW TEST DEPTH";
+		if (_sub.Depth > _sub.CrushDepth) warn = "!! CRUSH DEPTH EXCEEDED — HULL FAILING !!";
+		else if (_sub.Depth > _sub.TestDepth) warn = "HULL STRESS — BELOW TEST DEPTH";
 		else if (_sub.Hull < 35f) warn = "HULL INTEGRITY CRITICAL";
 
 		if (_mode == Mode.Helm)

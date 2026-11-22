@@ -62,7 +62,7 @@ public partial class Main
         _titleCam.MakeCurrent();
 
         _hud.SetGameplayHud(false);
-        _hud.ShowTitle(Seed, NewDive, () => GetTree().Quit());
+        _hud.ShowTitle(Seed, NewDive, () => GetTree().Quit(), HasSave() ? ContinueDive : null);
         _hud.FadeTo(0f, 3f);
         _titleRayTimer = 22f + (float)GD.RandRange(0, 8);
         Input.MouseMode = Input.MouseModeEnum.Visible;

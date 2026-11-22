@@ -8,7 +8,20 @@ synthesized soundscape designed to make you uncomfortable about what's below you
 
 A [Bad Ideas Works](https://github.com/badsadcode) production.
 
-## Current state — Milestone 5: the hard suit
+## Current state — Milestone 6: a reason to go deeper
+
+- **Biomes**: the Pale Shelf; the **Crystal Expanse** (violet water, glowing crystal pillars, crystals
+  everywhere); the **Hadal Deep** below ~750 m (red-black water, black rock, bones, the Fangwyrm).
+- **The Sounding**: every station core holds a fragment of the signal the crews kept hearing. Three
+  fragments triangulate its source — a shaft in the Hadal Deep, far below stock crush depth. What's at
+  the bottom is the ending. You can keep diving afterwards.
+- **Upgrades** at the engineering panel, built from crafted parts and **station alloy** salvaged
+  aboard stations: hull reinforcement I and II (the key to the deep), battery bank, hold racks, suit
+  tank, long-range sonar, flood array.
+- **Save and Continue**: autosaves when you dock, come back aboard or from a dive, find a data core,
+  install an upgrade, reach the end, or close the game. **CONTINUE** on the title screen.
+
+## Milestone 5: the hard suit
 
 - Suit up at the **dive locker** (engineering), climb to the **dive hatch** with the boat stopped,
   and you're outside: swim where you look, ~4 minutes of air, helmet lamp, a homing chevron back to
@@ -119,7 +132,7 @@ Godot_v4.7.2-stable_mono_win64.exe --path . -- --seed=1234
 3. ~~Manipulator arm and collectors, inventory, crafting and cooking stations, hull and power systems~~
 4. ~~Deep-sea stations: docking, procedural interiors (via [NoorLevel](https://github.com/badsadcode/BadLevel)), weapons, creatures~~
 5. ~~Diving suit and swimming outside the boat~~
-6. Replayability: biomes, progression, logs, map fragments
+6. ~~Replayability: biomes, progression, a story with an ending, save and continue~~
 
 ## Development notes
 

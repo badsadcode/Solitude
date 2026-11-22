@@ -317,7 +317,7 @@ public partial class Hud : CanvasLayer
     /// Title in the top-left corner (same face as the intro), a quiet menu beneath it, studio and
     /// seed in the bottom-left. The live world plays behind it.
     /// </summary>
-    public void ShowTitle(int seed, System.Action onNewDive, System.Action onQuit)
+    public void ShowTitle(int seed, System.Action onNewDive, System.Action onQuit, System.Action onContinue = null)
     {
         _titleGroup?.QueueFree();
         _titleGroup = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -338,7 +338,11 @@ public partial class Hud : CanvasLayer
         menu.AddThemeConstantOverride("separation", 4);
         _titleGroup.AddChild(menu);
         Button first = null;
-        foreach (var (label, action) in new (string, System.Action)[] { ("NEW DIVE", onNewDive), ("QUIT", onQuit) })
+        var items = new System.Collections.Generic.List<(string, System.Action)>();
+        if (onContinue != null) items.Add(("CONTINUE", onContinue));
+        items.Add(("NEW DIVE", onNewDive));
+        items.Add(("QUIT", onQuit));
+        foreach (var (label, action) in items)
         {
             var b = new Button { Text = "  " + label, Flat = true, Alignment = HorizontalAlignment.Left, FocusMode = Control.FocusModeEnum.All };
             b.AddThemeFontSizeOverride("font_size", 20);

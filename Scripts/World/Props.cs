@@ -42,6 +42,33 @@ public static class Props
         WhaleFall = BuildWhaleFall();
         TubeWorms = BuildTubeWorms();
         BuildPickups();
+        BuildCrystalPillar();
+    }
+
+    /// <summary>
+    /// Crystal Expanse pillar: unit height/radius ~1, a cluster of leaning hexagonal columns that
+    /// glow violet from inside (vertex alpha &lt; 1 → emission). Scaled per instance to 6–24 m.
+    /// </summary>
+    public static ArrayMesh CrystalPillar;
+
+    public static void BuildCrystalPillar()
+    {
+        var mb = new MeshBuilder();
+        var glow = new Color(0.55f, 0.4f, 0.95f, 0.55f);
+        var dim = new Color(0.32f, 0.26f, 0.5f);
+        for (int i = 0; i < 5; i++)
+        {
+            float a = i * 1.26f, lean = (i == 0 ? 0.04f : 0.18f + Perlin.Hash(i, 9, 1) * 0.2f);
+            float h = i == 0 ? 1f : 0.45f + Perlin.Hash(i, 8, 1) * 0.4f;
+            float r = i == 0 ? 0.55f : 0.25f + Perlin.Hash(i, 7, 1) * 0.15f;
+            var basis = new Basis(new Vector3(MathF.Cos(a), 0, MathF.Sin(a)), lean);
+            mb.Xform = new Transform3D(basis, i == 0 ? Vector3.Zero : new Vector3(MathF.Cos(a) * 0.45f, 0, MathF.Sin(a) * 0.45f));
+            mb.Cylinder(Vector3.Zero, r, r * 0.85f, h * 0.85f, 6, i % 2 == 0 ? glow : dim, caps: false);
+            mb.Cylinder(Vector3.Up * h * 0.85f, r * 0.85f, 0f, h * 0.15f, 6, glow, caps: false);
+        }
+        mb.Xform = Transform3D.Identity;
+        mb.Rock(Vector3.Zero, new Vector3(1.1f, 0.25f, 1.1f), new Color(0.18f, 0.16f, 0.24f), 3, 0.3f);
+        CrystalPillar = mb.Build(Art.Crystal);
     }
 
     /// <summary>Meshes for things the manipulator arm can collect. Size ~0.5–1.2 m at scale 1.</summary>

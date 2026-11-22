@@ -32,9 +32,11 @@ public partial class SonarSystem : Node
     /// <summary>Positions of things that swim (creatures). Sampled at ping time.</summary>
     public Func<IEnumerable<Vector3>> Bodies;
 
-    public static readonly float[] Ranges = { 150f, 300f, 500f };
+    public static readonly float[] Ranges = { 150f, 300f, 500f, 800f };
     public int RangeIndex = 1;
     public float Range => Ranges[RangeIndex];
+    /// <summary>Long-range transducer upgrade unlocks the 800 m setting.</summary>
+    public bool LongRange;
 
     public const float WaveSpeed = 300f;
     public const float Recharge = 4f;
@@ -64,7 +66,7 @@ public partial class SonarSystem : Node
         public List<(Vector2I cell, float height, double revealAt)> Cells;
     }
 
-    public void CycleRange() => RangeIndex = (RangeIndex + 1) % Ranges.Length;
+    public void CycleRange() => RangeIndex = (RangeIndex + 1) % (LongRange ? Ranges.Length : Ranges.Length - 1);
 
     /// <summary>Fire a ping. Returns false while recharging.</summary>
     public bool Ping()

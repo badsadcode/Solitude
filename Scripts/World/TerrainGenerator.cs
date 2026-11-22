@@ -4,6 +4,8 @@ using Solitude.Core;
 
 namespace Solitude.World;
 
+public enum Biome { Shelf, Vents, Crystal, Hadal }
+
 /// <summary>
 /// The seabed height function and biome fields. Pure maths: deterministic per seed and
 /// thread-safe, so chunks can be generated on worker threads.
@@ -16,7 +18,7 @@ namespace Solitude.World;
 public sealed class TerrainGenerator
 {
     public readonly int Seed;
-    private readonly Perlin _cont, _shelf, _mount, _mountMask, _canyon, _canyonMask, _warp, _detail, _terrace, _biome, _vent;
+    private readonly Perlin _cont, _shelf, _mount, _mountMask, _canyon, _canyonMask, _warp, _detail, _terrace, _biome, _vent, _crystal;
 
     public TerrainGenerator(int seed)
     {
@@ -32,11 +34,51 @@ public sealed class TerrainGenerator
         _terrace = new Perlin(seed + 9);
         _biome = new Perlin(seed + 10);
         _vent = new Perlin(seed + 11);
+        _crystal = new Perlin(seed + 12);
+        FindOrigin();
     }
 
     private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 
+    // ------------------------------------------------------------------ the Origin (milestone 6)
+    // The source of the Sounding: a shaft carved into the deepest ground 1.5–3.5 km from the
+    // world origin. Its bottom sits far below stock crush depth — the hull upgrades are the key.
+
+    public const float PitRadius = 70f, PitDepth = 380f;
+    public Vector3 Origin { get; private set; }      // on the rim (ground level at the shaft's centre)
+    public float OriginFloor { get; private set; }   // y of the shaft's bottom
+    private bool _hasOrigin;
+
+    private void FindOrigin()
+    {
+        float best = float.MaxValue;
+        Vector3 at = Vector3.Zero;
+        for (float r = 1500f; r <= 3500f; r += 125f)
+            for (int i = 0, n = (int)(Mathf.Tau * r / 125f); i < n; i++)
+            {
+                float a = Mathf.Tau * i / n;
+                float x = MathF.Sin(a) * r, z = MathF.Cos(a) * r;
+                float h = BaseHeight(x, z);
+                if (h < best) { best = h; at = new Vector3(x, h, z); }
+            }
+        Origin = at;
+        OriginFloor = at.Y - PitDepth;
+        _hasOrigin = true;
+    }
+
     public float Height(float x, float z)
+    {
+        float h = BaseHeight(x, z);
+        if (!_hasOrigin) return h;
+        float dx = x - Origin.X, dz = z - Origin.Z;
+        float d2 = dx * dx + dz * dz;
+        float outer = PitRadius * 1.15f;
+        if (d2 > outer * outer) return h;
+        float pit = Perlin.SmoothStep(outer, PitRadius * 0.85f, MathF.Sqrt(d2));
+        return h + (OriginFloor - h) * pit;
+    }
+
+    private float BaseHeight(float x, float z)
     {
         float wx = x + _warp.Get(x * 0.004f, z * 0.004f) * 70f;
         float wz = z + _warp.Get(x * 0.004f + 31.7f, z * 0.004f - 17.3f) * 70f;
@@ -87,6 +129,31 @@ public sealed class TerrainGenerator
     /// <summary>-1..1 — alien sediment colouring.</summary>
     public float Tint(float x, float z) => _biome.Get(x * 0.0021f + 100f, z * 0.0021f - 50f);
 
+    // ------------------------------------------------------------------ biomes (milestone 6)
+
+    /// <summary>0..1 — the Crystal Expanse: lattice crystal grows into glowing pillars, the water turns violet.</summary>
+    public float CrystalField(float x, float z) => Perlin.SmoothStep(0.28f, 0.55f, _crystal.Fbm(x * 0.0011f + 40f, z * 0.0011f - 70f, 2));
+
+    /// <summary>0..1 — the Hadal Deep, by depth: near-black rock, red-black water, Fangwyrm country.</summary>
+    public static float HadalFactor(float y) => Perlin.SmoothStep(-700f, -850f, y);
+
+    public Biome BiomeAt(float x, float z)
+    {
+        float h = Height(x, z);
+        if (HadalFactor(h) > 0.5f) return Biome.Hadal;
+        if (CrystalField(x, z) > 0.5f) return Biome.Crystal;
+        if (VentField(x, z) > 0.5f) return Biome.Vents;
+        return Biome.Shelf;
+    }
+
+    public static string BiomeName(Biome b) => b switch
+    {
+        Biome.Crystal => "THE CRYSTAL EXPANSE",
+        Biome.Hadal => "THE HADAL DEEP",
+        Biome.Vents => "THE VENT FIELDS",
+        _ => "THE PALE SHELF",
+    };
+
     public Color GroundColor(Vector3 centroid, Vector3 normal)
     {
         float slope = 1f - normal.Y;
@@ -108,6 +175,19 @@ public sealed class TerrainGenerator
         {
             sediment = sediment.Lerp(new Color(0.12f, 0.11f, 0.1f), vent);
             rock = rock.Lerp(new Color(0.1f, 0.09f, 0.09f), vent);
+        }
+
+        float crystal = CrystalField(x, z);
+        if (crystal > 0.01f)
+        {
+            sediment = sediment.Lerp(new Color(0.3f, 0.27f, 0.46f), crystal);
+            rock = rock.Lerp(new Color(0.2f, 0.18f, 0.32f), crystal);
+        }
+        float hadal = HadalFactor(centroid.Y);
+        if (hadal > 0.01f)
+        {
+            sediment = sediment.Lerp(new Color(0.16f, 0.11f, 0.1f), hadal);
+            rock = rock.Lerp(new Color(0.09f, 0.06f, 0.06f), hadal);
         }
 
         Color c = sediment.Lerp(rock, Perlin.SmoothStep(0.22f, 0.42f, slope));

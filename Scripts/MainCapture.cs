@@ -273,6 +273,16 @@ public partial class Main
             (t += 10.0f, () => Shot("10_chase_turning")),
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
+            // --- Milestone 6: biomes
+            (t += 0.1f, CaptureMarkBiomes),
+            (t += 0.1f, () => CaptureGoToBiome(Solitude.World.Biome.Crystal)),
+            (t += 4.0f, () => { Shot("20a_crystal_chase"); GD.Print($"[capture] biome here: {_gen.BiomeAt(_sub.GlobalPosition.X, _sub.GlobalPosition.Z)}"); }),
+            (t += 0.1f, () => { _view = HelmView.BowCamera; ApplyHelmView(); }),
+            (t += 1.0f, () => Shot("20b_crystal_bow")),
+            (t += 0.1f, () => CaptureGoToBiome(Solitude.World.Biome.Hadal)),
+            (t += 5.0f, () => { Shot("20c_hadal_chase"); GD.Print($"[capture] biome here: {_gen.BiomeAt(_sub.GlobalPosition.X, _sub.GlobalPosition.Z)} depth={_sub.Depth:0}"); }),
+            (t += 0.1f, () => { _view = HelmView.BowCamera; ApplyHelmView(); }),
+            (t += 1.0f, () => Shot("20d_hadal_bow")),
             // --- Tom's new creatures: Crystal Rays and the Fangwyrm
             (t += 0.1f, CaptureMarkCreatures),
             (t += 0.1f, () => { _sub.LightsOn = true; EnterWalking(); EnterHelm(); _view = HelmView.Chase; ApplyHelmView(); _creatures.SummonRays(); }),
@@ -310,6 +320,52 @@ public partial class Main
             (t += 0.8f, () => Shot("19g_wyrm_front")),
             (t += 0.1f, () => { _docCam.QueueFree(); _docCam = null; _docTarget = null; _view = HelmView.BowCamera; ApplyHelmView(); }),
             (t += 3.0f, () => { Shot("19h_wyrm_from_bow"); GD.Print($"[capture] wyrm distance to boat {_creatures.Wyrm?.DistanceToFocus:0} m"); }),
+            // --- Milestone 6: upgrades, data cores, save round-trip, the pit, the Choir, the ending
+            (t += 0.1f, CaptureMarkStory),
+            (t += 0.1f, () =>
+            {
+                GD.Print($"[capture] origin at {_gen.Origin} rim depth {-_gen.Origin.Y:0} m, shaft floor {-_gen.OriginFloor:0} m, {new Vector2(_gen.Origin.X - _spawnPoint.X, _gen.Origin.Z - _spawnPoint.Z).Length():0} m from spawn");
+                var h = _systems.Hold;
+                h.Capacity = 999;
+                h.Add(ItemId.MetalPlate, 8); h.Add(ItemId.StationAlloy, 6); h.Add(ItemId.Sealant, 1); h.Add(ItemId.Circuit, 2);
+                InstallUpgrade(Upgrades.Def(UpgradeId.HullII));   // must refuse: needs Hull I
+                InstallUpgrade(Upgrades.Def(UpgradeId.HullI));
+                InstallUpgrade(Upgrades.Def(UpgradeId.HullII));
+                GD.Print($"[capture] upgrades={string.Join(",", _upgrades.Installed)} test={_sub.TestDepth} crush={_sub.CrushDepth}");
+                for (int i = 0; i < 3; i++) OnDataCore(new Solitude.Stations.StationSite { Id = -100 - i, Name = "TEST" });
+                GD.Print($"[capture] cores={_coreSites.Count} originKnown={_originKnown}");
+                // Save round-trip (in memory: capture runs never touch the real save file).
+                var json = System.Text.Json.JsonSerializer.Serialize(Capture(), Json);
+                var back = System.Text.Json.JsonSerializer.Deserialize<SaveData>(json, Json);
+                GD.Print($"[capture] save {json.Length} bytes; round-trip seed={back.Seed} upgrades={back.Upgrades.Count} cores={back.CoreSites.Count} hold items={back.Hold.Count} taken={back.TakenPickups.Count} stations={back.Stations.Count}");
+            }),
+            (t += 0.1f, () =>
+            {
+                // On the rim, looking down into the shaft.
+                Vector3 rim = _gen.Origin + new Vector3(Solitude.World.TerrainGenerator.PitRadius * 1.6f, 25f, 0f);
+                _terrain.GenerateImmediate(rim, 2);
+                _sub.Freeze = false;
+                _sub.GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), rim);
+                _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+                EnterWalking(); EnterHelm(); _view = HelmView.Chase; ApplyHelmView();
+            }),
+            (t += 4.0f, () => Shot("21a_pit_rim")),
+            (t += 0.1f, () =>
+            {
+                // Inside the shaft, 70 m above the floor, facing the heart.
+                Vector3 p = new(_gen.Origin.X + 58f, _gen.OriginFloor + 30f, _gen.Origin.Z);
+                _terrain.GenerateImmediate(p, 2);
+                Vector3 toHeart = (ChoirHeart - p); toHeart.Y = 0;
+                _sub.GlobalTransform = new Transform3D(Basis.LookingAt(toHeart.Normalized(), Vector3.Up), p);
+                _sub.LinearVelocity = Vector3.Zero;
+                _view = HelmView.BowCamera; ApplyHelmView();
+            }),
+            (t += 3.0f, () => { Shot("21b_choir_bow"); GD.Print($"[capture] in the shaft at depth {_sub.Depth:0} m, hull {_sub.Hull:0}%, heart {_sub.GlobalPosition.DistanceTo(ChoirHeart):0} m away"); }),
+            (t += 0.1f, () => { _view = HelmView.Chase; ApplyHelmView(); }),
+            (t += 2.0f, () => Shot("21c_choir_chase")),
+            (t += 0.1f, () => { _sub.GlobalPosition = ChoirHeart + new Vector3(40f, 4f, 0f); _sub.LinearVelocity = Vector3.Zero; }),
+            (t += 1.0f, () => GD.Print($"[capture] ending running={_endingRunning}")),
+            (t += 11.0f, () => { Shot("21d_epilogue"); GD.Print($"[capture] ended={_ended} mode={_mode}"); }),
             (t += 0.5f, () => { _audio.SaveDebugRecording(_captureDir); GetTree().Quit(); }),
         };
     }
@@ -355,6 +411,32 @@ public partial class Main
     }
 
     private void CaptureMarkCreatures() => GD.Print("[capture] --- creatures section ---");
+    private void CaptureMarkBiomes() => GD.Print("[capture] --- biomes section ---");
+    private void CaptureMarkStory() => GD.Print("[capture] --- story section ---");
+
+    /// <summary>Find the nearest spot of a biome (spiral search, 40 m steps) and park the boat there.</summary>
+    private void CaptureGoToBiome(Solitude.World.Biome biome)
+    {
+        Vector3 c = _spawnPoint;
+        for (int ring = 1; ring < 120; ring++)
+            for (int i = 0; i < ring * 8; i++)
+            {
+                float a = Mathf.Tau * i / (ring * 8), r = ring * 40f;
+                float x = c.X + Mathf.Sin(a) * r, z = c.Z + Mathf.Cos(a) * r;
+                if (_gen.BiomeAt(x, z) != biome) continue;
+                if (biome == Solitude.World.Biome.Crystal && _gen.CrystalField(x, z) < 0.85f) continue;
+                Vector3 p = new(x, _gen.Height(x, z) + 14f, z);
+                _terrain.GenerateImmediate(p, 2);
+                _sub.GlobalTransform = new Transform3D(Basis.Identity, p);
+                _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+                _sub.TelegraphIndex = 2; _sub.ApplyTelegraph();
+                _sub.LightsOn = true;
+                EnterWalking(); EnterHelm(); _view = HelmView.Chase; ApplyHelmView();
+                GD.Print($"[capture] {biome} found {r:0} m from spawn at depth {-_gen.Height(x, z):0}");
+                return;
+            }
+        GD.Print($"[capture] {biome}: none within 4.8 km");
+    }
 
     /// <summary>`-- --capture-from=creatures` skips straight to that section (after a short settle).</summary>
     private void ApplyCaptureFrom()
@@ -363,7 +445,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

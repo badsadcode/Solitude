@@ -161,6 +161,7 @@ public partial class Main
             _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi), SubHatchSpot);
             _hud.FadeTo(0f, 1.2f);
             _hud.Message(stowed > 0 ? $"Airlock drained. {stowed} sample{(stowed > 1 ? "s" : "")} stowed in the hold." + (_diver.Bag.Count > 0 ? " The hold is full; the rest stay in the bag." : "") : "Airlock drained. You're back. Breathe.", 5f);
+            Autosave("back from the dive");
         }));
     }
 

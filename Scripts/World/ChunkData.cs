@@ -30,6 +30,7 @@ public sealed class ChunkData
     public readonly List<(Vector3 pos, float radius, float height)> SpireColliders = new();
     public readonly List<(Vector3 pos, float radius)> RockColliders = new();
     public readonly List<Vector3> Vents = new();
+    public readonly List<Transform3D> CrystalPillars = new();
     public readonly List<(ItemId type, Transform3D xform)> Collectibles = new();
 
     public static Vector2I CoordOf(Vector3 p) => new((int)MathF.Floor(p.X / Size), (int)MathF.Floor(p.Z / Size));
@@ -175,8 +176,24 @@ public sealed class ChunkData
             }
         }
 
-        // Rare: the bones of something enormous.
-        if (Perlin.Hash(d.Coord.X, d.Coord.Y, gen.Seed + 777) < 0.02f)
+        // Crystal Expanse: towering glowing pillars (solid — the boat has to weave between them).
+        float cf = gen.CrystalField(ox + Size * 0.5f, oz + Size * 0.5f);
+        if (cf > 0.3f)
+        {
+            int n = (int)(cf * 4f + R() * 2f);
+            for (int i = 0; i < n; i++)
+            {
+                float x = ox + 6 + R() * (Size - 12), z = oz + 6 + R() * (Size - 12);
+                float y = gen.Height(x, z);
+                float r = 1.5f + R() * 2.5f, hgt = 6f + R() * R() * 18f;
+                d.CrystalPillars.Add(Place(new Vector3(x, y - 1.5f, z), R() * Mathf.Tau, new Vector3(r, hgt, r), Vector3.Up, 0f));
+                d.SpireColliders.Add((new Vector3(x, y - 1.5f, z), r * 0.6f, hgt));
+            }
+        }
+
+        // The bones of something enormous: rare on the shelf, common in the Hadal Deep.
+        float hadal = TerrainGenerator.HadalFactor(gen.Height(ox + Size * 0.5f, oz + Size * 0.5f));
+        if (Perlin.Hash(d.Coord.X, d.Coord.Y, gen.Seed + 777) < 0.02f + hadal * 0.14f)
         {
             float x = ox + Size * 0.5f, z = oz + Size * 0.5f;
             Vector3 nrm = gen.Normal(x, z, 6f);
@@ -230,6 +247,18 @@ public sealed class ChunkData
             float x = ox + R() * Size, z = oz + R() * Size;
             float ny = gen.Normal(x, z).Y;
             if (ny > 0.45f && ny < 0.85f && R() < 0.35f) Add(ItemId.Crystal, x, z, 1f + R() * 0.8f, 0.2f, 0.8f);
+        }
+
+        // The Crystal Expanse sheds crystals everywhere.
+        float crystalBiome = gen.CrystalField(ox + Size * 0.5f, oz + Size * 0.5f);
+        if (crystalBiome > 0.4f)
+        {
+            int n = 2 + (int)(R() * 4);
+            for (int i = 0; i < n; i++)
+            {
+                float x = ox + R() * Size, z = oz + R() * Size;
+                Add(ItemId.Crystal, x, z, 0.9f + R() * 0.7f, 0.2f, 0.7f);
+            }
         }
 
         // Lumen pods: in the glowing meadows.

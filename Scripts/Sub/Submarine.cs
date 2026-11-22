@@ -35,8 +35,15 @@ public partial class Submarine : RigidBody3D
     private const float PitchRestore = 9000f, PitchDamp = 30000f;
     private const float RollRestore = 25000f, RollDamp = 9000f, RollFromTurn = 4000f;
 
-    public const float TestDepth = 750f;
-    public const float CrushDepth = 1050f;
+    // Hull rating (raised by Hull Reinforcement upgrades).
+    public float TestDepth = 750f;
+    public float CrushDepth = 1050f;
+
+    /// <summary>Flood array upgrade: longer, brighter beams.</summary>
+    public void SetFloodBoost(float mult)
+    {
+        for (int i = 0; i < 2 && _floods != null; i++) { _floods[i].SpotRange = 95f * mult; _floods[i].LightEnergy = 11f * (0.7f + 0.3f * mult); }
+    }
 
     // ---- controls (written by the helm)
     public float TargetThrottle;           // -1..1
@@ -151,6 +158,7 @@ public partial class Submarine : RigidBody3D
     }
 
     public void Repair(float amount) => Hull = Mathf.Min(100f, Hull + amount);
+    public void SetHull(float hull) => Hull = Mathf.Clamp(hull, 0f, 100f);
 
     public void Damage(float amount)
     {
