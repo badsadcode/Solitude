@@ -15,102 +15,102 @@
   "sub0_loop": {
    "caption": "Haldane, Haldane. Holed aft, settling. Three aboard. Nadia is hurt. If anyone hears this...",
    "file": "res://assets/audio/voice/sub0_loop.wav",
-   "seconds": 10.608
+   "seconds": 9.382
   },
   "sub0_rec1": {
    "caption": "Day one. Loaded at the shelf. Stores for three stations, mail, and a crate of real coffee somebody bribed us for.",
    "file": "res://assets/audio/voice/sub0_rec1.wav",
-   "seconds": 7.868
+   "seconds": 8.91
   },
   "sub0_rec2": {
    "caption": "Day three. Nadia says the current's taking us east of the lane. Correcting.",
    "file": "res://assets/audio/voice/sub0_rec2.wav",
-   "seconds": 5.699
+   "seconds": 5.965
   },
   "sub0_rec3": {
    "caption": "Day three. Something hit the stern. Not a rock. Rocks don't come back.",
    "file": "res://assets/audio/voice/sub0_rec3.wav",
-   "seconds": 5.872
+   "seconds": 6.388
   },
   "sub0_rec4": {
    "caption": "Day three. Holed aft. We're settling. Bram has the pinger running. We're fine. We're fine. Someone will come down the lane.",
    "file": "res://assets/audio/voice/sub0_rec4.wav",
-   "seconds": 8.96
+   "seconds": 10.149
   },
   "sub1_loop": {
    "caption": "Meridian Bell to any station. We are on the bottom. Power is failing. Please acknowledge. Please... acknowledge.",
    "file": "res://assets/audio/voice/sub1_loop.wav",
-   "seconds": 10.518
+   "seconds": 7.788
   },
   "sub1_rec1": {
    "caption": "Day twelve. The lane beacons are gone. All of them, one after the other, like someone walked the line turning them off.",
    "file": "res://assets/audio/voice/sub1_rec1.wav",
-   "seconds": 7.762
+   "seconds": 7.421
   },
   "sub1_rec2": {
    "caption": "Day thirteen. Sonar shows a ridge where the chart says flat. The ridge moved while we watched.",
    "file": "res://assets/audio/voice/sub1_rec2.wav",
-   "seconds": 6.989
+   "seconds": 6.143
   },
   "sub1_rec3": {
    "caption": "Day thirteen. We went dark. Engines off, lights off. It still found us.",
    "file": "res://assets/audio/voice/sub1_rec3.wav",
-   "seconds": 7.157
+   "seconds": 5.399
   },
   "sub1_rec4": {
    "caption": "Day fourteen. Air for two days. Kofi is writing letters. I told him there is no mail down here. He knows.",
    "file": "res://assets/audio/voice/sub1_rec4.wav",
-   "seconds": 8.565
+   "seconds": 7.821
   },
   "sub2_loop": {
    "caption": "This is the Okonkwo. Grounded, no propulsion, crew of two. We have food. We have air. We need a tow.",
    "file": "res://assets/audio/voice/sub2_loop.wav",
-   "seconds": 10.073
+   "seconds": 8.235
   },
   "sub2_rec1": {
    "caption": "Day five. The silt came down the slope like a wall. We couldn't see the bow from the bridge.",
    "file": "res://assets/audio/voice/sub2_rec1.wav",
-   "seconds": 6.87
+   "seconds": 6.218
   },
   "sub2_rec2": {
    "caption": "Day five. When it cleared we were somewhere else. The compass agrees with nothing.",
    "file": "res://assets/audio/voice/sub2_rec2.wav",
-   "seconds": 5.654
+   "seconds": 5.647
   },
   "sub2_rec3": {
    "caption": "Day six. Ilse heard tapping on the hull. Three taps, then three more. I said it was the cold. It's not the cold.",
    "file": "res://assets/audio/voice/sub2_rec3.wav",
-   "seconds": 8.82
+   "seconds": 8.319
   },
   "sub2_rec4": {
    "caption": "Day eight. Ilse went out to look. The tether came back. I'm keeping the pinger on for her.",
    "file": "res://assets/audio/voice/sub2_rec4.wav",
-   "seconds": 7.77
+   "seconds": 6.71
   },
   "sub3_loop": {
    "caption": "Patience calling. Patience calling. We are taking water, and the pumps have stopped. Is anyone there?",
    "file": "res://assets/audio/voice/sub3_loop.wav",
-   "seconds": 7.028
+   "seconds": 7.531
   },
   "sub3_rec1": {
    "caption": "Day two. Captain's log, Patience. A good run so far. Lena caught a ray in the lights and named it Gerald.",
    "file": "res://assets/audio/voice/sub3_rec1.wav",
-   "seconds": 6.591
+   "seconds": 9.039
   },
   "sub3_rec2": {
    "caption": "Day four. Gerald came back. Gerald brought friends. They follow the floodlights. All of them.",
    "file": "res://assets/audio/voice/sub3_rec2.wav",
-   "seconds": 6.978
+   "seconds": 7.007
   },
   "sub3_rec3": {
    "caption": "Day four. Something bigger followed Gerald. The lights went out on their own.",
    "file": "res://assets/audio/voice/sub3_rec3.wav",
-   "seconds": 4.887
+   "seconds": 5.548
   },
   "sub3_rec4": {
    "caption": "Day five. It's very dark. I'm not turning them back on.",
    "file": "res://assets/audio/voice/sub3_rec4.wav",
-   "seconds": 4.349
+   "seconds": 4.413
   },
   "sub4_loop": {
    "caption": "Grey Heron. Lost steering, lost the lane. Two aboard, both fine. Pinger's on. We'll wait.",
@@ -140,102 +140,102 @@
   "cap0_loop": {
    "caption": "Capsule two, two aboard. Air for... If you're the relief sub, we can hear you. We can hear you.",
    "file": "res://assets/audio/voice/cap0_loop.wav",
-   "seconds": 10.195
+   "seconds": 8.248
   },
   "cap0_rec1": {
    "caption": "We left the station when the lights went the wrong colour. Tomas says we did the right thing.",
    "file": "res://assets/audio/voice/cap0_rec1.wav",
-   "seconds": 5.947
+   "seconds": 5.984
   },
   "cap0_rec2": {
    "caption": "Hour nine. Air is fine. Pinger is fine. Something circled us twice and left.",
    "file": "res://assets/audio/voice/cap0_rec2.wav",
-   "seconds": 6.053
+   "seconds": 6.372
   },
   "cap0_rec3": {
    "caption": "Hour thirty-one. Tomas is asleep. I keep hearing counting through the hull. I've started counting back.",
    "file": "res://assets/audio/voice/cap0_rec3.wav",
-   "seconds": 8.149
+   "seconds": 7.855
   },
   "cap0_rec4": {
    "caption": "Hour forty. I've stopped.",
    "file": "res://assets/audio/voice/cap0_rec4.wav",
-   "seconds": 2.636
+   "seconds": 2.693
   },
   "cap1_loop": {
    "caption": "Capsule four. One aboard. I'm alright. I'm alright. Take your time.",
    "file": "res://assets/audio/voice/cap1_loop.wav",
-   "seconds": 6.675
+   "seconds": 7.997
   },
   "cap1_rec1": {
    "caption": "I was the last one off the station. I closed the doors behind me. I don't know why. Habit.",
    "file": "res://assets/audio/voice/cap1_rec1.wav",
-   "seconds": 6.997
+   "seconds": 7.005
   },
   "cap1_rec2": {
    "caption": "Hour six. Something is walking on the seabed outside. Walking. Down here.",
    "file": "res://assets/audio/voice/cap1_rec2.wav",
-   "seconds": 6.628
+   "seconds": 5.62
   },
   "cap1_rec3": {
    "caption": "Hour twenty. It's stopped right next to the hatch.",
    "file": "res://assets/audio/voice/cap1_rec3.wav",
-   "seconds": 3.671
+   "seconds": 3.569
   },
   "cap1_rec4": {
    "caption": "Hour twenty-one. It's knocking.",
    "file": "res://assets/audio/voice/cap1_rec4.wav",
-   "seconds": 2.859
+   "seconds": 2.709
   },
   "cap2_loop": {
    "caption": "Escape capsule one. Three aboard. The children are fine. Please hurry. Please.",
    "file": "res://assets/audio/voice/cap2_loop.wav",
-   "seconds": 5.752
+   "seconds": 6.144
   },
   "cap2_rec1": {
    "caption": "Hour one. The kids think it's an adventure. I told them we're a submarine now.",
    "file": "res://assets/audio/voice/cap2_rec1.wav",
-   "seconds": 5.697
+   "seconds": 5.562
   },
   "cap2_rec2": {
    "caption": "Hour twelve. We sang every song we know. Twice.",
    "file": "res://assets/audio/voice/cap2_rec2.wav",
-   "seconds": 4.071
+   "seconds": 4.415
   },
   "cap2_rec3": {
    "caption": "Hour twenty. They're asleep. The air smells like pennies.",
    "file": "res://assets/audio/voice/cap2_rec3.wav",
-   "seconds": 4.348
+   "seconds": 4.296
   },
   "cap2_rec4": {
    "caption": "Hour twenty-six. I can hear a motor. Something big, coming down the slope. It's slowing. It's slowing for us.",
    "file": "res://assets/audio/voice/cap2_rec4.wav",
-   "seconds": 9.1
+   "seconds": 9.126
   },
   "cap3_loop": {
    "caption": "Capsule three. Can anyone... the hatch won't... just come. Please come.",
    "file": "res://assets/audio/voice/cap3_loop.wav",
-   "seconds": 7.107
+   "seconds": 7.609
   },
   "cap3_rec1": {
    "caption": "We saw the station from the window as we left. The lights were all on. Every light.",
    "file": "res://assets/audio/voice/cap3_rec1.wav",
-   "seconds": 5.023
+   "seconds": 6.526
   },
   "cap3_rec2": {
    "caption": "Hour two. The lights were on in the core room. Nobody was in the core room.",
    "file": "res://assets/audio/voice/cap3_rec2.wav",
-   "seconds": 5.327
+   "seconds": 5.6
   },
   "cap3_rec3": {
    "caption": "Hour ten. The pinger is louder than it should be. Or something is answering it.",
    "file": "res://assets/audio/voice/cap3_rec3.wav",
-   "seconds": 5.155
+   "seconds": 6.379
   },
   "cap3_rec4": {
    "caption": "Hour eleven. The hatch. Something is working the hatch from outside.",
    "file": "res://assets/audio/voice/cap3_rec4.wav",
-   "seconds": 4.556
+   "seconds": 4.769
   },
   "drone0_loop": {
    "caption": "Survey drone. Fault. Awaiting recovery. Survey drone. Fault. Awaiting recovery.",

@@ -18,122 +18,122 @@
   "lines": [
     {
       "id": "sub0_loop",
-      "voice": "magda_world_weary",
-      "seed": 7,
+      "voice": "martha",
+      "seed": 31,
       "text": "Haldane, Haldane. Holed aft, settling. Three aboard. [sigh] Nadia is hurt. If anyone hears this..."
     },
     {
       "id": "sub0_rec1",
-      "voice": "magda_world_weary",
-      "seed": 7,
+      "voice": "martha",
+      "seed": 31,
       "text": "Day one. Loaded at the shelf. Stores for three stations, mail, and a crate of real coffee somebody bribed us for."
     },
     {
       "id": "sub0_rec2",
-      "voice": "magda_world_weary",
-      "seed": 7,
+      "voice": "martha",
+      "seed": 31,
       "text": "Day three. Nadia says the current's taking us east of the lane. Correcting."
     },
     {
       "id": "sub0_rec3",
-      "voice": "magda_world_weary",
-      "seed": 7,
+      "voice": "martha",
+      "seed": 31,
       "text": "Day three. Something hit the stern. Not a rock. [sniff] Rocks don't come back."
     },
     {
       "id": "sub0_rec4",
-      "voice": "magda_world_weary",
-      "seed": 7,
+      "voice": "martha",
+      "seed": 31,
       "text": "Day three. Holed aft. We're settling. Bram has the pinger running. We're fine. We're fine. Someone will come down the lane."
     },
     {
       "id": "sub1_loop",
-      "voice": "ivan",
-      "seed": 11,
+      "voice": "steven",
+      "seed": 53,
       "text": "Meridian Bell to any station. We are on the bottom. Power is failing. Please acknowledge. [cough] Please... acknowledge."
     },
     {
       "id": "sub1_rec1",
-      "voice": "ivan",
-      "seed": 11,
+      "voice": "steven",
+      "seed": 53,
       "text": "Day twelve. The lane beacons are gone. All of them, one after the other, like someone walked the line turning them off."
     },
     {
       "id": "sub1_rec2",
-      "voice": "ivan",
-      "seed": 11,
+      "voice": "steven",
+      "seed": 53,
       "text": "Day thirteen. Sonar shows a ridge where the chart says flat. The ridge moved while we watched."
     },
     {
       "id": "sub1_rec3",
-      "voice": "ivan",
-      "seed": 11,
+      "voice": "steven",
+      "seed": 53,
       "text": "Day thirteen. We went dark. Engines off, lights off. It still found us."
     },
     {
       "id": "sub1_rec4",
-      "voice": "ivan",
-      "seed": 11,
+      "voice": "steven",
+      "seed": 53,
       "text": "Day fourteen. Air for two days. Kofi is writing letters. I told him there is no mail down here. He knows."
     },
     {
       "id": "sub2_loop",
-      "voice": "narrator_1",
-      "seed": 5,
+      "voice": "steven",
+      "seed": 59,
       "text": "This is the Okonkwo. Grounded, no propulsion, crew of two. [groan] We have food. We have air. We need a tow."
     },
     {
       "id": "sub2_rec1",
-      "voice": "narrator_1",
-      "seed": 5,
+      "voice": "steven",
+      "seed": 59,
       "text": "Day five. The silt came down the slope like a wall. We couldn't see the bow from the bridge."
     },
     {
       "id": "sub2_rec2",
-      "voice": "narrator_1",
-      "seed": 5,
+      "voice": "steven",
+      "seed": 59,
       "text": "Day five. When it cleared we were somewhere else. The compass agrees with nothing."
     },
     {
       "id": "sub2_rec3",
-      "voice": "narrator_1",
-      "seed": 5,
+      "voice": "steven",
+      "seed": 59,
       "text": "Day six. Ilse heard tapping on the hull. Three taps, then three more. I said it was the cold. It's not the cold."
     },
     {
       "id": "sub2_rec4",
-      "voice": "narrator_1",
-      "seed": 5,
+      "voice": "steven",
+      "seed": 59,
       "text": "Day eight. Ilse went out to look. The tether came back. I'm keeping the pinger on for her."
     },
     {
       "id": "sub3_loop",
-      "voice": "irena",
-      "seed": 4,
+      "voice": "martha",
+      "seed": 37,
       "text": "Patience calling. Patience calling. [fear] We are taking water, and the pumps have stopped. Is anyone there?"
     },
     {
       "id": "sub3_rec1",
-      "voice": "irena",
-      "seed": 4,
+      "voice": "martha",
+      "seed": 37,
       "text": "Day two. Captain's log, Patience. A good run so far. Lena caught a ray in the lights and named it Gerald."
     },
     {
       "id": "sub3_rec2",
-      "voice": "irena",
-      "seed": 4,
+      "voice": "martha",
+      "seed": 37,
       "text": "Day four. Gerald came back. Gerald brought friends. They follow the floodlights. All of them."
     },
     {
       "id": "sub3_rec3",
-      "voice": "irena",
-      "seed": 4,
+      "voice": "martha",
+      "seed": 37,
       "text": "Day four. Something bigger followed Gerald. The lights went out on their own."
     },
     {
       "id": "sub3_rec4",
-      "voice": "irena",
-      "seed": 4,
+      "voice": "martha",
+      "seed": 37,
       "text": "Day five. It's very dark. I'm not turning them back on."
     },
     {
@@ -168,122 +168,122 @@
     },
     {
       "id": "cap0_loop",
-      "voice": "test_margaret",
-      "seed": 3,
+      "voice": "martha",
+      "seed": 41,
       "text": "Capsule two, two aboard. Air for... [cough] If you're the relief sub, we can hear you. We can hear you."
     },
     {
       "id": "cap0_rec1",
-      "voice": "test_margaret",
-      "seed": 3,
+      "voice": "martha",
+      "seed": 41,
       "text": "We left the station when the lights went the wrong colour. Tomas says we did the right thing."
     },
     {
       "id": "cap0_rec2",
-      "voice": "test_margaret",
-      "seed": 3,
+      "voice": "martha",
+      "seed": 41,
       "text": "Hour nine. Air is fine. Pinger is fine. Something circled us twice and left."
     },
     {
       "id": "cap0_rec3",
-      "voice": "test_margaret",
-      "seed": 3,
+      "voice": "martha",
+      "seed": 41,
       "text": "[whispering] Hour thirty-one. Tomas is asleep. I keep hearing counting through the hull. I've started counting back."
     },
     {
       "id": "cap0_rec4",
-      "voice": "test_margaret",
-      "seed": 3,
+      "voice": "martha",
+      "seed": 41,
       "text": "Hour forty. I've stopped."
     },
     {
       "id": "cap1_loop",
-      "voice": "narrator_2",
-      "seed": 3,
+      "voice": "mikey",
+      "seed": 61,
       "text": "Capsule four. One aboard. [sigh] I'm alright. I'm alright. Take your time."
     },
     {
       "id": "cap1_rec1",
-      "voice": "narrator_2",
-      "seed": 3,
+      "voice": "mikey",
+      "seed": 61,
       "text": "I was the last one off the station. I closed the doors behind me. I don't know why. Habit."
     },
     {
       "id": "cap1_rec2",
-      "voice": "narrator_2",
-      "seed": 3,
+      "voice": "mikey",
+      "seed": 61,
       "text": "Hour six. Something is walking on the seabed outside. Walking. Down here."
     },
     {
       "id": "cap1_rec3",
-      "voice": "narrator_2",
-      "seed": 3,
+      "voice": "mikey",
+      "seed": 61,
       "text": "Hour twenty. It's stopped right next to the hatch."
     },
     {
       "id": "cap1_rec4",
-      "voice": "narrator_2",
-      "seed": 3,
+      "voice": "mikey",
+      "seed": 61,
       "text": "[whispering] Hour twenty-one. It's knocking."
     },
     {
       "id": "cap2_loop",
-      "voice": "default",
-      "seed": 21,
+      "voice": "martha",
+      "seed": 43,
       "text": "Escape capsule one. Three aboard. The children are fine. Please hurry. Please."
     },
     {
       "id": "cap2_rec1",
-      "voice": "default",
-      "seed": 21,
+      "voice": "martha",
+      "seed": 43,
       "text": "Hour one. The kids think it's an adventure. I told them we're a submarine now."
     },
     {
       "id": "cap2_rec2",
-      "voice": "default",
-      "seed": 21,
+      "voice": "martha",
+      "seed": 43,
       "text": "Hour twelve. We sang every song we know. Twice."
     },
     {
       "id": "cap2_rec3",
-      "voice": "default",
-      "seed": 21,
+      "voice": "martha",
+      "seed": 43,
       "text": "Hour twenty. They're asleep. The air smells like pennies."
     },
     {
       "id": "cap2_rec4",
-      "voice": "default",
-      "seed": 21,
+      "voice": "martha",
+      "seed": 43,
       "text": "Hour twenty-six. I can hear a motor. Something big, coming down the slope. It's slowing. [gasp] It's slowing for us."
     },
     {
       "id": "cap3_loop",
-      "voice": "magda_world_weary",
-      "seed": 13,
+      "voice": "martha",
+      "seed": 47,
       "text": "Capsule three. [gasp] Can anyone... the hatch won't... just come. Please come."
     },
     {
       "id": "cap3_rec1",
-      "voice": "magda_world_weary",
-      "seed": 13,
+      "voice": "martha",
+      "seed": 47,
       "text": "We saw the station from the window as we left. The lights were all on. Every light."
     },
     {
       "id": "cap3_rec2",
-      "voice": "magda_world_weary",
-      "seed": 13,
+      "voice": "martha",
+      "seed": 47,
       "text": "Hour two. The lights were on in the core room. Nobody was in the core room."
     },
     {
       "id": "cap3_rec3",
-      "voice": "magda_world_weary",
-      "seed": 13,
+      "voice": "martha",
+      "seed": 47,
       "text": "Hour ten. The pinger is louder than it should be. Or something is answering it."
     },
     {
       "id": "cap3_rec4",
-      "voice": "magda_world_weary",
-      "seed": 13,
+      "voice": "martha",
+      "seed": 47,
       "text": "[whispering] Hour eleven. The hatch. Something is working the hatch from outside."
     },
     {
