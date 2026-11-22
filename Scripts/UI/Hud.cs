@@ -451,6 +451,28 @@ public partial class Hud : CanvasLayer
         foot.Position += new Vector2(60, -28);
         _titleGroup.AddChild(foot);
 
+        // Bottom right, quietly: the engine it's built on (Tom: "subtle, on the title screen").
+        // If assets/branding/godot_logo.png exists it's shown small and pixelated beside the words.
+        var engine = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
+        engine.AddThemeConstantOverride("separation", 8);
+        engine.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
+        engine.GrowHorizontal = Control.GrowDirection.Begin;
+        engine.GrowVertical = Control.GrowDirection.Begin;
+        engine.Position += new Vector2(-60, -34);
+        engine.Modulate = new Color(1, 1, 1, 0.55f);
+        if (ResourceLoader.Exists("res://assets/branding/godot_logo.png"))
+            engine.AddChild(new TextureRect
+            {
+                Texture = GD.Load<Texture2D>("res://assets/branding/godot_logo.png"), CustomMinimumSize = new Vector2(24, 24),
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest, MouseFilter = Control.MouseFilterEnum.Ignore,
+            });
+        var made = MakeLabel(new Color(0.4f, 0.48f, 0.45f), 12);
+        made.Text = "MADE WITH GODOT ENGINE";
+        made.VerticalAlignment = VerticalAlignment.Center;
+        engine.AddChild(made);
+        _titleGroup.AddChild(engine);
+
         _titleGroup.Modulate = new Color(1, 1, 1, 0);
         CreateTween().TweenProperty(_titleGroup, "modulate:a", 1f, 2.5).SetDelay(0.8);
         first?.CallDeferred(Control.MethodName.GrabFocus);

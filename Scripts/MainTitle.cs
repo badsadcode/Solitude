@@ -65,10 +65,45 @@ public partial class Main
 
         _hud.SetGameplayHud(false);
         _hud.ShowTitle(Seed, NewDive, () => GetTree().Quit(), HasSave() ? ContinueDive : null);
-        _hud.FadeTo(0f, 3f);
         _titleRayTimer = 22f + (float)GD.RandRange(0, 8);
         Input.MouseMode = Input.MouseModeEnum.Visible;
+        // Once per launch, the studio splash first (Tom's logo, under the sea); the title fades in after it.
+        if (!_splashShown && _titleCaptureDir == null) ShowStudioSplash(BeginTitle);
+        else BeginTitle();
+    }
+
+    private void BeginTitle()
+    {
+        _hud.FadeTo(0f, 3f);
         StartTitleMusic();
+    }
+
+    // ------------------------------------------------------------------ the studio splash
+
+    private static bool _splashShown;
+
+    private void ShowStudioSplash(Action then)
+    {
+        _splashShown = true;
+        var splash = new Solitude.UI.StudioSplash { Name = "StudioSplash" };
+        splash.Pinged += () => _audio.PlayPing();
+        splash.Finished += () => then?.Invoke();
+        AddChild(splash);
+
+        // Dev: `-- --splash-shot=<dir>` saves a few frames of it, then quits.
+        foreach (var arg in OS.GetCmdlineUserArgs())
+        {
+            if (!arg.StartsWith("--splash-shot=")) continue;
+            string dir = arg.Substring(14);
+            DirAccess.MakeDirRecursiveAbsolute(dir);
+            foreach (float at in new[] { 0.3f, 0.9f, 1.9f, 2.6f, 4.2f, 6.0f, 9.5f })
+                GetTree().CreateTimer(at).Timeout += () =>
+                {
+                    GetViewport().GetTexture().GetImage().SavePng($"{dir}/splash_{at:0.00}.png".Replace(',', '.'));
+                    GD.Print($"[splash] shot at {at:0.0} s");
+                };
+            GetTree().CreateTimer(9.8).Timeout += () => GetTree().Quit();
+        }
     }
 
     // ------------------------------------------------------------------ Tom's title music
