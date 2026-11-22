@@ -28,7 +28,8 @@ public partial class Swimmer : Node3D
     public event Action<float> BiteDiver;    // damage
     public bool Leaving { get; private set; }
 
-    private enum State { Wander, Curious, Lurk, Approach, Pass }
+    private enum State { Wander, Curious, Lurk, Approach, Pass, Transit }
+    private Vector3 _transitTo;
     private State _state;
     private Skeleton3D _skel;
     private ShaderMaterial _mat;
@@ -100,6 +101,14 @@ public partial class Swimmer : Node3D
     /// <summary>Apex: leave for good after a while (the director despawns it out of sight).</summary>
     public void Leave() => Leaving = true;
 
+    /// <summary>Scripted flyby (title screen): glide toward `to`, then flag Leaving once there.</summary>
+    public void Transit(Vector3 to)
+    {
+        _transitTo = to;
+        _state = State.Transit;
+        _fwd = (to - GlobalPosition).Normalized();
+    }
+
     private void BeginPass()
     {
         Vector3 f = Focus();
@@ -141,6 +150,10 @@ public partial class Swimmer : Node3D
                     _timer = 12f + (float)_rng.NextDouble() * 10f;
                 }
                 if (dist < Profile.CuriosityRange && (LightsOn?.Invoke() ?? true) && _rng.NextDouble() < dt * 0.15) { _state = State.Curious; _timer = 18f + (float)_rng.NextDouble() * 14f; }
+                break;
+            case State.Transit:
+                _target = _transitTo;
+                if (pos.DistanceTo(_transitTo) < 10f) Leaving = true;
                 break;
             case State.Curious:
                 // Lazy circles around the light, a little above it, then lose interest.

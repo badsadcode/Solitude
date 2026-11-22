@@ -26,7 +26,7 @@ namespace Solitude;
 /// </summary>
 public partial class Main : Node
 {
-	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading, Diving }
+	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading, Diving, Title }
 	private enum HelmView { Bridge, BowCamera, Chase }
 
 	[Export] public int PixelScale = 3;
@@ -218,12 +218,11 @@ public partial class Main : Node
 			if (_player.InStation) _station?.Noise(_player.GlobalPosition, 6f + speed);
 		};
 
-		Input.MouseMode = Input.MouseModeEnum.Captured;
-		_hud.Intro("S O L I T U D E", $"depth {_sub.Depth:0} m   ·   seed {Seed}   ·   you are alone down here");
-		_hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC release mouse · F11 fullscreen");
-
 		SetupCapture();
 		SetupDebugStart();
+		// Normal launches open on the title screen; dev launches (--start, --capture) go straight in.
+		if (SkipTitle()) BeginDive();
+		else EnterTitle();
 	}
 
 	private static int? ParseSeed()
@@ -554,7 +553,8 @@ public partial class Main : Node
 		{
 			if (_mode == Mode.Sonar && !_feedFullscreen) TryPing();
 			else if (_mode == Mode.Monitors && !_feedFullscreen) ClickScreen(mb.Position);
-			else if (Input.MouseMode != Input.MouseModeEnum.Captured && _mode != Mode.Monitors && _mode != Mode.Sonar)
+			// Click-to-recapture only where the mouse steers; never in menu-like modes (buttons live there).
+			else if (Input.MouseMode != Input.MouseModeEnum.Captured && _mode is not (Mode.Monitors or Mode.Sonar or Mode.Title or Mode.Panel or Mode.Reading))
 				Input.MouseMode = Input.MouseModeEnum.Captured;
 		}
 		else if (e is InputEventKey k && k.Pressed && !k.Echo && _mode == Mode.Monitors)
@@ -607,6 +607,7 @@ public partial class Main : Node
 			case Mode.Panel: UpdatePanel(); break;
 			case Mode.Reading: UpdateReading(); break;
 			case Mode.Diving: UpdateDiving(dt); break;
+			case Mode.Title: UpdateTitle(dt); break;
 		}
 		UpdateVitals();
 
@@ -615,7 +616,8 @@ public partial class Main : Node
 		UpdateAudioAndPost(dt);
 		UpdateWarnings(dt);
 		UpdateHatchBeacon(dt);
-		UpdateCreatureDebugKeys();
+		if (_mode != Mode.Title) UpdateCreatureDebugKeys();
+		UpdateTitleCapture(dt);
 		UpdateCapture(dt);
 	}
 

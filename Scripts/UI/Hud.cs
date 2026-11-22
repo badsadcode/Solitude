@@ -297,6 +297,87 @@ public partial class Hud : CanvasLayer
 
     public void ShowHelmet(bool on) => Helmet.Visible = on;
 
+    // ------------------------------------------------------------ title screen
+
+    private Control _titleGroup;
+
+    /// <summary>Hide/show everything that belongs to playing (vitals, prompts, help, crosshair).</summary>
+    public void SetGameplayHud(bool on)
+    {
+        EnsureM3();
+        _vitals.Visible = on;
+        _help.Visible = on;
+        _prompt.Visible = on;
+        _warning.Visible = on;
+        _message.Visible = on;
+        _crosshair.Visible = on;
+    }
+
+    /// <summary>
+    /// Title in the top-left corner (same face as the intro), a quiet menu beneath it, studio and
+    /// seed in the bottom-left. The live world plays behind it.
+    /// </summary>
+    public void ShowTitle(int seed, System.Action onNewDive, System.Action onQuit)
+    {
+        _titleGroup?.QueueFree();
+        _titleGroup = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+        _titleGroup.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _root.AddChild(_titleGroup);
+        _root.MoveChild(_titleGroup, _fade.GetIndex()); // under the fade
+
+        var title = MakeLabel(new Color(0.8f, 0.85f, 0.8f), 46);
+        title.Text = "S O L I T U D E";
+        title.Position = new Vector2(56, 44);
+        _titleGroup.AddChild(title);
+        var sub = MakeLabel(new Color(0.5f, 0.6f, 0.56f), 15);
+        sub.Text = "five hundred metres down, nobody answers";
+        sub.Position = new Vector2(60, 104);
+        _titleGroup.AddChild(sub);
+
+        var menu = new VBoxContainer { Position = new Vector2(56, 168) };
+        menu.AddThemeConstantOverride("separation", 4);
+        _titleGroup.AddChild(menu);
+        Button first = null;
+        foreach (var (label, action) in new (string, System.Action)[] { ("NEW DIVE", onNewDive), ("QUIT", onQuit) })
+        {
+            var b = new Button { Text = "  " + label, Flat = true, Alignment = HorizontalAlignment.Left, FocusMode = Control.FocusModeEnum.All };
+            b.AddThemeFontSizeOverride("font_size", 20);
+            b.AddThemeColorOverride("font_color", new Color(0.55f, 0.75f, 0.62f));
+            b.AddThemeColorOverride("font_hover_color", new Color(0.85f, 1f, 0.88f));
+            b.AddThemeColorOverride("font_focus_color", new Color(0.85f, 1f, 0.88f));
+            b.AddThemeColorOverride("font_pressed_color", Amber);
+            b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+            string plain = "  " + label, marked = "> " + label;
+            b.FocusEntered += () => b.Text = marked;
+            b.FocusExited += () => b.Text = plain;
+            b.MouseEntered += () => b.GrabFocus();
+            b.Pressed += () => action?.Invoke();
+            menu.AddChild(b);
+            first ??= b;
+        }
+
+        var foot = MakeLabel(new Color(0.4f, 0.48f, 0.45f), 12);
+        foot.Text = $"BAD IDEAS WORKS   ·   seed {seed}";
+        foot.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
+        foot.GrowVertical = Control.GrowDirection.Begin;
+        foot.Position += new Vector2(60, -28);
+        _titleGroup.AddChild(foot);
+
+        _titleGroup.Modulate = new Color(1, 1, 1, 0);
+        CreateTween().TweenProperty(_titleGroup, "modulate:a", 1f, 2.5).SetDelay(0.8);
+        first?.CallDeferred(Control.MethodName.GrabFocus);
+    }
+
+    public void HideTitle(float seconds = 0.8f)
+    {
+        if (_titleGroup == null) return;
+        var g = _titleGroup;
+        _titleGroup = null;
+        var tw = CreateTween();
+        tw.TweenProperty(g, "modulate:a", 0f, seconds);
+        tw.TweenCallback(Callable.From(g.QueueFree));
+    }
+
     public void SetHold(string text, bool visible) { EnsureM3(); _hold.Text = text; _hold.Visible = visible; }
 
     public void ShowArm(bool on) { EnsureM3(); _armGroup.Visible = on; }

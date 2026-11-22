@@ -101,7 +101,9 @@ public partial class StationManager : Node3D
         _prevSubPos = sp;
     }
 
-    private static bool IsPowered(StationSite s) => new Random(s.Seed).NextDouble() < 0.5;
+    // The starter station's outside is always lit: it's the title screen's backdrop and your first
+    // landmark. (Its interior still rolls its own power state.)
+    private static bool IsPowered(StationSite s) => s.Id == -1 || new Random(s.Seed).NextDouble() < 0.5;
 
     // ------------------------------------------------------------------ docking
 
@@ -157,6 +159,28 @@ public partial class StationManager : Node3D
             onDocked?.Invoke();
         }));
         return true;
+    }
+
+    /// <summary>Title screen: moor the boat at a berth instantly and silently.</summary>
+    public void ForceDock(StationSite site)
+    {
+        Sub.LinearVelocity = Vector3.Zero;
+        Sub.AngularVelocity = Vector3.Zero;
+        Sub.FreezeMode = RigidBody3D.FreezeModeEnum.Kinematic;
+        Sub.Freeze = true;
+        Sub.GlobalTransform = site.DockPose;
+        Docking = false;
+        DockedAt = site;
+    }
+
+    /// <summary>Title screen → game: let go silently (the game then repositions the boat).</summary>
+    public void ForceRelease()
+    {
+        DockedAt = null;
+        Docking = false;
+        Sub.Freeze = false;
+        Sub.LinearVelocity = Vector3.Zero;
+        Sub.AngularVelocity = Vector3.Zero;
     }
 
     public void Undock()
