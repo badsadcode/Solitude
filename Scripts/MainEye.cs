@@ -241,6 +241,7 @@ public partial class Main
         _eyeAge = 0f;
         if (!diving)
         {
+            _rig.Centre(_eyeCam);   // the head swings back to its mount: whatever's coming, it comes to the lens
             SelectFeed(_eyeCam);
             _audio.PlayBlip(880f, 0.06f, 0.5f);
             _hud.Message($"MONITORS: motion on {_rig.Feeds[_eyeCam].Name.Replace("  ", " ")}.", 6f);

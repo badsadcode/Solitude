@@ -87,6 +87,14 @@ public partial class Hud : CanvasLayer
         _yoke.SetAnchorsPreset(Control.LayoutPreset.TopRight);
         _yoke.Position += new Vector2(-140, 24);
         _helmGroup.AddChild(_yoke);
+        Prox = new ProxStrip { Size = new Vector2(176, 30), MouseFilter = Control.MouseFilterEnum.Ignore };
+        Prox.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        Prox.Position += new Vector2(-200, 122);
+        _helmGroup.AddChild(Prox);
+        FeedProx = new ProxStrip { Size = new Vector2(176, 30), MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+        FeedProx.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        FeedProx.Position += new Vector2(-200, 62);
+        _root.AddChild(FeedProx);   // after the feed overlay, so it draws on top of it
 
         _warning = MakeLabel(Warn, 20);
         _warning.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
@@ -165,11 +173,15 @@ public partial class Hud : CanvasLayer
     }
 
     public void ShowHelm(bool on) => _helmGroup.Visible = on;
+    public ProxStrip Prox { get; private set; }
+    public ProxStrip FeedProx { get; private set; }
 
     public void ShowFeed(Texture2D tex, string name, float signal, string hint = "[1-6] switch   [F] close")
     {
         bool on = tex != null;
         _feedOverlay.Visible = on;
+        // The lamp row rides along on hull-camera feeds (not on the sonar / hydrophone scopes).
+        FeedProx.Visible = on && name != null && name.StartsWith("CAM");
         _root.GetNode<ColorRect>("FeedBg").Visible = on;
         _feedName.Visible = on;
         if (!on) return;

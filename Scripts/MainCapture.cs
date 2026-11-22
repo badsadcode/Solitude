@@ -621,6 +621,42 @@ public partial class Main
             (t += 0.1f, () => { _diver.Place(_sub.GlobalTransform * HatchLocal + Vector3.Up * 1.5f, 0f); }),
             (t += 0.3f, () => ExitDive()),
             (t += 2.6f, () => { }),
+            // --- BALE IX: the six-lamp proximity panel + pan/tilt/zoom hull cameras
+            (t += 0.1f, CaptureMarkProx),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                var sp = _sub.GlobalPosition;
+                _terrain.GenerateImmediate(sp, 2);
+                _sub.GlobalPosition = new Vector3(sp.X, _gen.Height(sp.X, sp.Z) + 9f, sp.Z);   // skimming the bottom: KEEL amber
+                _sub.LinearVelocity = Vector3.Zero; _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = true;
+                EnterHelm(); _view = HelmView.Bridge; ApplyHelmView();
+            }),
+            (t += 2.5f, () => { Shot("40a_prox_helm_bottom"); LogProx(); }),
+            (t += 0.1f, () =>
+            {
+                // Something big crossing the bow, left to right: BOW goes red, then STBD.
+                Vector3 fwd = -_sub.GlobalBasis.Z; fwd.Y = 0; fwd = fwd.Normalized();
+                Vector3 side = new(-fwd.Z, 0, fwd.X);
+                Vector3 centre = _sub.GlobalPosition + fwd * 40f + Vector3.Up * 6f;
+                _creatures.SummonWhaleBetween(centre - side * 30f, centre + side * 420f);
+            }),
+            (t += 3.0f, () => { Shot("40b_prox_helm_whale"); LogProx(); }),
+            (t += 0.1f, () => { _view = HelmView.Chase; ApplyHelmView(); }),
+            (t += 1.5f, () => { Shot("40c_prox_hud_chase"); LogProx(); }),
+            (t += 0.1f, () => { EnterWalking(); _player.Position = new Vector3(-0.9f, 0.05f, -3f); EnterMonitors(); SelectFeed(0); }),
+            (t += 1.2f, () => { Shot("40d_monitor_desk"); LogProx(); }),
+            (t += 0.1f, () => { _feedFullscreen = true; Input.ActionPress(GameInput.Right); }),
+            (t += 1.5f, () => { Input.ActionRelease(GameInput.Right); Input.ActionPress(GameInput.Forward); }),
+            (t += 0.6f, () => { Input.ActionRelease(GameInput.Forward); _rig.ZoomStep(0, 1); _rig.ZoomStep(0, 1); }),
+            (t += 1.8f, () => { Shot("40e_cam1_aimed_zoomed"); GD.Print($"[capture] cam1 {_rig.AimText(0)}  servo={_camServo:0.00}"); LogProx(); }),
+            (t += 0.1f, () => { _rig.Centre(0); }),
+            (t += 1.6f, () => { Shot("40f_cam1_centred"); GD.Print($"[capture] cam1 {_rig.AimText(0)}"); }),
+            (t += 0.1f, () => { SelectFeed(5); Input.ActionPress(GameInput.Forward); }),
+            (t += 1.5f, () => { Input.ActionRelease(GameInput.Forward); }),
+            (t += 0.5f, () => { Shot("40g_mast_manual"); GD.Print($"[capture] mast {_rig.AimText(5)}"); }),
+            (t += 0.1f, () => { _feedFullscreen = false; _hud.ShowFeed(null, null, 1f); EnterWalking(); _creatures.DismissWhale(); }),
+            (t += 1.0f, () => { }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -890,6 +926,15 @@ public partial class Main
     private void CaptureMarkModules() => CaptureSection("modules");
     private void CaptureMarkHarpoon() => CaptureSection("harpoon");
     private void CaptureMarkTest() => CaptureSection("test");
+    private void CaptureMarkProx() => CaptureSection("prox");
+    private void LogProx()
+    {
+        if (_prox == null) return;
+        var sb = new System.Text.StringBuilder("[capture] prox:");
+        for (int i = 0; i < Solitude.Sub.ProximityPanel.Count; i++)
+            sb.Append($" {Solitude.Sub.ProximityPanel.Labels[i]}=solid {_prox.Solid[i]:0.00}/contact {_prox.Contact[i]:0.00}");
+        GD.Print(sb.ToString());
+    }
     private float _captureHeading0;
     private void CaptureMarkStory() => CaptureSection("story");
 
@@ -924,7 +969,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

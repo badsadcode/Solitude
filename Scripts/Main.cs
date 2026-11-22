@@ -321,7 +321,7 @@ public partial class Main : Node
 		_player.InputEnabled = false;
 		_hud.SetCrosshair(false);
 		_hud.SetPrompt("");
-		_hud.SetHelp("1-6 or click: put feed on main screen · F fullscreen · E / ESC leave");
+		_hud.SetHelp("1-6 or click: pick a feed · WASD aim · wheel zoom · X centre · F fullscreen · E / ESC leave");
 		_audio.PlayBlip(990f, 0.05f);
 		Input.MouseMode = Input.MouseModeEnum.Visible;
 		MoveStationCam(_interior.GlobalTransform * _interior.MonitorView);
@@ -627,6 +627,11 @@ public partial class Main : Node
 			_interior.Holo.CycleZoom(wheel.ButtonIndex == MouseButton.WheelUp ? -1 : 1);
 			_audio.PlayBlip(1300f, 0.02f, 0.3f);
 		}
+		else if (e is InputEventMouseButton cz && cz.Pressed && _mode == Mode.Monitors &&
+				 (cz.ButtonIndex == MouseButton.WheelUp || cz.ButtonIndex == MouseButton.WheelDown))
+		{
+			CameraZoomInput(cz);
+		}
 		else if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left)
 		{
 			if (_mode == Mode.Sonar && !_feedFullscreen) TryPing();
@@ -679,7 +684,7 @@ public partial class Main : Node
 		{
 			case Mode.Walking: UpdateWalking(); UpdateAboard(dt); break;
 			case Mode.Helm: UpdateHelm(dt); break;
-			case Mode.Monitors: UpdateMonitors(); break;
+			case Mode.Monitors: UpdateCameraAim(dt); UpdateMonitors(); break;
 			case Mode.Sonar: UpdateSonar(); break;
 			case Mode.Hydrophone: UpdateHydrophone(dt); break;
 			case Mode.Holo: UpdateHolo(); break;
@@ -704,6 +709,8 @@ public partial class Main : Node
 		UpdateListener(dt);
 		UpdateHydrophoneWorld(dt);
 		UpdateEyeEncounter(dt);
+		UpdateProximity(dt);
+		if (_mode != Mode.Monitors) _camServo = Mathf.MoveToward(_camServo, 0f, dt * 6f);
 		UpdateCapture(dt);
 	}
 
@@ -847,7 +854,7 @@ public partial class Main : Node
 			_hud.SetHold(string.Join("\n", lines), true);
 		}
 		else _hud.SetHold("", false);
-		_audio.Servo = _arm.ServoActivity;
+		_audio.Servo = Mathf.Max(_arm.ServoActivity, _camServo * 0.45f);
 		_audio.Intake = _systems.IntakeOn ? 1f : 0f;
 	}
 

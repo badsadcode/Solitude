@@ -61,6 +61,10 @@ public partial class SubInterior : Node3D
     public ShaderMaterial BridgeScreen { get; private set; }
     public ShaderMaterial BigScreen { get; private set; }
     public readonly List<ShaderMaterial> SmallScreens = new();
+    /// <summary>Proximity panel lamps (BALE IX): six on the helm console, six repeated on the monitor desk. Index % 6 = direction.</summary>
+    public readonly List<ShaderMaterial> ProxLamps = new();
+    /// <summary>A small light over the helm panel that takes the colour of whatever lamp is brightest.</summary>
+    public OmniLight3D ProxGlow;
     public Label3D BigScreenLabel { get; private set; }
     public Node3D Yoke { get; private set; }
 
@@ -150,6 +154,15 @@ public partial class SubInterior : Node3D
             Shaded = true,
             TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest,
         });
+    }
+
+    private void ProxLamp(Transform3D at, Vector3 size)
+    {
+        // Dark red-brown glass when off; the director drives its emission every frame.
+        var mat = Art.World(Art.FlatTexture(new Color(0.18f, 0.1f, 0.07f)), Colors.White, roughness: 0.4f).Glow(new Color(1f, 0.1f, 0.05f), 0f);
+        var mesh = new BoxMesh { Size = size };
+        AddChild(new MeshInstance3D { Mesh = mesh, Transform = at, MaterialOverride = mat });
+        ProxLamps.Add(mat);
     }
 
     private OmniLight3D Light(Vector3 pos, Color col, float energy, float range, float flicker = 0f, bool shadows = false, bool fixture = true)
@@ -246,8 +259,25 @@ public partial class SubInterior : Node3D
         // Helm console
         Solid(_machine, new Vector3(0, 0.45f, -11.1f), new Vector3(1.6f, 0.9f, 0.7f), Grey);
         _machine.BoxOriented(new Transform3D(new Basis(Vector3.Right, 0.6f), new Vector3(0, 0.98f, -11.05f)), new Vector3(1.6f, 0.06f, 0.75f), Grey.Shade(0.8f));
+        // The proximity panel: six lamps, one per hull camera direction (BOW PORT STBD KEEL STERN MAST).
+        // They sit ON the sloped console top (tilted 0.6 rad, centred at y 0.98, z -11.05), labels in front.
+        var tilt = new Basis(Vector3.Right, 0.6f);
+        var deck = new Vector3(0, 0.98f, -11.05f);
         for (int i = 0; i < 6; i++)
-            _machine.Box(new Vector3(-0.6f + i * 0.24f, 1.02f, -11.15f), new Vector3(0.12f, 0.04f, 0.12f), i % 3 == 0 ? AmberLamp : GreenLamp);
+        {
+            float x = -0.45f + i * 0.18f;   // inside the yoke's grips, as seen from the seat
+            _dark.BoxOriented(new Transform3D(tilt, deck + tilt * new Vector3(x, 0.035f, -0.08f)), new Vector3(0.16f, 0.012f, 0.16f), new Color(0.06f, 0.06f, 0.06f));
+            ProxLamp(new Transform3D(tilt, deck + tilt * new Vector3(x, 0.05f, -0.08f)), new Vector3(0.11f, 0.03f, 0.11f));
+            AddChild(new Label3D
+            {
+                Text = Solitude.Sub.ProximityPanel.Labels[i],
+                Transform = new Transform3D(tilt * new Basis(Vector3.Right, -Mathf.Pi / 2f), deck + tilt * new Vector3(x, 0.034f, 0.08f)),
+                FontSize = 9, PixelSize = 0.004f,
+                Modulate = new Color(0.85f, 0.8f, 0.6f), Shaded = true, TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest,
+            });
+        }
+        ProxGlow = new OmniLight3D { Position = new Vector3(0, 1.2f, -11.0f), LightEnergy = 0f, OmniRange = 2.2f, OmniAttenuation = 1.5f, ShadowEnabled = false };
+        AddChild(ProxGlow);
         // Yoke on a column — rotated by the director to show rudder input
         _machine.Box(new Vector3(0, 0.95f, -10.65f), new Vector3(0.12f, 0.2f, 0.4f), Grey.Shade(0.6f));
         Yoke = new Node3D { Position = new Vector3(0, 1.05f, -10.45f), Name = "Yoke" };
@@ -337,8 +367,13 @@ public partial class SubInterior : Node3D
         // Operator desk
         Solid(_machine, new Vector3(-1.95f, 0.42f, -3f), new Vector3(0.7f, 0.84f, 4.0f), Grey.Shade(0.9f));
         _machine.BoxOriented(new Transform3D(new Basis(Vector3.Back, -0.35f), new Vector3(-1.9f, 0.88f, -3f)), new Vector3(0.75f, 0.05f, 4.0f), Grey.Shade(0.7f));
+        // Proximity repeater: the same six lamps as the helm, each under its camera's number.
         for (int i = 0; i < 6; i++)
-            _machine.Box(new Vector3(-1.85f, 0.92f, -4.3f + i * 0.5f), new Vector3(0.1f, 0.04f, 0.1f), GreenLamp);
+        {
+            Vector3 at = new(-1.85f, 0.92f, -4.3f + i * 0.5f);
+            ProxLamp(new Transform3D(Basis.Identity, at), new Vector3(0.1f, 0.045f, 0.1f));
+            Label($"{i + 1}", at + new Vector3(0.1f, 0.03f, 0f), Mathf.Pi / 2f, 16, new Color(0.6f, 1f, 0.75f));
+        }
         Interactable.Create(this, new Vector3(-1.95f, 0.9f, -3f), new Vector3(0.8f, 0.6f, 4.0f), "Use camera monitors", () => OnMonitors?.Invoke());
         MonitorView = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f) * new Basis(Vector3.Right, 0.04f), new Vector3(0.55f, 1.5f, -3f));
         Solid(_dark, new Vector3(-0.9f, 0.25f, -3f), new Vector3(0.45f, 0.5f, 0.45f), Grey);
