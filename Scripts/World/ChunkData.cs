@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Solitude.Core;
+using Solitude.Systems;
 
 namespace Solitude.World;
 
@@ -29,6 +30,7 @@ public sealed class ChunkData
     public readonly List<(Vector3 pos, float radius, float height)> SpireColliders = new();
     public readonly List<(Vector3 pos, float radius)> RockColliders = new();
     public readonly List<Vector3> Vents = new();
+    public readonly List<(ItemId type, Transform3D xform)> Collectibles = new();
 
     public static Vector2I CoordOf(Vector3 p) => new((int)MathF.Floor(p.X / Size), (int)MathF.Floor(p.Z / Size));
 
@@ -184,5 +186,71 @@ public sealed class ChunkData
                 d.WhaleFalls.Add(Place(new Vector3(x, gen.Height(x, z) - 0.8f, z), R() * Mathf.Tau, new Vector3(s, s, s), nrm, 1f));
             }
         }
+
+        ScatterCollectibles(d, gen, ox, oz, rng);
+    }
+
+    /// <summary>
+    /// Things the arm can pick up. Separate RNG stream position is fine: everything here is
+    /// deterministic per (seed, chunk), and collectible index → stable id for "already taken".
+    /// </summary>
+    private static void ScatterCollectibles(ChunkData d, TerrainGenerator gen, float ox, float oz, Random rng)
+    {
+        float R() => (float)rng.NextDouble();
+        void Add(ItemId type, float x, float z, float scale, float sink, float tilt)
+        {
+            Vector3 nrm = gen.Normal(x, z);
+            d.Collectibles.Add((type, Place(new Vector3(x, gen.Height(x, z) - sink, z), R() * Mathf.Tau, Vector3.One * scale, nrm, tilt)));
+        }
+
+        // Manganese nodules: patches on flat sediment.
+        if (R() < 0.6f)
+        {
+            float cx = ox + 8 + R() * (Size - 16), cz = oz + 8 + R() * (Size - 16);
+            if (gen.Normal(cx, cz).Y > 0.88f && gen.VentField(cx, cz) < 0.3f)
+            {
+                int n = 2 + (int)(R() * 5);
+                for (int i = 0; i < n; i++)
+                {
+                    float a = R() * Mathf.Tau, r = R() * 7f;
+                    Add(ItemId.Nodule, cx + MathF.Cos(a) * r, cz + MathF.Sin(a) * r, 0.9f + R() * 0.5f, 0.1f, 1f);
+                }
+            }
+        }
+
+        // Lattice crystals: on slopes and at spire feet.
+        foreach (var s in d.SpireColliders)
+            if (R() < 0.6f)
+            {
+                float a = R() * Mathf.Tau;
+                Add(ItemId.Crystal, s.pos.X + MathF.Cos(a) * (s.radius + 1.5f), s.pos.Z + MathF.Sin(a) * (s.radius + 1.5f), 1f + R() * 0.8f, 0.2f, 0.6f);
+            }
+        for (int i = 0; i < 4; i++)
+        {
+            float x = ox + R() * Size, z = oz + R() * Size;
+            float ny = gen.Normal(x, z).Y;
+            if (ny > 0.45f && ny < 0.85f && R() < 0.35f) Add(ItemId.Crystal, x, z, 1f + R() * 0.8f, 0.2f, 0.8f);
+        }
+
+        // Lumen pods: in the glowing meadows.
+        float dens = gen.FloraDensity(ox + Size * 0.5f, oz + Size * 0.5f);
+        int pods = (int)(dens * 6f + R());
+        for (int i = 0; i < pods; i++)
+        {
+            float x = ox + R() * Size, z = oz + R() * Size;
+            if (gen.Normal(x, z).Y > 0.8f) Add(ItemId.Lumen, x, z, 1f + R() * 0.6f, 0.05f, 0.3f);
+        }
+
+        // Clams: crowd around vents; a few under rocks elsewhere.
+        foreach (var v in d.Vents)
+        {
+            int n = 2 + (int)(R() * 3);
+            for (int i = 0; i < n; i++)
+            {
+                float a = R() * Mathf.Tau, r = 3f + R() * 6f;
+                Add(ItemId.Clam, v.X + MathF.Cos(a) * r, v.Z + MathF.Sin(a) * r, 0.9f + R() * 0.4f, 0.05f, 1f);
+            }
+        }
+        if (R() < 0.2f) Add(ItemId.Clam, ox + R() * Size, oz + R() * Size, 1f, 0.05f, 1f);
     }
 }

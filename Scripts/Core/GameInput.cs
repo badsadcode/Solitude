@@ -29,6 +29,10 @@ public static class GameInput
     public const string Ping = "sonar_ping";
     public const string SonarRange = "sonar_range";
 
+    // Systems
+    public const string Inventory = "inventory";
+    public const string IntakeToggle = "intake_toggle";
+
     // Debug
     public const string SummonCreature = "debug_summon_creature";
 
@@ -59,6 +63,8 @@ public static class GameInput
         Bind(Ping, Godot.Key.P);
         Bind(SonarRange, Godot.Key.Q);
         Bind(SummonCreature, Godot.Key.F9);
+        Bind(Inventory, Godot.Key.I);
+        Bind(IntakeToggle, Godot.Key.G);
 
         Bind(Fullscreen, Godot.Key.F);
         Bind(ToggleFullscreenWindow, Godot.Key.F11);

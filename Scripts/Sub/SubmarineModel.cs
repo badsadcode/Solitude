@@ -120,12 +120,7 @@ public static class SubmarineModel
         mb.Box(new Vector3(0, 3.2f, 9f), new Vector3(0.9f, 0.08f, 0.08f), Brass);
         mb.Box(new Vector3(0, 3.2f, 9f), new Vector3(0.08f, 0.08f, 0.9f), Brass);
 
-        // Folded manipulator arm under the bow (milestone 3 will unfold it)
-        mb.Box(new Vector3(0.9f, -2.65f, -9.5f), new Vector3(0.5f, 0.5f, 0.8f), Brass.Shade(0.8f));
-        mb.BoxOriented(new Transform3D(new Basis(Vector3.Right, 0.2f), new Vector3(0.9f, -2.85f, -11f)), new Vector3(0.28f, 0.28f, 2.4f), Upper.Shade(0.8f));
-        mb.BoxOriented(new Transform3D(new Basis(Vector3.Right, -0.4f), new Vector3(0.9f, -2.75f, -12.6f)), new Vector3(0.24f, 0.24f, 1.4f), Upper.Shade(0.8f));
-        mb.Box(new Vector3(0.9f, -2.5f, -13.3f), new Vector3(0.4f, 0.3f, 0.3f), Dark);
-
+        // (The manipulator arm is its own rig: see ManipulatorArm.cs)
         // Weld seams / hull bands
         for (int i = 0; i < 6; i++)
         {

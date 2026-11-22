@@ -46,6 +46,8 @@ public partial class Submarine : RigidBody3D
     public DriveMode Mode = DriveMode.Telegraph;
     public int TelegraphIndex = 2;         // into Telegraph[]
     public bool LightsOn = true;
+    /// <summary>Max |engine output| the power bus allows (1 normally, low on emergency power).</summary>
+    public float EngineLimit = 1f;
 
     public static readonly (string name, float throttle)[] Telegraph =
     {
@@ -148,6 +150,8 @@ public partial class Submarine : RigidBody3D
         TargetThrottle = Telegraph[TelegraphIndex].throttle;
     }
 
+    public void Repair(float amount) => Hull = Mathf.Min(100f, Hull + amount);
+
     public void Damage(float amount)
     {
         Hull = Mathf.Max(0f, Hull - amount);
@@ -162,7 +166,8 @@ public partial class Submarine : RigidBody3D
 
         // Engine spools slowly; reversing is weaker.
         EngineOutput = Mathf.MoveToward(EngineOutput, TargetThrottle, SpoolRate * dt);
-        float thrust = EngineOutput * MaxThrust * (EngineOutput >= 0f ? 1f : ReverseFactor);
+        float limited = Mathf.Clamp(EngineOutput, -EngineLimit, EngineLimit);
+        float thrust = limited * MaxThrust * (limited >= 0f ? 1f : ReverseFactor);
 
         // Ballast tank level follows the pumps.
         Ballast = Mathf.Clamp(Ballast + BallastInput * BallastPumpRate * dt, -1f, 1f);

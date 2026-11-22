@@ -31,6 +31,8 @@ public partial class AudioDirector : Node
     public volatile float TurnRate;   // deg/s
     public volatile bool Inside = true;
     public volatile float Hull = 100f;
+    public volatile float Servo;      // manipulator hydraulics activity 0..1
+    public volatile float Intake;     // intake filter running 0/1
 
     private AudioStreamGeneratorPlayback _pb;
     private Thread _thread;
@@ -44,6 +46,8 @@ public partial class AudioDirector : Node
     private readonly Vector2[] _buf = new Vector2[Block];
     private float _brown, _dronePh1, _dronePh2, _dronePh3, _humPh, _engPh, _chugPh, _t;
     private OnePole _rumbleHp = new(25f, Rate), _droneLp = new(110f, Rate),_hissLp = new(2500f, Rate), _hissHp = new(600f, Rate), _flowLp = new(700f, Rate), _engLp = new(400f, Rate);
+    private float _servoPh;
+    private OnePole _servoLp = new(900f, Rate), _intakeLp = new(350f, Rate);
     private float _creakTimer = 6f, _groanTimer = 25f, _callTimer = 40f;
     private float _master;
 
@@ -210,7 +214,12 @@ public partial class AudioDirector : Node
             float chug = 1f - 0.22f * rpm * (0.5f + 0.5f * MathF.Sin(_chugPh * MathF.Tau));
             float eng = _engLp.Process(tone) * (0.012f + rpm * 0.1f) * chug;
 
-            float bed = rumble + drone + hiss + hum + rush + eng;
+            // Arm hydraulics: a strained, slightly wavering whine. Intake: pump drone + water hiss.
+            _servoPh = Wrap(_servoPh + (170f + Servo * 140f + MathF.Sin(_t * 7f) * 6f) * inv);
+            float servo = _servoLp.Process(_servoPh * 2f - 1f) * Servo * 0.07f;
+            float intake = (_intakeLp.Process(w) * 0.08f + MathF.Sin(_humPh * 1.5f * MathF.Tau) * 0.015f) * Intake;
+
+            float bed = rumble + drone + hiss + hum + rush + eng + servo + intake;
             float l = bed, r = bed;
 
             for (int v = _voices.Count - 1; v >= 0; v--)

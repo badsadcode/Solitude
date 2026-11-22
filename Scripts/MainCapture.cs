@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Solitude.Sub;
+using Solitude.Systems;
 
 namespace Solitude;
 
@@ -15,6 +17,7 @@ public partial class Main
     private int _captureStep;
     private List<(float at, Action act)> _captureScript;
     private Camera3D _docCam;
+    private Solitude.World.TerrainStreamer.Pickup _capturePk;
     private float _docSide = 1f;
 
     private void SetupCapture()
@@ -53,6 +56,44 @@ public partial class Main
             (t += 0.8f, () => Shot("06f_holo_top")),
             (t += 0.1f, () => { _holoPitch = 0.5f; _interior.Holo.ZoomIndex = 2; TryPing(); }),
             (t += 0.7f, () => Shot("06g_holo_reveal_wide")),
+            (t += 0.1f, () => EnterWalking()),
+            // --- Milestone 3: stations, then the arm on a real pickup
+            (t += 0.1f, () =>
+            {
+                var h = _systems.Hold;
+                h.Add(ItemId.Nodule, 4); h.Add(ItemId.Crystal, 3); h.Add(ItemId.Lumen, 2);
+                h.Add(ItemId.Sediment, 1); h.Add(ItemId.Plankton, 4); h.Add(ItemId.Clam, 2);
+                _player.Position = new Vector3(0.3f, 0.05f, 7f);
+                EnterPanel("workbench");
+            }),
+            (t += 1.2f, () => Shot("13a_workbench")),
+            (t += 0.1f, () => { PickPanel(0); PickPanel(0); }),
+            (t += 0.5f, () => Shot("13b_workbench_after")),
+            (t += 0.1f, () => { EnterWalking(); _player.Position = new Vector3(0.3f, 0.05f, 2.4f); EnterPanel("galley"); }),
+            (t += 1.2f, () => Shot("13c_galley")),
+            (t += 0.1f, () => { EnterWalking(); _player.Position = new Vector3(0f, 0.05f, 11.5f); EnterPanel("engineering"); }),
+            (t += 1.2f, () => Shot("13d_engineering")),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                _capturePk = _terrain.NearestPickup(_sub.GlobalPosition, 250f);
+                if (_capturePk != null)
+                {
+                    var b = _sub.GlobalBasis;
+                    _sub.GlobalPosition = _capturePk.Position - b * (ManipulatorArm.Shoulder + new Vector3(0, -2.6f, -3.6f)) + Vector3.Up * 1.0f;
+                    _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+                    _sub.TelegraphIndex = 2; _sub.ApplyTelegraph();
+                    GD.Print($"[capture] arm test target: {_capturePk.Type} at {_capturePk.Position}");
+                }
+                else GD.Print("[capture] arm test: no pickup found nearby");
+                EnterArm();
+            }),
+            (t += 3.0f, () => Shot("14a_arm_deployed")),
+            (t += 0.1f, () => { if (_capturePk != null) _arm.Target = _sub.ToLocal(_capturePk.Position) + Vector3.Up * 0.4f; }),
+            (t += 3.0f, () => Shot("14b_arm_over_target")),
+            (t += 0.1f, () => GD.Print($"[capture] grab={_arm.Grab()} tipDist={_arm.NearestDistance:0.00}")),
+            (t += 1.0f, () => Shot("14c_arm_grabbed")),
+            (t += 5.0f, () => { Shot("14d_arm_redeployed"); GD.Print($"[capture] hold weight {_systems.Hold.Weight}, power {_systems.Power:0.0}"); }),
             (t += 0.1f, () => EnterWalking()),
             (t += 0.1f, () => { EnterWalking(); EnterHelm(); var p = _sub.GlobalPosition; _sub.GlobalPosition = new Vector3(p.X, _gen.Height(p.X, p.Z) + 7f, p.Z); _sub.TelegraphIndex = 4; _sub.ApplyTelegraph(); }),
             (t += 1.5f, () => Shot("07_helm_bridge")),

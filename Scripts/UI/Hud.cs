@@ -214,6 +214,103 @@ public partial class Hud : CanvasLayer
 
     public void SetWarning(string text) => _warning.Text = text ?? "";
 
+    // ------------------------------------------------------------ milestone 3: vitals, panels, arm, hold
+
+    private Label _vitals, _hold, _armInfo;
+    private PanelContainer _panel;
+    private Label _panelTitle, _panelBody;
+    private VBoxContainer _panelButtons;
+    private Control _armGroup;
+
+    private void EnsureM3()
+    {
+        if (_vitals != null) return;
+        _vitals = MakeLabel(Phosphor, 14);
+        _vitals.Position = new Vector2(16, 34);
+        _root.AddChild(_vitals);
+
+        _hold = MakeLabel(new Color(0.8f, 0.85f, 0.75f), 14);
+        _hold.Position = new Vector2(16, 60);
+        _hold.Visible = false;
+        _root.AddChild(_hold);
+
+        _panel = new PanelContainer { Visible = false };
+        var style = new StyleBoxFlat { BgColor = new Color(0.02f, 0.05f, 0.04f, 0.88f), BorderColor = new Color(0.3f, 0.8f, 0.5f, 0.6f) };
+        style.SetBorderWidthAll(1);
+        style.SetContentMarginAll(14);
+        _panel.AddThemeStyleboxOverride("panel", style);
+        _panel.SetAnchorsPreset(Control.LayoutPreset.CenterRight);
+        _panel.GrowHorizontal = Control.GrowDirection.Begin;
+        _panel.GrowVertical = Control.GrowDirection.Both;
+        _panel.Position += new Vector2(-40, 0);
+        _panel.CustomMinimumSize = new Vector2(560, 0);
+        _root.AddChild(_panel);
+        var v = new VBoxContainer();
+        v.AddThemeConstantOverride("separation", 6);
+        _panel.AddChild(v);
+        _panelTitle = MakeLabel(Amber, 20);
+        _panelBody = MakeLabel(new Color(0.75f, 0.85f, 0.78f), 13);
+        _panelBody.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _panelBody.CustomMinimumSize = new Vector2(530, 0);
+        _panelButtons = new VBoxContainer();
+        v.AddChild(_panelTitle);
+        v.AddChild(_panelBody);
+        v.AddChild(new HSeparator());
+        v.AddChild(_panelButtons);
+
+        _armGroup = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+        _armGroup.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _root.AddChild(_armGroup);
+        var reticle = new Label { Text = "+", MouseFilter = Control.MouseFilterEnum.Ignore };
+        reticle.AddThemeColorOverride("font_color", new Color(1f, 0.7f, 0.25f, 0.7f));
+        reticle.AddThemeFontSizeOverride("font_size", 28);
+        reticle.SetAnchorsPreset(Control.LayoutPreset.Center);
+        reticle.Position -= new Vector2(8, 18);
+        _armGroup.AddChild(reticle);
+        _armInfo = MakeLabel(Amber, 16);
+        _armInfo.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
+        _armInfo.GrowVertical = Control.GrowDirection.Begin;
+        _armInfo.Position += new Vector2(24, -24);
+        _armGroup.AddChild(_armInfo);
+    }
+
+    public void SetVitals(string text) { EnsureM3(); _vitals.Text = text; }
+
+    public void SetHold(string text, bool visible) { EnsureM3(); _hold.Text = text; _hold.Visible = visible; }
+
+    public void ShowArm(bool on) { EnsureM3(); _armGroup.Visible = on; }
+    public void SetArmInfo(string text) { EnsureM3(); _armInfo.Text = text; }
+
+    public bool PanelVisible => _panel != null && _panel.Visible;
+
+    /// <summary>Show a station panel. Options become numbered buttons; picking calls onPick(index).</summary>
+    public void ShowPanel(string title, string body, System.Collections.Generic.IReadOnlyList<(string label, bool enabled)> options, System.Action<int> onPick)
+    {
+        EnsureM3();
+        _panel.Visible = true;
+        _panelTitle.Text = title;
+        _panelBody.Text = body;
+        foreach (var c in _panelButtons.GetChildren()) c.QueueFree();
+        for (int i = 0; i < options.Count; i++)
+        {
+            int idx = i;
+            var b = new Button
+            {
+                Text = $"[{i + 1}]  {options[i].label}",
+                Disabled = !options[i].enabled,
+                Alignment = HorizontalAlignment.Left,
+                FocusMode = Control.FocusModeEnum.None,
+            };
+            b.AddThemeFontSizeOverride("font_size", 14);
+            b.AddThemeColorOverride("font_color", Phosphor);
+            b.AddThemeColorOverride("font_disabled_color", new Color(0.45f, 0.5f, 0.47f));
+            b.Pressed += () => onPick(idx);
+            _panelButtons.AddChild(b);
+        }
+    }
+
+    public void HidePanel() { if (_panel != null) _panel.Visible = false; }
+
     public override void _Process(double delta)
     {
         float dt = (float)delta;

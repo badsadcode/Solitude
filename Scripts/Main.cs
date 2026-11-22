@@ -7,6 +7,7 @@ using Solitude.Interior;
 using Solitude.Player;
 using Solitude.Sonar;
 using Solitude.Sub;
+using Solitude.Systems;
 using Solitude.UI;
 using Solitude.World;
 
@@ -25,7 +26,7 @@ namespace Solitude;
 /// </summary>
 public partial class Main : Node
 {
-	private enum Mode { Walking, Helm, Monitors, Sonar, Holo }
+	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel }
 	private enum HelmView { Bridge, BowCamera, Chase }
 
 	[Export] public int PixelScale = 3;
@@ -47,6 +48,11 @@ public partial class Main : Node
 	private Hud _hud;
 	private SonarSystem _sonar;
 	private Ravager _ravager;
+	private ShipSystems _systems;
+	private ManipulatorArm _arm;
+	private string _panelKind;
+	private int _panelVersion = -1;
+	private bool _holdVisible;
 	private SubViewport _sonarScope;
 	private float _holoYaw = 0.6f, _holoPitch = 0.75f;
 
@@ -141,6 +147,8 @@ public partial class Main : Node
 			OnMonitors = EnterMonitors,
 			OnSonar = EnterSonar,
 			OnHolo = EnterHolo,
+			OnArm = EnterArm,
+			OnPanel = EnterPanel,
 			OnMessage = msg => { _hud.Message(msg); _audio.PlayBlip(330f, 0.12f); },
 		};
 		_game.AddChild(_interior);
@@ -171,6 +179,20 @@ public partial class Main : Node
 		_game.AddChild(_ravager);
 		_sonar.Bodies = () => new[] { _ravager.GlobalPosition };
 
+		// ---- ship systems + manipulator arm
+		_systems = new ShipSystems
+		{
+			Name = "Systems", Sub = _sub, Terrain = _terrain, Gen = _gen, Audio = _audio,
+			Message = msg => _hud.Message(msg, 4f),
+		};
+		AddChild(_systems);
+		_arm = new ManipulatorArm
+		{
+			Name = "Arm", Terrain = _terrain, Gen = _gen, Systems = _systems,
+			OnClaw = s => { _audio.PlayImpact(s * 0.35f); _audio.PlayBlip(140f, 0.06f, 0.6f); },
+		};
+		_sub.AddChild(_arm);
+
 		_sub.Impact += s =>
 		{
 			_audio.PlayImpact(s);
@@ -181,7 +203,7 @@ public partial class Main : Node
 
 		Input.MouseMode = Input.MouseModeEnum.Captured;
 		_hud.Intro("S O L I T U D E", $"depth {_sub.Depth:0} m   ·   seed {Seed}   ·   you are alone down here");
-		_hud.SetHelp("WASD move · SHIFT run · E use · ESC release mouse · F11 fullscreen");
+		_hud.SetHelp("WASD move · SHIFT run · E use · I hold · ESC release mouse · F11 fullscreen");
 
 		SetupCapture();
 	}
@@ -218,8 +240,11 @@ public partial class Main : Node
 		_feedFullscreen = false;
 		_hud.ShowFeed(null, null, 1f);
 		_hud.ShowHelm(false);
+		_hud.HidePanel();
+		_hud.ShowArm(false);
+		_arm.Stow();
 		_hud.SetCrosshair(true);
-		_hud.SetHelp("WASD move · SHIFT run · E use · ESC release mouse · F11 fullscreen");
+		_hud.SetHelp("WASD move · SHIFT run · E use · I hold · ESC release mouse · F11 fullscreen");
 		_rig.MonitorsActive = true;
 		_rig.BridgeActive = true;
 		_audio.Inside = true;
@@ -235,7 +260,7 @@ public partial class Main : Node
 		_hud.SetCrosshair(false);
 		_hud.SetPrompt("");
 		_hud.ShowHelm(true);
-		_hud.SetHelp("W/S throttle · A/D + mouse rudder · R/F + mouse planes · SPACE blow / C flood ballast · P ping · X centre · L floods · V view · E leave");
+		_hud.SetHelp("W/S throttle · A/D + mouse rudder · R/F + mouse planes · SPACE blow / C flood ballast · P ping · G intake · X centre · L floods · V view · E leave");
 		_audio.PlayBlip(660f, 0.08f);
 		_view = HelmView.Bridge;
 		MoveStationCam(_interior.GlobalTransform * _interior.HelmView * new Transform3D(new Basis(Vector3.Right, -0.06f), Vector3.Zero));
@@ -294,9 +319,121 @@ public partial class Main : Node
 		return _interior.GlobalTransform * local;
 	}
 
+	private void EnterArm()
+	{
+		if (_systems.Emergency) { _hud.Message("No power for the arm hydraulics."); return; }
+		_mode = Mode.Arm;
+		_player.InputEnabled = false;
+		_hud.SetCrosshair(false);
+		_hud.SetPrompt("");
+		_hud.ShowArm(true);
+		_hud.SetHelp("mouse move claw · wheel / W-S height · click grab · keep speed under 2.5 m/s · E / ESC stow and leave");
+		_arm.Deploy();
+		_arm.Camera.MakeCurrent();
+		_rig.MonitorsActive = false;
+		_audio.Inside = false;
+		_audio.PlayBlip(500f, 0.1f);
+		Input.MouseMode = Input.MouseModeEnum.Captured;
+	}
+
+	private void EnterPanel(string kind)
+	{
+		_mode = Mode.Panel;
+		_panelKind = kind;
+		_panelVersion = -1;
+		_player.InputEnabled = false;
+		_hud.SetCrosshair(false);
+		_hud.SetPrompt("");
+		_hud.SetHelp("1-9 or click to use · E / ESC leave");
+		_audio.PlayBlip(880f, 0.05f);
+		Input.MouseMode = Input.MouseModeEnum.Visible;
+		Transform3D view = kind switch
+		{
+			"galley" => _interior.GalleyView,
+			"workbench" => _interior.WorkbenchView,
+			_ => _interior.EngineeringView,
+		};
+		MoveStationCam(_interior.GlobalTransform * view);
+		RefreshPanel();
+	}
+
+	private readonly System.Collections.Generic.List<Action> _panelActions = new();
+
+	/// <summary>Rebuild the station panel from current hold/power state.</summary>
+	private void RefreshPanel()
+	{
+		_panelVersion = _systems.Hold.Version;
+		var opts = new System.Collections.Generic.List<(string, bool)>();
+		_panelActions.Clear();
+		string title, body;
+		var hold = _systems.Hold;
+
+		void AddRecipes(Station st)
+		{
+			foreach (var r in Recipes.All)
+			{
+				if (r.Station != st) continue;
+				bool ok = hold.Has(r.Cost) && _systems.Power >= r.PowerCost;
+				opts.Add(($"{r.Verb} {Items.Name(r.Output)}   <-  {Recipes.CostText(r)}   ({r.PowerCost:0.#} pwr)", ok));
+				var rec = r;
+				_panelActions.Add(() =>
+				{
+					if (_systems.Craft(rec)) { _audio.PlayImpact(0.25f); _audio.PlayBlip(st == Station.Galley ? 300f : 700f, 0.15f, 0.4f); }
+				});
+			}
+		}
+
+		switch (_panelKind)
+		{
+			case "workbench":
+				title = "WORKBENCH  —  process & fabricate";
+				AddRecipes(Station.Workbench);
+				break;
+			case "galley":
+				title = "GALLEY  —  cook & eat";
+				AddRecipes(Station.Galley);
+				foreach (var (id, count) in hold.All())
+				{
+					var info = Items.Info[id];
+					if (info.Food <= 0f) continue;
+					opts.Add(($"Eat {info.Name}  (+{info.Food:0} food)   x{count}", true));
+					var food = id;
+					_panelActions.Add(() => { _systems.Eat(food); _audio.PlayBlip(220f, 0.2f, 0.3f); });
+				}
+				break;
+			default:
+				title = "ENGINEERING  —  power bus & damage control";
+				opts.Add(($"Install power cell  (+40 power)   x{hold.Count(ItemId.PowerCell)}", hold.Count(ItemId.PowerCell) > 0));
+				_panelActions.Add(_systems.InstallPowerCell);
+				opts.Add(($"Weld hull patch  (+30 hull)   x{hold.Count(ItemId.PatchKit)}", hold.Count(ItemId.PatchKit) > 0 && _sub.Hull < 99.5f));
+				_panelActions.Add(_systems.ApplyPatch);
+				opts.Add(($"{(_systems.IntakeOn ? "Close" : "Open")} intake filter", !_systems.Emergency));
+				_panelActions.Add(_systems.ToggleIntake);
+				break;
+		}
+
+		var sb = new System.Text.StringBuilder();
+		sb.AppendLine($"POWER {_systems.Power:0}%{(_systems.Thermal ? "  (thermal charging)" : "")}    HULL {_sub.Hull:0}%    FOOD {_systems.Food:0}%");
+		sb.AppendLine($"HOLD {hold.Weight}/{hold.Capacity}:");
+		var items = new System.Collections.Generic.List<string>();
+		foreach (var (id, count) in hold.All()) items.Add($"{Items.Name(id)} x{count}");
+		sb.Append(items.Count > 0 ? string.Join(",  ", items) : "(empty)");
+		body = sb.ToString();
+		_hud.ShowPanel(title, body, opts, PickPanel);
+	}
+
+	private void PickPanel(int i)
+	{
+		if (i < 0 || i >= _panelActions.Count) return;
+		_panelActions[i]();
+		RefreshPanel();
+	}
+
 	private void TryPing()
 	{
+		if (!_systems.UsePower(1.5f)) { _hud.Message("Sonar: insufficient power."); _audio.PlayBlip(180f, 0.08f, 0.5f); return; }
 		if (_sonar.Ping()) return;
+		_systems.UsePower(-1.5f); // refund: still recharging
 		_audio.PlayBlip(180f, 0.08f, 0.5f); // still recharging
 	}
 
@@ -367,6 +504,22 @@ public partial class Main : Node
 				_holoYaw -= mm.Relative.X * 0.006f;
 				_holoPitch = Mathf.Clamp(_holoPitch + mm.Relative.Y * 0.005f, 0.3f, 1.35f);
 			}
+			else if (_mode == Mode.Arm)
+			{
+				// Mouse right = claw to starboard (+X), mouse up = claw forward (-Z).
+				_arm.Steer(mm.Relative.X * 0.008f, mm.Relative.Y * 0.008f, 0f);
+			}
+		}
+		else if (e is InputEventMouseButton aw && aw.Pressed && _mode == Mode.Arm)
+		{
+			if (aw.ButtonIndex == MouseButton.WheelUp) _arm.Steer(0, 0, 0.25f);
+			else if (aw.ButtonIndex == MouseButton.WheelDown) _arm.Steer(0, 0, -0.25f);
+			else if (aw.ButtonIndex == MouseButton.Left && !_arm.Grab()) { }
+		}
+		else if (e is InputEventKey pk && pk.Pressed && !pk.Echo && _mode == Mode.Panel)
+		{
+			int n = (int)(pk.PhysicalKeycode - Key.Key1);
+			if (n >= 0 && n < 9) PickPanel(n);
 		}
 		else if (e is InputEventMouseButton wheel && wheel.Pressed && _mode == Mode.Holo &&
 				 (wheel.ButtonIndex == MouseButton.WheelUp || wheel.ButtonIndex == MouseButton.WheelDown))
@@ -427,7 +580,10 @@ public partial class Main : Node
 			case Mode.Monitors: UpdateMonitors(); break;
 			case Mode.Sonar: UpdateSonar(); break;
 			case Mode.Holo: UpdateHolo(); break;
+			case Mode.Arm: UpdateArm(dt); break;
+			case Mode.Panel: UpdatePanel(); break;
 		}
+		UpdateVitals();
 
 		UpdateChaseCam(dt);
 		UpdateFeedsOnScreens();
@@ -493,6 +649,7 @@ public partial class Main : Node
 		_sub.BallastInput = Input.IsActionPressed(GameInput.BallastBlow) ? 1f : Input.IsActionPressed(GameInput.BallastFlood) ? -1f : 0f;
 
 		if (Input.IsActionJustPressed(GameInput.Ping)) TryPing();
+		if (Input.IsActionJustPressed(GameInput.IntakeToggle)) _systems.ToggleIntake();
 		if (Input.IsActionJustPressed(GameInput.CenterControls)) { _sub.Rudder = 0f; _sub.Planes = 0f; _audio.PlayBlip(400f, 0.05f); }
 		if (Input.IsActionJustPressed(GameInput.Lights)) { _sub.LightsOn = !_sub.LightsOn; _audio.PlayBlip(220f, 0.04f, 0.8f); }
 		if (Input.IsActionJustPressed(GameInput.CameraCycle))
@@ -527,6 +684,48 @@ public partial class Main : Node
 			}
 			EnterWalking();
 		}
+	}
+
+	private void UpdateArm(float dt)
+	{
+		float h = Input.GetAxis(GameInput.Back, GameInput.Forward);
+		if (h != 0f) _arm.Steer(0, 0, h * 1.5f * dt);
+		if (Input.IsActionJustPressed(GameInput.Cancel) || Input.IsActionJustPressed(GameInput.Interact) || !_arm.Deployed)
+		{
+			_audio.PlayBlip(400f, 0.1f);
+			EnterWalking();
+			return;
+		}
+		Vector3 tip = _arm.TipWorld();
+		float alt = tip.Y - _gen.Height(tip.X, tip.Z);
+		string near = _arm.Nearest != null
+			? $"CONTACT  {Items.Name(_arm.Nearest.Type).ToUpperInvariant()}  {_arm.NearestDistance:0.0} m{(_arm.NearestDistance < 1.4f ? "   << IN REACH — CLICK" : "")}"
+			: "CONTACT  none within 8 m";
+		string state = _arm.State == ManipulatorArm.ArmState.Returning ? (_arm.Held != null ? "STOWING CATCH..." : "RETURNING...") : "ACTIVE";
+		_hud.SetArmInfo($"ARM CAM  ·  {state}\nCLAW ALT {alt:0.0} m    SUB SPEED {_sub.ForwardSpeed:0.0} m/s\n{near}\nHOLD {_systems.Hold.Weight}/{_systems.Hold.Capacity}");
+	}
+
+	private void UpdatePanel()
+	{
+		if (_systems.Hold.Version != _panelVersion) RefreshPanel();
+		if (Input.IsActionJustPressed(GameInput.Cancel) || Input.IsActionJustPressed(GameInput.Interact))
+			EnterWalking();
+	}
+
+	private void UpdateVitals()
+	{
+		string pwr = _systems.Emergency ? "PWR EMERGENCY" : $"PWR {_systems.Power:0}%";
+		_hud.SetVitals($"{pwr}{(_systems.Thermal ? " +THERMAL" : "")}    HULL {_sub.Hull:0}%    FOOD {_systems.Food:0}%    HOLD {_systems.Hold.Weight}/{_systems.Hold.Capacity}{(_systems.IntakeOn ? "    INTAKE" : "")}");
+		if (_mode == Mode.Walking && Input.IsActionJustPressed(GameInput.Inventory)) _holdVisible = !_holdVisible;
+		if (_holdVisible && _mode == Mode.Walking)
+		{
+			var lines = new System.Collections.Generic.List<string> { "HOLD  [I]" };
+			foreach (var (id, count) in _systems.Hold.All()) lines.Add($"  {Items.Name(id)}  x{count}");
+			_hud.SetHold(string.Join("\n", lines), true);
+		}
+		else _hud.SetHold("", false);
+		_audio.Servo = _arm.ServoActivity;
+		_audio.Intake = _systems.IntakeOn ? 1f : 0f;
 	}
 
 	private void UpdateSonar()

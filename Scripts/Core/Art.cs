@@ -147,6 +147,10 @@ public static class Art
         World(SedimentTexture(5), Colors.White, triplanar: true, triScale: 0.5f).Glow(new Color(0.3f, 1f, 0.85f), 2.2f, fromAlpha: true, pulse: 1.3f).Sway(0.35f));
     public static ShaderMaterial FloraWarm => Cached("flora_warm", () =>
         World(SedimentTexture(6), Colors.White, triplanar: true, triScale: 0.5f).Glow(new Color(1f, 0.45f, 0.2f), 1.6f, fromAlpha: true, pulse: 0.7f).Sway(0.2f));
+    public static ShaderMaterial Nodule => Cached("nodule", () =>
+        World(RockTexture(61), Colors.White, triplanar: true, triScale: 0.8f, roughness: 0.35f, metallic: 0.6f).Glow(new Color(1f, 0.6f, 0.3f), 0.6f, fromAlpha: true));
+    public static ShaderMaterial Crystal => Cached("crystal", () =>
+        World(SedimentTexture(71), Colors.White, triplanar: true, triScale: 1f, roughness: 0.15f, metallic: 0.2f).Glow(new Color(0.7f, 0.5f, 1f), 1.4f, fromAlpha: true, pulse: 0.9f));
     public static ShaderMaterial Bone => Cached("bone", () => World(RockTexture(41), new Color(0.82f, 0.8f, 0.7f), triplanar: true, triScale: 0.4f));
     public static ShaderMaterial Vent => Cached("vent", () =>
         World(RockTexture(51), Colors.White, triplanar: true, triScale: 0.4f).Glow(new Color(1f, 0.35f, 0.08f), 3f, fromAlpha: true, pulse: 2.1f));

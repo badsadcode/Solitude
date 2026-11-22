@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Godot;
 using Solitude.Core;
+using Solitude.Systems;
 
 namespace Solitude.World;
 
@@ -40,6 +41,57 @@ public static class Props
         Chimney = BuildChimney();
         WhaleFall = BuildWhaleFall();
         TubeWorms = BuildTubeWorms();
+        BuildPickups();
+    }
+
+    /// <summary>Meshes for things the manipulator arm can collect. Size ~0.5–1.2 m at scale 1.</summary>
+    public static Dictionary<ItemId, ArrayMesh> Pickups;
+
+    private static void BuildPickups()
+    {
+        Pickups = new Dictionary<ItemId, ArrayMesh>();
+
+        // Nodule: three fused, dark, slightly metallic lumps.
+        var mb = new MeshBuilder();
+        var ore = new Color(0.16f, 0.13f, 0.11f);
+        mb.Rock(new Vector3(0, 0.18f, 0), new Vector3(0.3f, 0.2f, 0.28f), ore, 1, 0.25f);
+        mb.Rock(new Vector3(0.22f, 0.12f, 0.1f), new Vector3(0.18f, 0.14f, 0.2f), ore.Shade(1.2f), 2, 0.3f);
+        mb.Rock(new Vector3(-0.15f, 0.1f, 0.18f), new Vector3(0.16f, 0.12f, 0.15f), ore.Shade(0.9f), 3, 0.3f);
+        mb.Rock(new Vector3(0.05f, 0.33f, 0.02f), new Vector3(0.05f, 0.04f, 0.05f), new Color(0.9f, 0.5f, 0.2f, 0.5f), 4, 0.1f); // rusty glint
+        Pickups[ItemId.Nodule] = mb.Build(Art.Nodule);
+
+        // Crystal: cluster of hexagonal prisms, glowing violet inside.
+        mb = new MeshBuilder();
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * 1.1f, lean = 0.25f + Perlin.Hash(i, 2, 7) * 0.35f;
+            var basis = new Basis(new Vector3(MathF.Cos(a), 0, MathF.Sin(a)), lean);
+            float h = 0.5f + Perlin.Hash(i, 3, 7) * 0.7f;
+            mb.Xform = new Transform3D(basis, new Vector3(MathF.Cos(a) * 0.12f, 0, MathF.Sin(a) * 0.12f));
+            mb.Cylinder(Vector3.Zero, 0.09f, 0.07f, h, 6, new Color(0.55f, 0.35f, 0.9f, 0.6f), caps: false);
+            mb.Cylinder(Vector3.Up * h, 0.07f, 0f, 0.15f, 6, new Color(0.8f, 0.6f, 1f, 0.6f), caps: false);
+        }
+        mb.Xform = Transform3D.Identity;
+        mb.Rock(new Vector3(0, 0.05f, 0), new Vector3(0.3f, 0.12f, 0.3f), new Color(0.25f, 0.23f, 0.22f), 9, 0.3f);
+        Pickups[ItemId.Crystal] = mb.Build(Art.Crystal);
+
+        // Lumen pod: bulbous glowing sac on a short stalk.
+        mb = new MeshBuilder();
+        mb.Cylinder(Vector3.Zero, 0.06f, 0.04f, 0.45f, 5, new Color(0.18f, 0.25f, 0.22f), caps: false);
+        mb.Rock(new Vector3(0, 0.62f, 0), new Vector3(0.2f, 0.28f, 0.2f), new Color(0.4f, 1f, 0.9f, 0.5f), 5, 0.15f);
+        mb.Rock(new Vector3(0.12f, 0.35f, 0.04f), new Vector3(0.08f, 0.1f, 0.08f), new Color(0.4f, 1f, 0.9f, 0.5f), 6, 0.15f);
+        Pickups[ItemId.Lumen] = mb.Build(Art.Flora);
+
+        // Clams: pale shells with a faint pink lip.
+        mb = new MeshBuilder();
+        for (int i = 0; i < 4; i++)
+        {
+            float a = i * 1.7f, r = 0.1f + Perlin.Hash(i, 5, 3) * 0.15f;
+            var p = new Vector3(MathF.Cos(a) * r, 0.06f, MathF.Sin(a) * r);
+            mb.Rock(p, new Vector3(0.16f, 0.07f, 0.11f), new Color(0.8f, 0.78f, 0.7f), 20 + i, 0.08f);
+            mb.Rock(p + new Vector3(0, 0.06f, 0), new Vector3(0.12f, 0.015f, 0.08f), new Color(1f, 0.45f, 0.5f, 0.6f), 30 + i, 0.05f);
+        }
+        Pickups[ItemId.Clam] = mb.Build(Art.FloraWarm);
     }
 
     /// <summary>Unit spire: radius ~1, height 1, stacked jittered prisms.</summary>

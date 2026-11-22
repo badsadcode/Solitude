@@ -29,6 +29,8 @@ public partial class SubInterior : Node3D
     public Action OnMonitors;
     public Action OnSonar;
     public Action OnHolo;
+    public Action OnArm;
+    public Action<string> OnPanel;
     public Action<string> OnMessage;
 
     // Sonar (set before Build)
@@ -38,6 +40,10 @@ public partial class SubInterior : Node3D
     public HoloTable Holo { get; private set; }
     public Transform3D SonarView { get; private set; }
     public Vector3 HoloCentre { get; private set; }
+    public Transform3D ArmView { get; private set; }
+    public Transform3D GalleyView { get; private set; }
+    public Transform3D WorkbenchView { get; private set; }
+    public Transform3D EngineeringView { get; private set; }
 
     // Exposed anchors (local space)
     public Transform3D PlayerSpawn { get; private set; }
@@ -253,7 +259,12 @@ public partial class SubInterior : Node3D
                 _dark.Box(dialPos + new Vector3(-s * 0.04f, 0.04f, 0.02f), new Vector3(0.02f, 0.14f, 0.02f), new Color(0.1f, 0.1f, 0.1f));
             }
         }
-        Label("BALLAST", new Vector3(-HalfW + 0.02f, 2.15f, -10f), Mathf.Pi / 2f, 36);
+        Label("MANIPULATOR", new Vector3(-HalfW + 0.02f, 2.15f, -10f), Mathf.Pi / 2f, 36);
+        // Port console now drives the arm (joystick + arm-cam screen)
+        _machine.Box(new Vector3(-1.95f, 1.2f, -10.3f), new Vector3(0.12f, 0.25f, 0.12f), new Color(0.2f, 0.2f, 0.2f));
+        _machine.Box(new Vector3(-1.95f, 1.36f, -10.3f), new Vector3(0.09f, 0.09f, 0.09f), RedLamp);
+        Interactable.Create(this, new Vector3(-2.05f, 1.0f, -10f), new Vector3(0.8f, 0.6f, 3.4f), "Operate manipulator arm", () => OnArm?.Invoke());
+        ArmView = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-1.0f, 1.5f, -10.1f));
         Label("NAV / COMMS", new Vector3(HalfW - 0.02f, 2.15f, -10f), -Mathf.Pi / 2f, 36);
 
         Light(new Vector3(0, Height - 0.15f, -9f), new Color(1f, 0.28f, 0.2f), 1.1f, 7f, shadows: true);
@@ -373,8 +384,9 @@ public partial class SubInterior : Node3D
         _dark.Box(new Vector3(2.15f, 2.1f, 2.2f), new Vector3(0.6f, 0.4f, 1.2f), Grey.Shade(0.8f));
         _wall.Box(new Vector3(2.25f, 1.75f, 3.4f), new Vector3(0.45f, 0.6f, 1.4f), Grey.Shade(0.95f)); // cabinets
         _machine.Box(new Vector3(1.72f, 0.75f, 1.9f), new Vector3(0.04f, 0.06f, 0.06f), RedLamp);
-        Interactable.Create(this, new Vector3(2.05f, 1.0f, 2.2f), new Vector3(0.8f, 0.3f, 1.4f), "Galley stove",
-            () => OnMessage?.Invoke("GALLEY STOVE: nothing to cook. Your rations are in a crate that doesn't exist yet. (Milestone 3)"));
+        Interactable.Create(this, new Vector3(2.05f, 1.0f, 2.2f), new Vector3(0.8f, 0.3f, 1.4f), "Cook / eat at the galley",
+            () => OnPanel?.Invoke("galley"));
+        GalleyView = new Transform3D(new Basis(Vector3.Up, -Mathf.Pi / 2f) * new Basis(Vector3.Right, -0.35f), new Vector3(0.9f, 1.55f, 2.4f));
         Label("GALLEY", new Vector3(HalfW - 0.02f, 2.25f, 4f), -Mathf.Pi / 2f, 36);
 
         // Mess table, two benches. Seats for four; one is used.
@@ -409,8 +421,9 @@ public partial class SubInterior : Node3D
         for (int i = 0; i < 5; i++)
             _dark.Box(new Vector3(HalfW - 0.1f, 1.4f + (i % 2) * 0.3f, 6.2f + i * 0.4f), new Vector3(0.04f, 0.25f, 0.05f), new Color(0.3f, 0.3f, 0.32f));
         _machine.Box(new Vector3(1.9f, 1.0f, 6.2f), new Vector3(0.25f, 0.2f, 0.3f), Grey.Shade(0.5f)); // vice
-        Interactable.Create(this, new Vector3(2.0f, 1.0f, 7f), new Vector3(0.9f, 0.3f, 2.6f), "Workbench",
-            () => OnMessage?.Invoke("WORKBENCH: no materials. The manipulator arm is still folded. (Milestone 3)"));
+        Interactable.Create(this, new Vector3(2.0f, 1.0f, 7f), new Vector3(0.9f, 0.3f, 2.6f), "Use workbench",
+            () => OnPanel?.Invoke("workbench"));
+        WorkbenchView = new Transform3D(new Basis(Vector3.Up, -Mathf.Pi / 2f) * new Basis(Vector3.Right, -0.4f), new Vector3(0.95f, 1.6f, 7f));
         Label("WORKSHOP", new Vector3(HalfW - 0.02f, 2.25f, 8.3f), -Mathf.Pi / 2f, 36);
 
         Light(new Vector3(0, Height - 0.15f, 7f), new Color(1f, 0.85f, 0.65f), 0.7f, 5f);
@@ -437,6 +450,14 @@ public partial class SubInterior : Node3D
         for (int i = 0; i < 5; i++)
             _machine.Box(new Vector3(0.58f, 0.9f, 10f + i * 0.5f), new Vector3(0.04f, 0.1f, 0.1f), i == 4 ? RedLamp : AmberLamp);
         Label("DRIVE  ENG.  No.1", new Vector3(0.59f, 0.55f, 11f), -Mathf.Pi / 2f, 32);
+
+        // Engineering panel: power bus + damage control, on the aft bulkhead
+        _machine.Box(new Vector3(-0.05f, 1.55f, Stern - 0.08f), new Vector3(1.0f, 1.0f, 0.12f), Grey.Shade(0.7f));
+        for (int i = 0; i < 8; i++)
+            _machine.Box(new Vector3(-0.4f + (i % 4) * 0.23f, 1.35f + (i / 4) * 0.4f, Stern - 0.15f), new Vector3(0.1f, 0.1f, 0.04f), i % 3 == 0 ? RedLamp : GreenLamp);
+        Label("POWER / DAMAGE CTRL", new Vector3(-0.05f, 2.15f, Stern - 0.15f), Mathf.Pi, 28);
+        Interactable.Create(this, new Vector3(-0.05f, 1.55f, Stern - 0.3f), new Vector3(1.0f, 1.0f, 0.5f), "Engineering panel", () => OnPanel?.Invoke("engineering"));
+        EngineeringView = new Transform3D(new Basis(Vector3.Up, Mathf.Pi), new Vector3(-0.05f, 1.6f, Stern - 1.3f));
 
         // Dive locker with an uncertified suit (milestone 5)
         _dark.Box(new Vector3(-2.15f, 1.2f, 11.6f), new Vector3(0.6f, 2.4f, 1.4f), Grey.Shade(0.6f));

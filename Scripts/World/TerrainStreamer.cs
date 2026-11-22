@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 using Solitude.Core;
+using Solitude.Systems;
 
 namespace Solitude.World;
 
@@ -92,6 +93,8 @@ public partial class TerrainStreamer : Node3D
             {
                 _chunks[k].QueueFree();
                 _chunks.Remove(k);
+                _pickups.Remove(k);
+                _vents.Remove(k);
             }
     }
 
@@ -132,6 +135,9 @@ public partial class TerrainStreamer : Node3D
         AddMulti(root, Props.TubeWorms, d.Worms, 80f);
         AddMulti(root, Props.WhaleFall, d.WhaleFalls, 0f);
 
+        RegisterPickups(d, root);
+        _vents[d.Coord] = d.Vents;
+
         foreach (var v in d.Vents)
         {
             root.AddChild(new OmniLight3D
@@ -146,6 +152,90 @@ public partial class TerrainStreamer : Node3D
             });
             root.AddChild(MakeVentPlume(v));
         }
+    }
+
+    // ------------------------------------------------------------------ pickups & vents
+
+    /// <summary>A collectible lying on the seabed. Id is stable per (chunk, index).</summary>
+    public sealed class Pickup
+    {
+        public long Id;
+        public ItemId Type;
+        public Vector3 Position;
+        public MultiMesh Mesh;
+        public int Instance;
+    }
+
+    private readonly Dictionary<Vector2I, List<Pickup>> _pickups = new();
+    private readonly Dictionary<Vector2I, List<Vector3>> _vents = new();
+    private readonly HashSet<long> _taken = new();
+
+    private static long PickupId(Vector2I c, int i) => ((long)c.X << 40) ^ ((long)(c.Y & 0xFFFFF) << 16) ^ (uint)i;
+
+    private void RegisterPickups(ChunkData d, Node3D root)
+    {
+        var list = new List<Pickup>();
+        _pickups[d.Coord] = list;
+        var byType = new Dictionary<ItemId, List<int>>();
+        for (int i = 0; i < d.Collectibles.Count; i++)
+        {
+            var t = d.Collectibles[i].type;
+            if (!byType.TryGetValue(t, out var l)) byType[t] = l = new List<int>();
+            l.Add(i);
+        }
+        foreach (var (type, idxs) in byType)
+        {
+            var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = Props.Pickups[type] };
+            mm.InstanceCount = idxs.Count;
+            for (int k = 0; k < idxs.Count; k++)
+            {
+                int i = idxs[k];
+                long id = PickupId(d.Coord, i);
+                var xf = d.Collectibles[i].xform;
+                bool taken = _taken.Contains(id);
+                mm.SetInstanceTransform(k, taken ? new Transform3D(Basis.FromScale(Vector3.Zero), xf.Origin) : xf);
+                if (!taken) list.Add(new Pickup { Id = id, Type = type, Position = xf.Origin + xf.Basis.Y * 0.3f, Mesh = mm, Instance = k });
+            }
+            root.AddChild(new MultiMeshInstance3D { Multimesh = mm });
+        }
+    }
+
+    /// <summary>Nearest untaken pickup within maxDist of p, or null.</summary>
+    public Pickup NearestPickup(Vector3 p, float maxDist)
+    {
+        Pickup best = null;
+        float bestD = maxDist;
+        var c = ChunkData.CoordOf(p);
+        for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (!_pickups.TryGetValue(new Vector2I(c.X + dx, c.Y + dz), out var list)) continue;
+                foreach (var pk in list)
+                {
+                    float d = pk.Position.DistanceTo(p);
+                    if (d < bestD) { bestD = d; best = pk; }
+                }
+            }
+        return best;
+    }
+
+    /// <summary>Remove a pickup from the world for good.</summary>
+    public void Take(Pickup pk)
+    {
+        _taken.Add(pk.Id);
+        pk.Mesh.SetInstanceTransform(pk.Instance, new Transform3D(Basis.FromScale(Vector3.Zero), pk.Position));
+        foreach (var list in _pickups.Values) list.Remove(pk);
+    }
+
+    public float NearestVentDistance(Vector3 p)
+    {
+        float best = float.MaxValue;
+        var c = ChunkData.CoordOf(p);
+        for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+                if (_vents.TryGetValue(new Vector2I(c.X + dx, c.Y + dz), out var vs))
+                    foreach (var v in vs) best = Mathf.Min(best, v.DistanceTo(p));
+        return best;
     }
 
     private static void AddMulti(Node3D parent, Mesh mesh, List<Transform3D> xforms, float visEnd)

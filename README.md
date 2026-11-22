@@ -8,7 +8,20 @@ synthesized soundscape designed to make you uncomfortable about what's below you
 
 A [Bad Ideas Works](https://github.com/badsadcode) production.
 
-## Current state — Milestone 2: sonar and holo table
+## Current state — Milestone 3: survival systems
+
+- **Manipulator arm** — operate it from the bridge's port console: two-bone IK hydraulic arm with its
+  own camera and work light. Mouse steers the claw, wheel / W-S height, click grabs. Catches are
+  folded back and stowed in the hold.
+- **Resources** on the seabed (remembered once taken): manganese nodules, lattice crystals, lumen
+  pods, vent clams. The **intake filter** (G at the helm) gathers plankton, and sediment near the bottom.
+- **Workbench** (plates, sealant, circuits, hull patch kits, power cells), **galley** (rations, clam
+  stew, glow broth — and eating), **engineering panel** (install power cells, weld hull patches).
+- **Power**: engine, floods, sonar, arm and intake all drain the battery; recharge with power cells
+  or by resting near a hydrothermal vent. At zero: emergency bus, crippled engine, dark floods.
+- **Hunger**: eat or your hands start shaking on the controls.
+
+## Milestone 2: sonar and holo table
 
 - **Active sonar** — ping (P anywhere at the helm, or at the console) and 360 beams sweep the real
   seabed with **acoustic shadowing**: what hides behind a ridge stays unknown. Heading-up PPI scope
@@ -54,8 +67,10 @@ Godot_v4.7.2-stable_mono_win64.exe --path . -- --seed=1234
 
 | Context | Keys |
 |---|---|
-| Walking | **WASD** move · **Shift** run · **E** use · **Esc** release mouse · **F11** fullscreen |
-| Helm | **W/S** throttle (telegraph steps or hold) · **A/D** + mouse rudder · **R/F** + mouse dive planes · **Space** blow / **C** flood ballast · **P** sonar ping · **X** centre controls · **T** drive mode · **L** floodlights · **V** view · **E** leave |
+| Walking | **WASD** move · **Shift** run · **E** use · **I** hold · **Esc** release mouse · **F11** fullscreen |
+| Arm | mouse claw · wheel / **W-S** height · click grab · **E/Esc** stow |
+| Stations | **1–9** or click an option · **E/Esc** leave |
+| Helm | **W/S** throttle (telegraph steps or hold) · **A/D** + mouse rudder · **R/F** + mouse dive planes · **Space** blow / **C** flood ballast · **P** sonar ping · **G** intake · **X** centre controls · **T** drive mode · **L** floodlights · **V** view · **E** leave |
 | Monitors | **1–6** or click a screen · **F** fullscreen feed · **E/Esc** leave |
 | Sonar | **Space** / click / **P** ping · **Q** range · **F** fullscreen scope · **E/Esc** leave |
 | Holo table | mouse orbit · wheel / **Q** zoom · **Space** / **P** ping · **E/Esc** leave |
@@ -64,7 +79,7 @@ Godot_v4.7.2-stable_mono_win64.exe --path . -- --seed=1234
 
 1. ~~Vertical slice: interior, helm, monitors, world, atmosphere, audio~~
 2. ~~Sonar and holo table (scanned terrain hologram)~~
-3. Manipulator arm and collectors, inventory, crafting and cooking stations, hull and power systems
+3. ~~Manipulator arm and collectors, inventory, crafting and cooking stations, hull and power systems~~
 4. Deep-sea stations: docking, procedural interiors (via [NoorLevel](https://github.com/badsadcode/BadLevel)), weapons, creatures
 5. Diving suit and swimming outside the boat
 6. Replayability: biomes, progression, logs, map fragments
