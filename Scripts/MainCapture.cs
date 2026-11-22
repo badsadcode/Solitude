@@ -466,6 +466,7 @@ public partial class Main
                 _sub.GlobalPosition = new Vector3(sp.X, Mathf.Min(_gen.Height(sp.X, sp.Z) + 60f, -420f), sp.Z);
                 _sub.LinearVelocity = Vector3.Zero; _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = true;
                 StartEyeEncounter(false);
+                _eyeBoatStart = _sub.GlobalPosition;
                 _player.Position = new Vector3(-0.9f, 0.05f, -3f); EnterMonitors();
                 _feedFullscreen = true; _hud.ShowFeed(_rig.Feeds[_eyeCam].Viewport.GetTexture(), _rig.Feeds[_eyeCam].Name, 1f);
             }),
@@ -875,13 +876,14 @@ public partial class Main
     }
     private void CaptureMarkWhale() => CaptureSection("whale");
     private void CaptureMarkEye() => CaptureSection("eye");
+    private Vector3 _eyeBoatStart;
     private void LogEye()
     {
         var w = _creatures.Whale;
         if (w == null) { GD.Print("[capture] eye: no whale"); return; }
         Vector3 lens = LensWorld(_eyeCam);
         float d = Mathf.Min(w.EyeWorld(-1).DistanceTo(lens), w.EyeWorld(1).DistanceTo(lens));
-        GD.Print($"[capture] eye: phase {_eyePhase} active {_eyeActive} eye-to-lens {d:0.0} m speed {w.SpeedOverride:0.00} whale {_sub.GlobalTransform.AffineInverse() * w.GlobalPosition}");
+        GD.Print($"[capture] eye: phase {_eyePhase} active {_eyeActive} eye-to-lens {d:0.0} m speed {w.SpeedOverride:0.00} touching {_whaleTouching} boat moved {_sub.GlobalPosition.DistanceTo(_eyeBoatStart):0.0} m v {_sub.LinearVelocity} heading {_sub.Heading:0} angvel {_sub.AngularVelocity.Length():0.000} whale {_sub.GlobalTransform.AffineInverse() * w.GlobalPosition}");
     }
     private void CaptureMarkHydrophone() => CaptureSection("hydrophone");
     private void CaptureMarkListener() => CaptureSection("listener");

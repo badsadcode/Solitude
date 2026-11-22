@@ -20,6 +20,8 @@ public partial class Main
     private bool _eyeActive, _eyeDiver;
     private int _eyePhase, _eyeCam = -1;
     private float _eyeLinger, _eyeAge;
+    private Vector3 _eyeOutward, _eyeTravel;
+    private float _eyeLateral, _eyeRise;
 
     /// <summary>A hull camera's lens in the world, from the boat itself (the camera node lags a frame).</summary>
     private Vector3 LensWorld(int cam)
@@ -31,9 +33,98 @@ public partial class Main
 
     private const float EyeGap = 3.2f;   // how close the eye comes to the lens (m)
 
+    // ------------------------------------------------------------------ the whale is solid
+    // Tom: "puppy-sized brain, skyscraper-sized body: not aggressive, but it can bump into your boat
+    // and gently nudge it." Its body is seven spheres along the spine (model units, measured from
+    // the mesh: x across, y up, z along the body, radius); the boat is a capsule along its hull.
+    // The long pectoral fins reach ~5 units out and sweep down and back: they're what touches first.
+    private static readonly (float x, float y, float z, float r)[] WhaleBody =
+    {
+        (0f, 0.5f, 8f, 1.4f), (0f, 0.1f, 6f, 1.9f), (0f, 0f, 3.5f, 2.1f), (0f, 0.5f, 1f, 2.0f), (0f, 1f, -2f, 1.6f), (0f, 1f, -5f, 1.0f), (0f, 1.8f, -8f, 1.2f),
+        (2.6f, -0.8f, 3.6f, 0.7f), (3.8f, -1.9f, 2.6f, 0.6f), (4.9f, -2.9f, 1.6f, 0.5f),
+        (-2.6f, -0.8f, 3.6f, 0.7f), (-3.8f, -1.9f, 2.6f, 0.6f), (-4.9f, -2.9f, 1.6f, 0.5f),
+    };
+    private const float HullRadius = 3.1f;
+    private bool _whaleTouching;
+    private float _bumpCd;
+    private static bool _toldBump;
+
+    private void UpdateWhaleContact(float dt)
+    {
+        _bumpCd -= dt;
+        var w = _creatures.Whale;
+        if (w == null || _mode == Mode.Title) { _whaleTouching = false; return; }
+        var p = w.Profile;
+        float s = p.Length / p.ModelLength;
+        bool diving = _diver.Active;
+        Vector3 a = _sub.ToGlobal(new Vector3(0, 0, -13f)), b = _sub.ToGlobal(new Vector3(0, 0, 13f));
+        float deepest = 0f;
+        Vector3 push = Vector3.Zero;
+        foreach (var (x, y, z, r) in WhaleBody)
+        {
+            Vector3 c = w.ToGlobal(new Vector3(-x * s, y * s, -z * s));   // the model faces +Z; the node is turned 180°
+            if (diving)
+            {
+                Vector3 d = _diver.GlobalPosition - c;
+                float pen = r * s + 0.6f - d.Length();
+                if (pen > deepest) { deepest = pen; push = d.Normalized(); }
+            }
+            else if (_stations.DockedAt == null)
+            {
+                Vector3 ab = b - a;
+                float t = Mathf.Clamp((c - a).Dot(ab) / ab.LengthSquared(), 0f, 1f);
+                Vector3 d = (a + ab * t) - c;
+                float pen = r * s + HullRadius - d.Length();
+                if (pen > deepest) { deepest = pen; push = d.LengthSquared() > 1e-4f ? d.Normalized() : Vector3.Up; }
+            }
+        }
+        bool touching = deepest > 0f;
+        if (touching)
+        {
+            // Not a hit: a lean. Move out at a speed that grows with how deep it pressed in.
+            float want = Mathf.Min(0.15f + deepest * 0.3f, 0.3f);
+            // ...and it yields: during the eye encounter its line backs off from the hull, so the boat
+            // only sways while the whale makes room (otherwise it would follow the lens and push forever).
+            if (_eyeActive && !diving) _eyeLateral += Mathf.Min(deepest + 0.2f, 1.5f) * 1.5f * dt;
+            if (diving)
+            {
+                float vn = _diver.Velocity.Dot(push);
+                if (vn < want) _diver.Velocity += push * (want - vn) * Mathf.Clamp(6f * dt, 0f, 1f);
+            }
+            else
+            {
+                float vn = _sub.LinearVelocity.Dot(push);
+                if (vn < want) _sub.LinearVelocity += push * (want - vn) * Mathf.Clamp(2f * dt, 0f, 1f);
+            }
+        }
+        // After a bump the water settles the boat again (a rigid body would drift on for ages).
+        if (!touching && !diving && _bumpCd > 2f)
+        {
+            _sub.LinearVelocity *= 1f - Mathf.Clamp(0.9f * dt, 0f, 1f);
+            _sub.AngularVelocity *= 1f - Mathf.Clamp(1.5f * dt, 0f, 1f);
+        }
+        if (touching && !_whaleTouching && _bumpCd <= 0f)
+        {
+            _bumpCd = 6f;
+            GD.Print($"[whale] bump: pressed in {deepest:0.00} m, {(diving ? "diver" : "boat")}");
+            _audio.PlayImpact(0.55f);
+            _audio.PlayGroan(0.55f);
+            if (diving) _audio.PlayAt("knock", 0f, 0.6f);
+            else { PlaySpatial("knock", _sub.GlobalPosition); _player.AddShake(0.35f); }
+            if (!_toldBump)
+            {
+                _toldBump = true;
+                _hud.Message(diving ? "It nudges you aside like a fish nudging a pebble. It didn't mean anything by it."
+                                    : "Something the size of a building just leaned on the boat. Gently. It didn't mean anything by it.", 7f);
+            }
+        }
+        _whaleTouching = touching;
+    }
+
     private void UpdateEyeEncounter(float dt)
     {
         if (_mode == Mode.Title || _ended) return;
+        UpdateWhaleContact(dt);
         if (Input.IsActionJustPressed(GameInput.DebugEye)) { StartEyeEncounter(_diver.Active); return; }
         if (!_eyeActive)
         {
@@ -56,6 +147,10 @@ public partial class Main
         Vector3 eye = eL.DistanceTo(target) < eR.DistanceTo(target) ? eL : eR;
         float ahead = (target - eye).Dot(-w.GlobalBasis.Z);      // how far the eye still has to travel
         w.EyeTarget = eye.DistanceTo(target) < 70f ? target : null;
+
+        // Keep the line to wherever the lens is now (the boat drifts, or gets nudged by a fin).
+        if (_eyePhase < 2)
+            w.SetTransitTarget(target + _eyeOutward * _eyeLateral + Vector3.Up * _eyeRise + _eyeTravel * 500f);
 
         switch (_eyePhase)
         {
@@ -134,7 +229,9 @@ public partial class Main
         // Put the whale's centre where its eye will pass ~4.5 m from the lens.
         var p = CreatureProfile.Whale();
         float s = p.Length / p.ModelLength;
-        Vector3 centreLine = lens + outward * (p.EyeModel.X * s + EyeGap) + Vector3.Up * (-p.EyeModel.Y * s);
+        _eyeOutward = outward; _eyeTravel = travel;
+        _eyeLateral = p.EyeModel.X * s + EyeGap; _eyeRise = -p.EyeModel.Y * s;
+        Vector3 centreLine = lens + outward * _eyeLateral + Vector3.Up * _eyeRise;
         Vector3 start = centreLine - travel * 80f - travel * (p.EyeModel.Z * s);   // ~40 s from "motion" to the eye
         _creatures.SummonWhaleBetween(start, centreLine + travel * 500f);
         var w = _creatures.Whale;

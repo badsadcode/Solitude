@@ -192,6 +192,9 @@ public partial class Swimmer : Node3D, IHarpoonable
     /// <summary>Apex: leave for good after a while (the director despawns it out of sight).</summary>
     public void Leave() => Leaving = true;
 
+    /// <summary>Move a transit's destination without snapping the heading (it steers there at its own pace).</summary>
+    public void SetTransitTarget(Vector3 to) { if (_state == State.Transit) _transitTo = to; }
+
     /// <summary>Scripted flyby (title screen): glide toward `to`, then flag Leaving once there.</summary>
     public void Transit(Vector3 to)
     {
