@@ -36,7 +36,7 @@ public partial class PlayerController : CharacterBody3D
     private const float WalkSpeed = 2.6f, SprintSpeed = 4.2f, Accel = 10f, Gravity = 9.8f, EyeHeight = 1.62f;
 
     private Node3D _tilt, _yaw, _pitch;
-    private float _bob, _stepDist, _shake;
+    private float _bob, _stepDist, _shake, _time, _bobWeight, _stepOffset;
     private Vector3 _camBase;
 
     public override void _Ready()
@@ -132,7 +132,8 @@ public partial class PlayerController : CharacterBody3D
         }
         v.X = hv.X; v.Z = hv.Z;
         Velocity = v;
-        Stepper.TryStepUp(this, dt, StepHeight);
+        float rise = Stepper.TryStepUp(this, dt, StepHeight);
+        _stepOffset -= rise; // body pops up the step; the camera eases after it
         MoveAndSlide();
 
         // Footsteps by distance travelled.
@@ -163,33 +164,48 @@ public partial class PlayerController : CharacterBody3D
         if (hit.Count > 0 && hit["collider"].AsGodotObject() is Interactable it) Focused = it;
     }
 
+    /// <summary>
+    /// Camera feel, tuned after Tom found walking "way too jumpy":
+    ///   - shake and vibration are smooth noise (sums of slow sines), never per-frame random jitter;
+    ///   - the boat's acceleration only shakes you on real jolts (well above the physics noise),
+    ///     and the build-up is per second, not per frame;
+    ///   - head bob is subtle (~1.2 cm), and eases in/out with walking speed;
+    ///   - stepping up a stair lifts the body instantly but the eyes follow over ~0.15 s.
+    /// </summary>
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        if (Sub != null && InStation)
+        _time += dt;
+
+        if (Sub != null && !InStation)
         {
-            _tilt.Rotation = Vector3.Zero;
-            _shake = Mathf.MoveToward(_shake, 0f, dt * 1.6f);
-            float s0 = _shake * _shake * 0.08f;
-            var r0 = new Vector3((float)GD.RandRange(-1.0, 1.0), (float)GD.RandRange(-1.0, 1.0), 0) * s0;
-            float b0 = Mathf.Sin(_bob * Mathf.Pi) * 0.035f;
-            Camera.Position = _camBase + r0 + new Vector3(Mathf.Cos(_bob * Mathf.Pi * 0.5f) * 0.02f, b0, 0);
-        }
-        else if (Sub != null)
-        {
-            // Show only part of the real attitude; full 1:1 is nauseating.
+            // Show only part of the real attitude; full 1:1 is nauseating. Smoothed, so physics
+            // micro-wobble never reaches the eyes.
             float pitch = Mathf.DegToRad(Sub.PitchDeg) * 0.55f;
             float roll = Mathf.DegToRad(Sub.RollDeg) * 0.7f;
-            _tilt.Rotation = new Vector3(-pitch, 0, -roll);
-
-            // Engine vibration and surge from acceleration.
-            float vib = Mathf.Abs(Sub.EngineOutput) * 0.004f;
-            _shake += Mathf.Clamp(Sub.LocalAccel.Length() - 0.4f, 0f, 3f) * 0.02f;
-            _shake = Mathf.MoveToward(_shake, 0f, dt * 1.6f);
-            float s = _shake * _shake * 0.08f + vib;
-            var rng = new Vector3((float)GD.RandRange(-1.0, 1.0), (float)GD.RandRange(-1.0, 1.0), 0) * s;
-            float bob = Mathf.Sin(_bob * Mathf.Pi) * 0.035f;
-            Camera.Position = _camBase + rng + new Vector3(Mathf.Cos(_bob * Mathf.Pi * 0.5f) * 0.02f, bob, 0);
+            _tilt.Rotation = _tilt.Rotation.Lerp(new Vector3(-pitch, 0, -roll), Mathf.Clamp(4f * dt, 0f, 1f));
+            float jolt = Mathf.Clamp(Sub.LocalAccel.Length() - 1.5f, 0f, 4f);
+            _shake = Mathf.Min(_shake + jolt * 0.25f * dt, 1.2f);
         }
+        else _tilt.Rotation = _tilt.Rotation.Lerp(Vector3.Zero, Mathf.Clamp(4f * dt, 0f, 1f));
+        _shake = Mathf.MoveToward(_shake, 0f, dt * 1.2f);
+
+        // Smooth shake: two slow noise-like sines per axis instead of a new random value each frame.
+        float amp = _shake * _shake * 0.05f;
+        float vib = Sub != null && !InStation ? Mathf.Abs(Sub.EngineOutput) * 0.0012f : 0f;
+        Vector3 shake = new Vector3(
+            Mathf.Sin(_time * 23f) * 0.6f + Mathf.Sin(_time * 37f + 1.3f) * 0.4f,
+            Mathf.Sin(_time * 29f + 0.7f) * 0.6f + Mathf.Sin(_time * 41f + 2.1f) * 0.4f, 0) * amp
+            + new Vector3(Mathf.Sin(_time * 61f), Mathf.Sin(_time * 53f + 0.4f), 0) * vib;
+
+        // Gentle head bob that fades with speed (no bob standing still, no snap when you stop).
+        float speed01 = Mathf.Clamp(new Vector2(Velocity.X, Velocity.Z).Length() / SprintSpeed, 0f, 1f);
+        _bobWeight = Mathf.Lerp(_bobWeight, IsOnFloor() ? speed01 : 0f, Mathf.Clamp(6f * dt, 0f, 1f));
+        Vector3 bob = new Vector3(Mathf.Cos(_bob * Mathf.Pi * 0.5f) * 0.006f, Mathf.Sin(_bob * Mathf.Pi) * 0.012f, 0) * _bobWeight;
+
+        // Stair steps: the eyes catch up with the body.
+        _stepOffset = Mathf.Lerp(_stepOffset, 0f, Mathf.Clamp(14f * dt, 0f, 1f));
+
+        Camera.Position = _camBase + shake + bob + new Vector3(0, _stepOffset, 0);
     }
 }
