@@ -168,11 +168,43 @@ public partial class Hud : CanvasLayer
     /// <summary>Every message shown (the ship's log picks out the ones worth keeping).</summary>
     public event System.Action<string> Messaged;
 
-    public void Message(string text, float seconds = 5f)
+    // Messages stay up long enough to read (Tom: "sometimes the text doesn't show up long enough"):
+    // at least a reading time based on length, and a new message waits its turn instead of wiping one
+    // you're halfway through. Alarms ("!!") and subtitles for voices go straight on screen.
+    private readonly System.Collections.Generic.List<(string text, float seconds)> _messageQueue = new();
+    private float _messageShown, _messageNeed;
+
+    /// <summary>Roughly how long it takes to read: a beat to notice it, then ~190 words a minute.</summary>
+    public static float ReadTime(string text) => 1.6f + text.Split(' ', System.StringSplitOptions.RemoveEmptyEntries).Length * 0.32f;
+
+    public void Message(string text, float seconds = 5f, bool immediate = false)
     {
         Messaged?.Invoke(text);
+        if (string.IsNullOrEmpty(text)) return;
+        float dur = Mathf.Max(seconds, ReadTime(text));
+        bool showing = _messageTime > 1f;
+        if (showing && _message.Text == text) { _messageTime = Mathf.Max(_messageTime, dur); return; }   // the same thing again: just keep it up
+        bool urgent = immediate || text.StartsWith("!!") || text.StartsWith("[debug]");
+        if (showing && !urgent && _messageShown < _messageNeed * 0.8f)
+        {
+            foreach (var q in _messageQueue) if (q.text == text) return;
+            if (_messageQueue.Count >= 4) _messageQueue.RemoveAt(0);
+            _messageQueue.Add((text, dur));
+            return;
+        }
+        // An alarm cutting in: the half-read message goes back to the front of the line.
+        if (showing && urgent && _messageShown < _messageNeed * 0.8f && !_message.Text.StartsWith("[debug]"))
+            _messageQueue.Insert(0, (_message.Text, Mathf.Max(_messageTime, ReadTime(_message.Text))));
+        ShowMessage(text, dur);
+    }
+
+    private void ShowMessage(string text, float dur)
+    {
         _message.Text = text;
-        _messageTime = seconds;
+        // With a backlog, each waits only as long as it takes to read.
+        _messageTime = _messageQueue.Count > 1 ? Mathf.Min(dur, ReadTime(text)) : dur;
+        _messageNeed = ReadTime(text);
+        _messageShown = 0f;
         _message.Modulate = Colors.White;
     }
 
@@ -548,7 +580,14 @@ public partial class Hud : CanvasLayer
         if (_messageTime > 0f)
         {
             _messageTime -= dt;
+            _messageShown += dt;
             if (_messageTime < 1f) _message.Modulate = new Color(1, 1, 1, Mathf.Max(0f, _messageTime));
+        }
+        if (_messageTime <= 0.4f && _messageQueue.Count > 0)
+        {
+            var (text, dur) = _messageQueue[0];
+            _messageQueue.RemoveAt(0);
+            ShowMessage(text, dur);
         }
         _warnBlink += dt;
         _warning.Visible = Mathf.PosMod(_warnBlink, 0.9f) < 0.6f;

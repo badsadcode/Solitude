@@ -48,7 +48,7 @@ public partial class Main
         _voice.Stream = stream;
         _voice.Play();
         _voiceGap = gap;
-        if (subtitle != null) _hud.Message(subtitle, seconds + 1f);
+        if (subtitle != null) _hud.Message(subtitle, seconds + 1f, immediate: true);   // in step with the voice
         _audio.Duck(-5f, 0.4f);
         GetTree().CreateTimer(((AudioStreamWav)stream).GetLength() + 0.2).Timeout += () => { if (!VoiceBusy) _audio.Duck(0f, 1.2f); };
     }
