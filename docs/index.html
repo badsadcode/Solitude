@@ -78,6 +78,8 @@
   .crt figcaption { display: flex; justify-content: space-between; font-family: "VT323"; font-size: 17px; color: var(--phosphor-dim); letter-spacing: 2px; padding-top: 8px; }
   .crt figcaption .rec::before { content: "● "; color: var(--blood); animation: blink 1.2s steps(2) infinite; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .crt.radio .screen { padding: 22px 16px; display: flex; align-items: center; justify-content: center; }
+  .crt.radio audio { width: 100%; filter: sepia(1) hue-rotate(60deg) saturate(0.6) brightness(0.8); }
   .pair .crt { margin: 0; }
 
   /* Whispers: barely there until you hover */
@@ -518,6 +520,21 @@
     <p>The ship's log keeps a quiet record of it all. The page that shows the boat's condition doesn't use numbers for this, only words: sound, worn, failing. Tom's old design notes describe the game as surviving a world that doesn't care whether you survive, inside a machine you learn to care for. The world was already doing its part. Now the machine is doing its part too.</p>
     <p>You'll learn it the way you learn a house you've lived in for years: which creak is the cold and which creak is a problem, and which sound means get up right now.</p>
     <p class="whisper">I listened to the boat for a long time while I was testing, alone in engineering with the lights low. Everything was green. There was still a knock, very faint, once every few seconds. It isn't coming from the drive.</p>
+  </article>
+
+  <article class="entry" data-depth="568">
+    <div class="meta"><span>LOG 029</span><span class="depth">568 m</span><span>COMMS · VOICE LOOP · FAINT</span></div>
+    <h2>Someone is talking</h2>
+    <p>For twenty-eight logs the ocean in Solitude has had no voices in it. Engines, pings, the whale singing, the hull groaning, something knocking where nothing should knock, but never a person. That was on purpose. Nothing makes you feel alone like a world where nobody talks.</p>
+    <p>So when we gave the game voices, there was one rule: no narrator, no friendly guide in your ear, and you never speak. A voice only comes in the way it would really come in down here: through a machine. A radio on a wreck, a recorder pulled out of a capsule. Someone else's voice, from somewhere else, from some time ago.</p>
+    <p>Tom has his own voice studio. He built it, of course, because that's what happens at Bad Ideas Works when you need a thing. It runs on his own computer: no cloud, no accounts. He handed it to me and said I could use it myself. So I wrote the lines, picked the voices, and let it run for an evening. Sixty-eight lines. Supply sub crews, people in escape capsules, a couple of very patient survey drones.</p>
+    <p>A clean recording would sound wrong down here, though. So every line goes through a filter first. The sound is squeezed down to what a cheap speaker can manage. It crackles and it fades as the signal comes and goes. There are short dropouts where you lose a word, a hum from the power supply, and a squelch at the end when the loop starts over. It should sound like a forty-year-old radio on the seabed, still doing its one job.</p>
+    <figure class="crt radio"><div class="screen"><audio controls preload="none" src="devlog/audio/haldane_loop.wav"></audio></div><figcaption><span>COMMS · SUPPLY SUB HALDANE · LOOP</span><span class="rec">REC</span></figcaption></figure>
+    <p>That's the Haldane. If you're close to her pinger, her voice comes up on the comms set, and then it comes up again. The world gets a little quieter underneath it, the way you go still when someone's speaking. The words appear on screen too: in the middle of the bridge, so nothing covers them, and on a dark strip so you can read them over anything.</p>
+    <figure class="crt"><div class="screen"><img src="devlog/img/voice_helm.jpg" alt="The bridge in red light with a two-line subtitle at the top of the screen, a transcription of a radio voice"></div><figcaption><span>BRIDGE · COMMS</span><span class="rec">REC</span></figcaption></figure>
+    <p>Pull a recorder and you hear its last entries in the voice of the person who made them. You don't have to listen. They go in your journal either way. But you will listen.</p>
+    <p>And a couple of the voices out there are not from a wreck at all. They know things they shouldn't. I'm not going to say what. Tom asked me not to, and to be honest the first time I heard one I didn't want to talk about it either.</p>
+    <p class="whisper">The voices are all invented, made up from written descriptions. None of them belongs to a real person. I checked that very carefully. I'm less sure about one of them now.</p>
   </article>
 
   <article class="entry corrupt" data-depth="9999">
