@@ -14,6 +14,7 @@ The counts come from the 20 pod stations (how often each prop appears). The size
 | Fangwyrm | `assets/Abyssal_Fangwyrm.glb` | the deep-water serpent |
 | Crystal Ray | `assets/Abyssal_Crystal_Ray.glb` | the gentle, curious rays |
 | Dive locker | `assets/sub_utilities/locker.glb` | the suit locker in engineering |
+| Station lockers | `assets/props/locker_0.glb`, `locker_1.glb` (+ `_broken`) | crew and dive-gear lockers in the stations; you can hide in them |
 | Abyssal Crawler | `assets/Abyssal_Crawler.glb` | the station monster (purple) |
 | Abyssal Crawler, spiked | `assets/Abyssal_Crawler_Spiked.glb` | variant: tougher, glows at half strength |
 | Whale of the Abyss | `assets/Whale_of_the_Abyss.glb` | the gentle giant (shown at 70 m) |
@@ -28,8 +29,8 @@ Size is width × depth × height in metres.
 
 ### Tier 1: you'll see these constantly
 
-- [ ] **locker**: 0.5 × 0.5 × 1.9. Floor, against a wall. Appears 45×. Two or three variants; `_broken` with the door hanging open.
-- [ ] **console**: 1.2 × 0.6 × 1.1. Floor, against a wall. Appears 25×. Paint the screen with vertex alpha below 1 so it glows; `_broken` gets a dark, cracked screen.
+- [x] **locker**: done (2026-11-22): crew locker `locker_0` and dive-gear locker `locker_1`, each with `_broken`. A third variant is welcome any time.
+- [ ] **console**: 1.2 × 0.6 × 1.1. Floor, against a wall. Appears 25×. Give the screen its own glowing material (see **Glowing screens and lamps** below); `_broken` gets a dark, cracked screen with no glow.
 - [ ] **dive_suit**: 0.7 × 0.5 × 2.0. Floor (hangs on a rack). Appears 19×. Empty suit, visor dark. The creepiest prop in the game.
 - [ ] **light_fixture_dead**: 0.6 × 0.3 × 0.1. Ceiling. Appears 102×. A broken tube hanging on one wire.
 - [ ] **sign**: 0.6 × 0.05 × 0.3. Wall. Appears 295×. Just the plate; the game writes the text on it.
@@ -97,6 +98,13 @@ These are "blockout" furniture: the level generator already builds them as rough
 
 **PS1 look**
 - 64–128 px textures for props (256–512 is fine for big creatures). Low poly: about 50–500 triangles for props.
+
+**Glowing screens and lamps on props** (the easy way: no textures, no painting)
+- In Edit Mode, select the screen's faces. In the Material tab press **+**, then **New**, name it `Screen`, and press **Assign**.
+- In that material: Base Color dark (a deep green or amber), **Emission Color** the screen's colour, **Emission Strength** about 1–2.
+- Blender exports it as glTF emission and the game shows it glowing. A lamp or LED works the same way: its own little material.
+- For `_broken`: the same faces get a plain dark material with no emission (add cracks in the colour texture if you like).
+- (Vertex colours/alpha do nothing on your models: that's only how Sage's placeholder props mark their glow.)
 
 **Glow (emission)**
 - Wire the glow image into **Principled BSDF → Emission Color**; Blender only exports it that way. Use its own image, not the colour texture.
