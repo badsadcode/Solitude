@@ -273,6 +273,21 @@ public partial class Main
             (t += 10.0f, () => Shot("10_chase_turning")),
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
+            // --- Tom's quick tests: turn rate, the locker model
+            (t += 0.1f, CaptureMarkTest),
+            (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
+            (t += 1.2f, () => { Shot("22a_locker"); GD.Print($"[capture] focused: {_player.Focused?.Prompt ?? "nothing"}"); }),
+            (t += 0.1f, () => { _player.Focused?.Use(); GD.Print($"[capture] suit on: {_suitOn}"); }),
+            (t += 0.1f, () =>
+            {
+                EnterHelm();
+                _sub.TelegraphIndex = 5; _sub.ApplyTelegraph(); _sub.Rudder = 0f;
+                _captureHeading0 = -1f;
+            }),
+            (t += 14.0f, () => { _sub.Rudder = 1f; _captureHeading0 = _sub.Heading; GD.Print($"[capture] full ahead {_sub.ForwardSpeed:0.0} m/s, full right rudder"); }),
+            (t += 10.0f, () => GD.Print($"[capture] turned {Mathf.PosMod(_sub.Heading - _captureHeading0, 360f):0}° in 10 s, yaw rate {Mathf.Abs(_sub.YawRate):0.0}°/s, roll {_sub.RollDeg:0.0}°")),
+            (t += 0.1f, () => { _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LinearVelocity = Vector3.Zero; _sub.Rudder = 1f; _captureHeading0 = _sub.Heading; }),
+            (t += 10.0f, () => GD.Print($"[capture] at a stop (bow thrusters): {Mathf.PosMod(_sub.Heading - _captureHeading0, 360f):0}° in 10 s")),
             // --- Milestone 6: biomes
             (t += 0.1f, CaptureMarkBiomes),
             (t += 0.1f, () => CaptureGoToBiome(Solitude.World.Biome.Crystal)),
@@ -412,6 +427,8 @@ public partial class Main
 
     private void CaptureMarkCreatures() => GD.Print("[capture] --- creatures section ---");
     private void CaptureMarkBiomes() => GD.Print("[capture] --- biomes section ---");
+    private void CaptureMarkTest() => GD.Print("[capture] --- test section ---");
+    private float _captureHeading0;
     private void CaptureMarkStory() => GD.Print("[capture] --- story section ---");
 
     /// <summary>Find the nearest spot of a biome (spiral search, 40 m steps) and park the boat there.</summary>
@@ -445,7 +462,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

@@ -102,6 +102,28 @@ public partial class SubInterior : Node3D
 
     // ------------------------------------------------------------------ helpers
 
+    /// <summary>
+    /// Place one of Tom's prop models in the interior, restyled with the PS1 world shader (its own
+    /// texture, vertex snapping, nearest filtering) so it sits with everything else.
+    /// </summary>
+    private Node3D AddProp(string path, Vector3 pos, float yaw)
+    {
+        var node = GD.Load<PackedScene>(path).Instantiate<Node3D>();
+        node.Position = pos;
+        node.Rotation = new Vector3(0, yaw, 0);
+        AddChild(node);
+        foreach (var mi in FindMeshes(node))
+            if (mi.Mesh?.SurfaceGetMaterial(0) is BaseMaterial3D src && src.AlbedoTexture != null)
+                mi.MaterialOverride = Art.World(src.AlbedoTexture, Colors.White, roughness: 0.6f, metallic: 0.3f, jitter: 260f);
+        return node;
+    }
+
+    private static IEnumerable<MeshInstance3D> FindMeshes(Node n)
+    {
+        if (n is MeshInstance3D mi) yield return mi;
+        foreach (var c in n.GetChildren()) foreach (var r in FindMeshes(c)) yield return r;
+    }
+
     private void Solid(MeshBuilder mb, Vector3 c, Vector3 size, Color col)
     {
         mb.Box(c, size, col);
@@ -461,13 +483,11 @@ public partial class SubInterior : Node3D
         Interactable.Create(this, new Vector3(-0.05f, 1.55f, Stern - 0.3f), new Vector3(1.0f, 1.0f, 0.5f), "Engineering panel", () => OnPanel?.Invoke("engineering"));
         EngineeringView = new Transform3D(new Basis(Vector3.Up, Mathf.Pi), new Vector3(-0.05f, 1.6f, Stern - 1.3f));
 
-        // Dive locker with an uncertified suit (milestone 5)
-        _dark.Box(new Vector3(-2.15f, 1.2f, 11.6f), new Vector3(0.6f, 2.4f, 1.4f), Grey.Shade(0.6f));
-        _wall.Rock(new Vector3(-2.05f, 1.75f, 11.6f), new Vector3(0.2f, 0.22f, 0.2f), new Color(0.75f, 0.6f, 0.25f), 3, 0.05f);
-        _wall.Box(new Vector3(-2.05f, 1.15f, 11.6f), new Vector3(0.3f, 0.75f, 0.45f), new Color(0.65f, 0.5f, 0.2f));
-        _wall.Box(new Vector3(-2.05f, 0.5f, 11.45f), new Vector3(0.14f, 0.6f, 0.14f), new Color(0.6f, 0.45f, 0.18f));
-        _wall.Box(new Vector3(-2.05f, 0.5f, 11.75f), new Vector3(0.14f, 0.6f, 0.14f), new Color(0.6f, 0.45f, 0.18f));
-        Interactable.Create(this, new Vector3(-2.0f, 1.2f, 11.6f), new Vector3(0.6f, 2.2f, 1.2f), "Put on / take off the hard suit",
+        // Dive locker: Tom's model (assets/sub_utilities/locker.glb). Its door faces the model's -X;
+        // turned 180° so it faces into the room, back against the port hull wall.
+        AddProp("res://assets/sub_utilities/locker.glb", new Vector3(-2.1f, 0f, 11.6f), Mathf.Pi);
+        _solid.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(0.6f, 2.1f, 1.18f) }, Position = new Vector3(-2.18f, 1.05f, 11.6f) });
+        Interactable.Create(this, new Vector3(-1.7f, 1.2f, 11.6f), new Vector3(0.4f, 2.0f, 1.1f), "Open locker: put on / take off the hard suit",
             () => OnSuit?.Invoke());
         Label("DIVE LOCKER", new Vector3(-HalfW + 0.02f, 2.3f, 10.3f), Mathf.Pi / 2f, 36);
 

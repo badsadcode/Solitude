@@ -29,7 +29,8 @@ public partial class Submarine : RigidBody3D
     private const float DragFwdQ = 7f, DragFwdL = 25f;
     private const float DragSideQ = 90f, DragSideL = 150f;
     private const float DragVertQ = 80f, DragVertL = 150f;
-    private const float RudderK = 900f, BowThruster = 900f;
+    // Turning tuned faster after Tom's test (2026-11-22): ~40% higher turn rate, quicker to respond.
+    private const float RudderK = 1250f, BowThruster = 1350f;
     private const float PlanesK = 900f;
     private const float YawDamp = 30000f, YawDampQ = 60000f;
     private const float PitchRestore = 9000f, PitchDamp = 30000f;
@@ -97,7 +98,7 @@ public partial class Submarine : RigidBody3D
         AngularDampMode = DampMode.Replace;
         LinearDamp = 0f;
         AngularDamp = 0f;
-        Inertia = new Vector3(60000f, 70000f, 6000f);
+        Inertia = new Vector3(60000f, 55000f, 6000f); // yaw inertia 70k → 55k: answers the rudder sooner
         CollisionLayer = Layers.Sub;
         CollisionMask = Layers.World;
 
