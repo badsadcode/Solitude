@@ -37,6 +37,8 @@ public partial class SonarSystem : Node
     public float Range => Ranges[RangeIndex];
     /// <summary>Long-range transducer upgrade unlocks the 800 m setting.</summary>
     public bool LongRange;
+    /// <summary>0..1: silt in the water scatters the ping (shorter reach). Set by the director.</summary>
+    public float Clutter;
 
     public const float WaveSpeed = 300f;
     public const float Recharge = 4f;
@@ -87,7 +89,7 @@ public partial class SonarSystem : Node
         if (RechargeLeft > 0f || Sub == null) return false;
         PingStart = Now;
         PingOrigin = Sub.GlobalPosition;
-        PingRange = Range;
+        PingRange = Range * (1f - 0.55f * Clutter);
         PingCount++;
         var gen = Gen;
         var origin = PingOrigin;
@@ -95,6 +97,19 @@ public partial class SonarSystem : Node
         double start = PingStart;
         int seed = _rng.Next();
         _task = Task.Run(() => Sample(gen, origin, range, start, seed));
+        // Silt scatters the ping into false returns: faint blotches that are gone on the next ping.
+        if (Clutter > 0.05f)
+            for (int i = 0; i < (int)(30 * Clutter); i++)
+            {
+                float a = (float)_rng.NextDouble() * Mathf.Tau, d = 20f + (float)_rng.NextDouble() * range * 0.8f;
+                Contacts.Add(new SonarContact
+                {
+                    World = new Vector2(origin.X + Mathf.Cos(a) * d, origin.Z + Mathf.Sin(a) * d),
+                    RevealAt = start + d / WaveSpeed,
+                    Strength = 0.35f + 0.35f * (float)_rng.NextDouble(),
+                    Ghost = true,
+                });
+            }
         // Living things echo too: a tight, bright cluster the map never records.
         if (Bodies != null)
             foreach (var b in Bodies())

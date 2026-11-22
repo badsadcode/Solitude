@@ -730,6 +730,53 @@ public partial class Main
             (t += 0.4f, () => Shot("42g_journal_goals")),
             (t += 0.1f, () => { CloseTerminal(); GD.Print($"[capture] after journal: mode {_mode}"); }),
             (t += 0.5f, () => { }),
+            // --- Currents and silt storms
+            (t += 0.1f, CaptureMarkSilt),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                var sp = _sub.GlobalPosition;
+                _terrain.GenerateImmediate(sp, 2);
+                _sub.GlobalPosition = new Vector3(sp.X, _gen.Height(sp.X, sp.Z) + 30f, sp.Z);
+                _sub.LinearVelocity = Vector3.Zero; _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = true;
+                EnterHelm(); _view = HelmView.Chase; ApplyHelmView();
+                _siltMark = _sub.GlobalPosition;
+                LogSilt("still water start");
+            }),
+            (t += 12f, () => { LogSilt("after 12 s stopped"); _siltMark = _sub.GlobalPosition; Shot("43a_current_chase"); }),
+            (t += 0.1f, () =>
+            {
+                // Find the strongest current within 3 km and park the boat in it.
+                Vector3 best = _sub.GlobalPosition; float bs = 0f;
+                for (int x = -15; x <= 15; x++)
+                    for (int z = -15; z <= 15; z++)
+                    {
+                        Vector3 q = _sub.GlobalPosition + new Vector3(x * 100f, 0, z * 100f);
+                        float sp = _currents.At(q, _shipLog.Clock).Length();
+                        if (sp > bs) { bs = sp; best = q; }
+                    }
+                GD.Print($"[capture] strongest current within 1.5 km: {bs:0.00} m/s at {best}");
+                _terrain.GenerateImmediate(best, 2);
+                _sub.GlobalPosition = new Vector3(best.X, _gen.Height(best.X, best.Z) + 30f, best.Z);
+                _sub.LinearVelocity = Vector3.Zero;
+                _siltMark = _sub.GlobalPosition;
+            }),
+            (t += 15f, () => { LogSilt("in the river, 15 s stopped"); _siltMark = _sub.GlobalPosition; }),
+            (t += 0.1f, () => { StartSiltWarning(); LogSilt("warning"); }),
+            (t += 20f, () => { Shot("43b_silt_warning"); LogSilt("warning 20 s"); }),
+            (t += 30f, () => { Shot("43c_silt_storm_chase"); LogSilt("storm 15 s"); _siltMark = _sub.GlobalPosition; }),
+            (t += 0.1f, () => { _view = HelmView.BowCamera; ApplyHelmView(); }),
+            (t += 1.5f, () => Shot("43d_silt_bowcam")),
+            (t += 0.1f, () => { _view = HelmView.Bridge; ApplyHelmView(); }),
+            (t += 1.5f, () => { Shot("43e_silt_bridge"); _hud.Message("(capture) helm:" + CurrentHelmText()); }),
+            (t += 0.1f, () => { EnterWalking(); _player.Position = new Vector3(-0.9f, 0.05f, -3f); EnterMonitors(); SelectFeed(2); _feedFullscreen = true; var f = _rig.Feeds[2]; _hud.ShowFeed(f.Viewport.GetTexture(), f.Name, f.Signal); }),
+            (t += 2f, () => Shot("43f_silt_cam3")),
+            (t += 0.1f, () => { _feedFullscreen = false; _hud.ShowFeed(null, null, 1f); EnterWalking(); EnterSonar(); _sonar.RangeIndex = 1; TryPing(); }),
+            (t += 2.5f, () => { _feedFullscreen = true; _hud.ShowFeed(_sonarScope.GetTexture(), "SONAR  -  ACTIVE", 1f); }),
+            (t += 0.5f, () => { Shot("43g_silt_sonar"); LogSilt("storm, after ping"); GD.Print($"[capture] hatch interlock in storm: {(TryOpenHatchForCapture() ? "OPEN (wrong)" : "refused")}"); }),
+            (t += 0.1f, () => { _feedFullscreen = false; _hud.ShowFeed(null, null, 1f); EnterWalking(); _siltPhase = SiltPhase.Clearing; _siltPhaseT = 0f; }),
+            (t += 40f, () => LogSilt("clearing 40 s")),
+            (t += 10f, () => { _siltPhase = SiltPhase.None; LogSilt("done"); }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -1002,6 +1049,20 @@ public partial class Main
     private void CaptureMarkProx() => CaptureSection("prox");
     private void CaptureMarkGloam() => CaptureSection("gloam");
     private void CaptureMarkTerminal() => CaptureSection("terminal");
+    private void CaptureMarkSilt() => CaptureSection("silt");
+    private Vector3 _siltMark;
+    private void LogSilt(string what)
+    {
+        Vector3 moved = _sub.GlobalPosition - _siltMark; moved.Y = 0;
+        GD.Print($"[capture] silt {what}: phase {_siltPhase} silt {_silt:0.00} water {_sub.Water.Length():0.00} m/s set {Solitude.Systems.Currents.SetDegrees(_sub.Water):0} ground {_sub.LinearVelocity.Length():0.00} m/s moved {moved.Length():0.0} m, sonar range {_sonar.PingRange:0}, gloam sees {GloamBrightness():0.00}");
+    }
+    private bool TryOpenHatchForCapture()
+    {
+        bool was = _suitOn; _suitOn = true;
+        bool ok = !SiltStorm && (_sub.LinearVelocity - _sub.Water).Length() <= 0.6f;
+        _suitOn = was;
+        return ok;
+    }
     private void LogGloam(string what)
     {
         GD.Print(_gloam == null ? $"[capture] gloam {what}: none" :
@@ -1049,7 +1110,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

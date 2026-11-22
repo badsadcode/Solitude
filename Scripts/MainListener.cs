@@ -55,6 +55,9 @@ public partial class Main
         // The whale's song fills the water: while it's near, the Listener loses track of one small boat.
         if (_creatures.Whale is { } whale && whale.DistanceToFocus < 500f)
             _listener.Attention = Mathf.Max(StoryUnease * 25f, _listener.Attention - 1.5f * dt);
+        // ...and so does a silt storm's roar.
+        if (_silt > 0.5f)
+            _listener.Attention = Mathf.Max(StoryUnease * 25f, _listener.Attention - 1.0f * _silt * dt);
 
         // Everything that already scales with "unease" (distant calls, hull knocks) follows attention too.
         _audio.Unease = Mathf.Max(StoryUnease, _listener.Attention / 100f * 0.85f);

@@ -97,8 +97,9 @@ public partial class Main
     /// <summary>What the Gloam can see of you: 1 = floods / lamp on, 0 = dark.</summary>
     private float GloamBrightness()
     {
-        if (_diver.Active) return _diver.Lamp.Visible ? 0.6f : 0f;
-        return _sub.LightsOn ? 1f : 0f;
+        float murk = 1f - 0.85f * _silt;   // light doesn't carry far in silt
+        if (_diver.Active) return _diver.Lamp.Visible ? 0.6f * murk : 0f;
+        return _sub.LightsOn ? murk : 0f;
     }
 
     private void OnGloamNoticed()

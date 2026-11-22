@@ -51,6 +51,7 @@ public static class GameInput
     public const string DebugEye = "debug_eye";
     public const string DebugGloam = "debug_gloam";
     public const string Journal = "journal";
+    public const string DebugSilt = "debug_silt";
 
     // Monitor station
     public const string Fullscreen = "feed_fullscreen";
@@ -89,6 +90,7 @@ public static class GameInput
         Bind(DebugEye, Godot.Key.F3);
         Bind(DebugGloam, Godot.Key.F2);
         Bind(Journal, Godot.Key.J);
+        Bind(DebugSilt, Godot.Key.F1);
         Bind(Inventory, Godot.Key.I);
         Bind(IntakeToggle, Godot.Key.G);
         Bind(Dock, Godot.Key.K);

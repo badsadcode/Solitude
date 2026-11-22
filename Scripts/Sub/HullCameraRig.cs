@@ -40,6 +40,8 @@ public partial class HullCameraRig : Node
     /// <summary>When false (e.g. player looking through a fullscreen external camera) the monitor feeds stop rendering.</summary>
     public bool MonitorsActive = true;
     public bool BridgeActive = true;
+    /// <summary>0..1 murk in the water (silt): every feed's picture degrades with it.</summary>
+    public float Murk;
 
     private static readonly string[] Names = { "CAM 1  BOW", "CAM 2  PORT", "CAM 3  STBD", "CAM 4  KEEL", "CAM 5  STERN", "CAM 6  MAST" };
     private int _rr;
@@ -169,6 +171,7 @@ public partial class HullCameraRig : Node
                 f.DipTimer = 4f + (float)_rng.NextDouble() * 18f;
                 bool dip = _rng.NextDouble() < 0.18 + Sub.Stress * 0.3;
                 f.Signal = dip ? 0.2f + (float)_rng.NextDouble() * 0.4f : 0.85f + (float)_rng.NextDouble() * 0.15f;
+                f.Signal *= 1f - 0.7f * Murk;
             }
         }
         Bridge.Camera.GlobalTransform = st * new Transform3D(LookBasis(Bridge.MountDir), Bridge.MountPos);

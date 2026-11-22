@@ -37,6 +37,7 @@ public partial class AudioDirector : Node
     public volatile float Exertion;   // 0..1, breathing rate
     public volatile float Heartbeat;  // 0..1, panic
     public volatile float Unease;     // 0..1, story progress: the distant calls come more often
+    public volatile float Silt;       // 0..1, a silt storm outside: a roar, and grit ticking on the hull
     public volatile float Spray;      // 0..1, open hull breaches: water forcing in
     // Hydrophone headphones: when on, the boat is muffled and the beam's sound is synthesised.
     public volatile bool Hydro;
@@ -64,6 +65,8 @@ public partial class AudioDirector : Node
     private OnePole _muffleL = new(900f, Rate), _muffleR = new(900f, Rate), _breathLp = new(1400f, Rate), _exhaleLp = new(500f, Rate);
     private OnePole _servoLp = new(900f, Rate), _intakeLp = new(350f, Rate);
     private OnePole _sprayLp = new(2500f, Rate), _sprayLowLp = new(300f, Rate);
+    private OnePole _siltLp = new(160f, Rate), _siltLp2 = new(900f, Rate);
+    private readonly BandPass _gritBp = new(3400f, 5f, Rate);
     private float _creakTimer = 6f, _groanTimer = 25f, _callTimer = 40f;
     private float _master;
 
@@ -252,6 +255,19 @@ public partial class AudioDirector : Node
                 float hissS = (w - _sprayLp.Process(w)) * 0.22f;
                 float roar = _sprayLowLp.Process(w) * 0.5f;
                 intake += (hissS + roar) * spr * (0.85f + 0.15f * MathF.Sin(_t * 7.3f));
+            }
+
+            // Silt storm: a deep surging roar (the whole water column moving) and fine grit
+            // ticking on the hull in random bursts, like sand thrown at a window.
+            float sl = Silt;
+            if (sl > 0.001f)
+            {
+                float surge = 0.7f + 0.3f * MathF.Sin(_t * 0.9f) * MathF.Sin(_t * 0.37f);
+                float roarS = _siltLp.Process(w) * 1.1f + (_siltLp2.Process(w) - _siltLp.Process(w) * 0.5f) * 0.12f;
+                // (the mixer thread's own white noise decides the ticks: no shared Random across threads)
+                float gate = w * 0.5f + 0.5f < 0.004f * sl * surge ? 1f : 0f;
+                float grit = _gritBp.Process(gate + w * 0.01f) * 0.6f;
+                intake += (roarS * surge * 0.5f + grit) * sl * (Inside ? 0.8f : 1f);
             }
 
             float bed = rumble + drone + hiss + hum + rush + eng + servo + intake;

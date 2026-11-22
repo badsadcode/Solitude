@@ -36,6 +36,8 @@ public partial class Diver : CharacterBody3D
     private Node3D _yaw;
     private float _pitch, _drownTick, _warn;
     private Vector3 _current;
+    /// <summary>Water velocity at a point (set by the director); null = the old gentle wander.</summary>
+    public System.Func<Vector3, Vector3> WaterAt;
     private float _t;
 
     // Tuned by Tom's first swim (2026-11-22): "a bit slower" — ~15% off, slightly heavier starts.
@@ -121,13 +123,14 @@ public partial class Diver : CharacterBody3D
             boost = Input.IsActionPressed(GameInput.Sprint) && wish.LengthSquared() > 0.01f;
         }
 
-        // A slow, wandering current and slight negative buoyancy.
-        _current = new Vector3(Mathf.Sin(_t * 0.05f), 0, Mathf.Cos(_t * 0.037f)) * 0.08f;
-        Vector3 v = Velocity;
+        // The water moves (Systems/Currents.cs): you swim relative to it, so in still water this is
+        // exactly the old feel, and in a current you're carried. Slight negative buoyancy on top.
+        _current = WaterAt?.Invoke(GlobalPosition) ?? new Vector3(Mathf.Sin(_t * 0.05f), 0, Mathf.Cos(_t * 0.037f)) * 0.08f;
+        Vector3 rel = Velocity - _current;
         float max = boost ? BoostSpeed : SwimSpeed;
-        v += (wish * max - v) * Mathf.Clamp(Accel * dt, 0f, 1f);
-        v -= v * Mathf.Clamp(Drag * 0.2f * dt, 0f, 1f);
-        v += (_current + Vector3.Down * 0.06f) * dt;
+        rel += (wish * max - rel) * Mathf.Clamp(Accel * dt, 0f, 1f);
+        rel -= rel * Mathf.Clamp(Drag * 0.2f * dt, 0f, 1f);
+        Vector3 v = rel + _current + Vector3.Down * 0.06f * dt;
         Velocity = v;
         MoveAndSlide();
 

@@ -214,6 +214,7 @@ public partial class Main : Node
 		SetupStory();
 		SetupListener();
 		SetupHydrophone();
+		SetupCurrents();
 		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--station-sweep") CallDeferred(MethodName.StationSweep);
 		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--eye-test") CallDeferred(MethodName.EyeTest);
 		{
@@ -719,6 +720,7 @@ public partial class Main : Node
 		UpdateHydrophoneWorld(dt);
 		UpdateEyeEncounter(dt);
 		UpdateGloam(dt);
+		UpdateSilt(dt);
 		UpdateTerminalWorld(dt);
 		UpdateProximity(dt);
 		if (_mode != Mode.Monitors) _camServo = Mathf.MoveToward(_camServo, 0f, dt * 6f);
@@ -801,7 +803,7 @@ public partial class Main : Node
 
 		float alt = _sub.GlobalPosition.Y - _gen.Height(_sub.GlobalPosition.X, _sub.GlobalPosition.Z);
 		string view = _view switch { HelmView.Bridge => "BRIDGE [V]", HelmView.BowCamera => "CAM 1 BOW [V]", _ => "EXTERNAL [V]" };
-		view += DockingText() + StoryHelmText();
+		view += DockingText() + StoryHelmText() + CurrentHelmText();
 		view += _sonar.RechargeLeft > 0 ? $"\nSONAR    CHARGING {_sonar.RechargeLeft:0.0}s" : "\nSONAR    READY [P]";
 		_hud.UpdateHelm(_sub, alt, view);
 	}

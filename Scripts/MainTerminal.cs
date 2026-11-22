@@ -53,6 +53,7 @@ public partial class Main
         "Recorded:", "Same signature", "IDENTIFIED", "It's very faint",
         "THE CRYSTAL EXPANSE", "THE HADAL DEEP", "THE PALE SHELF",
         "The Sounding has stopped", "The light turns toward you",
+        "HYDROPHONE: a long, low rumble", "SILT.", "The silt is settling",
     };
 
     private void OnHudMessage(string m)
@@ -289,6 +290,7 @@ public partial class Main
         l.Add(new Line("SYSTEMS", 1));
         l.Add(new Line($"FLOODS    {(_sub.LightsOn ? "ON" : _floodTrip > 0f ? $"TRIPPED, resetting {_floodTrip:0} s" : "off")}", _floodTrip > 0f ? 3 : 0));
         l.Add(new Line($"INTAKE    {(_systems.IntakeOn ? "RUNNING" : "off")}"));
+        l.Add(new Line($"CURRENT   {CurrentHelmText().Replace("CURRENT", "").Trim()}", _silt > 0.3f ? 3 : 0));
         l.Add(new Line($"NOISE     {NoiseDb:0} dB{(_listener.Noise < Listener.Quiet ? "  (silent)" : "")}"));
         var rooms = _hull.BreachRooms().ToList();
         if (rooms.Count == 0) l.Add(new Line("BREACHES  none"));

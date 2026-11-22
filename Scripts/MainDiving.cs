@@ -83,7 +83,9 @@ public partial class Main
     private bool TryDiveFromHatch()
     {
         if (!_suitOn) { _hud.Message("Hatch opens onto 500 m of water. Suit up first (dive locker, port side)."); _audio.PlayAt("deny", 0f, 0.6f); return false; }
-        if (_sub.LinearVelocity.Length() > 0.6f || Mathf.Abs(_sub.EngineOutput) > 0.05f)
+        if (SiltStorm) { _hud.Message("HATCH INTERLOCK: not in a silt storm. You'd never find the boat again."); _audio.PlayAt("deny", 0f, 0.6f); return false; }
+        // Through the water: in a current the boat and the diver drift together.
+        if ((_sub.LinearVelocity - _sub.Water).Length() > 0.6f || Mathf.Abs(_sub.EngineOutput) > 0.05f)
         {
             _hud.Message("HATCH INTERLOCK: the boat must be stopped (ALL STOP and drifting under 0.6 m/s).");
             _audio.PlayAt("deny", 0f, 0.6f);

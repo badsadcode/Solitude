@@ -58,6 +58,11 @@ public partial class Submarine : RigidBody3D
     public float EngineLimit = 1f;
     /// <summary>Downward force from flooded compartments (set by HullEvents).</summary>
     public float FloodWeight;
+    /// <summary>The water's own velocity here (currents, a silt storm's push). Drag acts on the boat's
+    /// speed THROUGH the water, so a stopped boat drifts with it. Set by the director.</summary>
+    public Vector3 Water;
+    /// <summary>Speed over the ground (what the current is doing to you), for the helm.</summary>
+    public Vector3 GroundVelocity => LinearVelocity;
 
     public static readonly (string name, float throttle)[] Telegraph =
     {
@@ -184,7 +189,7 @@ public partial class Submarine : RigidBody3D
         float dt = (float)delta;
         Basis b = GlobalBasis.Orthonormalized();
         Vector3 right = b.X, up = b.Y, fwd = -b.Z;
-        Vector3 v = LinearVelocity;
+        Vector3 v = LinearVelocity - Water;   // through the water: that's what the hull and rudder feel
 
         // Engine spools slowly; reversing is weaker.
         EngineOutput = Mathf.MoveToward(EngineOutput, TargetThrottle, SpoolRate * dt);
@@ -230,6 +235,7 @@ public partial class Submarine : RigidBody3D
             Heading = Mathf.PosMod(Mathf.RadToDeg(Mathf.Atan2(flat.X, -flat.Z)), 360f);
 
         // Impacts: a velocity change much bigger than our own forces can cause, while touching.
+        v = LinearVelocity;   // impacts are about the ground
         Vector3 dv = v - _prevVel;
         LocalAccel = b.Transposed() * (dv / Mathf.Max(dt, 1e-4f));
         _impactCooldown -= dt;

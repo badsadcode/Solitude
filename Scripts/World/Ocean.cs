@@ -15,7 +15,11 @@ public partial class Ocean : Node3D
     public System.Func<Vector3> Focus;
 
     private GpuParticles3D _snow;
-    private GpuParticles3D _motes;
+    private GpuParticles3D _motes, _siltPs;
+    /// <summary>0..1: a silt storm thickens and browns the water. Set by the director.</summary>
+    public float Silt;
+    /// <summary>The water's velocity at the focus: the snow drifts with it.</summary>
+    public Vector3 Flow;
 
     public override void _Ready()
     {
@@ -81,6 +85,16 @@ public partial class Ocean : Node3D
         _motes = MakeSnow(700, 0.14f, new Color(0.7f, 0.75f, 0.65f, 0.6f), 30f);
         AddChild(_snow);
         AddChild(_motes);
+        // Silt-storm particles: thick, fine, brown, streaming with the current. Off until a storm.
+        // (big enough to survive the low render resolution: 0.05 m flecks vanish at 10 m)
+        _siltPs = MakeSnow(9000, 0.13f, new Color(0.55f, 0.42f, 0.27f, 0.9f), 22f);
+        var siltMat = (StandardMaterial3D)((QuadMesh)_siltPs.DrawPass1).Material;
+        siltMat.Emission = new Color(0.07f, 0.045f, 0.025f);
+        _siltPs.Lifetime = 5f; _siltPs.Preprocess = 5f; _siltPs.Emitting = false; _siltPs.AmountRatio = 0f;
+        ((ParticleProcessMaterial)_siltPs.ProcessMaterial).TurbulenceNoiseStrength = 1.2f;
+        ((ParticleProcessMaterial)_siltPs.ProcessMaterial).DampingMin = 0f;
+        ((ParticleProcessMaterial)_siltPs.ProcessMaterial).DampingMax = 0f;
+        AddChild(_siltPs);
     }
 
     private static GpuParticles3D MakeSnow(int amount, float size, Color color, float box)
@@ -134,6 +148,7 @@ public partial class Ocean : Node3D
         Vector3 f = Focus();
         _snow.GlobalPosition = f;
         _motes.GlobalPosition = f;
+        _siltPs.GlobalPosition = f - Flow * 2f;   // upstream a little, so the cloud streams past you
 
         // The deeper you go the less ambient light leaks down and the thicker the dark.
         float dt = (float)delta;
@@ -155,6 +170,33 @@ public partial class Ocean : Node3D
         Water.FogDensity = Mathf.Lerp(0.011f, 0.02f, t) * (1f + 0.25f * _hadalT);
         Water.VolumetricFogAlbedo = new Color(0.55f, 0.75f, 0.78f).Lerp(new Color(0.68f, 0.55f, 0.95f), _crystalT).Lerp(new Color(0.65f, 0.32f, 0.28f), _hadalT);
         Water.AmbientLightColor = new Color(0.08f, 0.16f, 0.18f).Lerp(new Color(0.12f, 0.09f, 0.2f), _crystalT).Lerp(new Color(0.1f, 0.03f, 0.03f), _hadalT);
+
+        // Silt: the water closes in and goes the colour of weak tea; the light gets swallowed a few
+        // metres out. The snow streams along with the current instead of drifting down.
+        float s = Silt;
+        if (s > 0.001f)
+        {
+            Water.FogLightColor = fog.Lerp(new Color(0.05f, 0.034f, 0.018f), s * 0.85f);
+            Water.BackgroundColor = Water.FogLightColor;
+            Water.FogDensity *= 1f + 7f * s;
+            Water.VolumetricFogAlbedo = Water.VolumetricFogAlbedo.Lerp(new Color(0.62f, 0.48f, 0.3f), s);
+            Water.AmbientLightColor = Water.AmbientLightColor.Lerp(new Color(0.12f, 0.09f, 0.05f), s);
+        }
+        Water.VolumetricFogDensity = 0.016f * (1f + 5f * s);
+        foreach (var ps in new[] { _snow, _motes })
+        {
+            var pm = (ParticleProcessMaterial)ps.ProcessMaterial;
+            pm.Gravity = new Vector3(0.02f, -0.035f, 0.01f) + Flow * (0.06f + 0.5f * s);
+            ps.SpeedScale = 1f + 2.5f * s;
+        }
+        _siltPs.Emitting = s > 0.03f;
+        _siltPs.AmountRatio = s;
+        var spm = (ParticleProcessMaterial)_siltPs.ProcessMaterial;
+        spm.Gravity = Flow * 1.4f + Vector3.Down * 0.05f;
+        spm.InitialVelocityMin = Flow.Length() * 0.8f;
+        spm.InitialVelocityMax = Flow.Length() * 1.3f;
+        spm.Direction = Flow.LengthSquared() > 1e-4f ? Flow.Normalized() : Vector3.Down;
+        spm.Spread = 25f;
     }
 
     public TerrainGenerator Gen;
