@@ -50,6 +50,7 @@ public static class GameInput
     public const string SummonWhale = "debug_summon_whale";
     public const string DebugEye = "debug_eye";
     public const string DebugGloam = "debug_gloam";
+    public const string Journal = "journal";
 
     // Monitor station
     public const string Fullscreen = "feed_fullscreen";
@@ -87,6 +88,7 @@ public static class GameInput
         Bind(SummonWhale, Godot.Key.F4);
         Bind(DebugEye, Godot.Key.F3);
         Bind(DebugGloam, Godot.Key.F2);
+        Bind(Journal, Godot.Key.J);
         Bind(Inventory, Godot.Key.I);
         Bind(IntakeToggle, Godot.Key.G);
         Bind(Dock, Godot.Key.K);

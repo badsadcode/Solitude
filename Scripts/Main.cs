@@ -26,7 +26,7 @@ namespace Solitude;
 /// </summary>
 public partial class Main : Node
 {
-	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading, Diving, Title, Hydrophone }
+	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading, Diving, Title, Hydrophone, Terminal }
 	private enum HelmView { Bridge, BowCamera, Chase }
 
 	[Export] public int PixelScale = 3;
@@ -141,7 +141,8 @@ public partial class Main : Node
 		AddChild(_sonarScope);
 		_sonarScope.AddChild(new SonarDisplay { Sonar = _sonar, Sub = _sub, Size = new Vector2(256, 256) });
 
-		// ---- interior
+		// ---- interior (the ship's log terminal draws first: its picture goes on the galley wall)
+		SetupTerminal();
 		_interior = new SubInterior
 		{
 			Name = "Interior",
@@ -154,6 +155,8 @@ public partial class Main : Node
 			OnSonar = EnterSonar,
 			OnHydrophone = EnterHydrophone,
 			OnHolo = EnterHolo,
+			OnTerminal = EnterTerminal,
+			LogTexture = _logVp.GetTexture(),
 			OnArm = EnterArm,
 			OnPanel = EnterPanel,
 			OnHatch = OnHatch,
@@ -181,6 +184,7 @@ public partial class Main : Node
 		AddChild(_audio);
 		_hud = new Hud { Name = "Hud" };
 		AddChild(_hud);
+		_hud.Messaged += OnHudMessage;   // the ship's log keeps the ones worth keeping
 		_sonar.Audio = _audio;
 
 		// ---- creatures
@@ -289,12 +293,13 @@ public partial class Main : Node
 		_player.Camera.MakeCurrent();
 		_feedFullscreen = false;
 		_hud.ShowFeed(null, null, 1f);
+		_hud.ShowTerminal(null);
 		_hud.ShowHelm(false);
 		_hud.HidePanel();
 		_hud.ShowArm(false);
 		_arm.Stow();
 		_hud.SetCrosshair(true);
-		_hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC pause · F11 fullscreen");
+		_hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · J journal · ESC pause · F11 fullscreen");
 		_rig.MonitorsActive = true;
 		_rig.BridgeActive = true;
 		_audio.Inside = true;
@@ -577,6 +582,7 @@ public partial class Main : Node
 
 	public override void _Input(InputEvent e)
 	{
+		if (_mode == Mode.Terminal) { TerminalInput(e); return; }
 		// Esc pauses wherever it isn't already "back out of this station".
 		if (e is InputEventKey esc && esc.Pressed && !esc.Echo && esc.PhysicalKeycode == Key.Escape
 			&& _mode is Mode.Walking or Mode.Helm or Mode.Diving && !_endingRunning && !_pause.Visible)
@@ -639,7 +645,7 @@ public partial class Main : Node
 			if (_mode == Mode.Sonar && !_feedFullscreen) TryPing();
 			else if (_mode == Mode.Monitors && !_feedFullscreen) ClickScreen(mb.Position);
 			// Click-to-recapture only where the mouse steers; never in menu-like modes (buttons live there).
-			else if (Input.MouseMode != Input.MouseModeEnum.Captured && _mode is not (Mode.Monitors or Mode.Sonar or Mode.Title or Mode.Panel or Mode.Reading))
+			else if (Input.MouseMode != Input.MouseModeEnum.Captured && _mode is not (Mode.Monitors or Mode.Sonar or Mode.Title or Mode.Panel or Mode.Reading or Mode.Terminal))
 				Input.MouseMode = Input.MouseModeEnum.Captured;
 		}
 		else if (e is InputEventKey k && k.Pressed && !k.Echo && _mode == Mode.Monitors)
@@ -689,6 +695,7 @@ public partial class Main : Node
 			case Mode.Monitors: UpdateCameraAim(dt); UpdateMonitors(); break;
 			case Mode.Sonar: UpdateSonar(); break;
 			case Mode.Hydrophone: UpdateHydrophone(dt); break;
+			case Mode.Terminal: UpdateTerminal(); break;
 			case Mode.Holo: UpdateHolo(); break;
 			case Mode.Arm: UpdateArm(dt); break;
 			case Mode.Panel: UpdatePanel(); break;
@@ -712,6 +719,7 @@ public partial class Main : Node
 		UpdateHydrophoneWorld(dt);
 		UpdateEyeEncounter(dt);
 		UpdateGloam(dt);
+		UpdateTerminalWorld(dt);
 		UpdateProximity(dt);
 		if (_mode != Mode.Monitors) _camServo = Mathf.MoveToward(_camServo, 0f, dt * 6f);
 		UpdateCapture(dt);

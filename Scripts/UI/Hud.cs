@@ -165,8 +165,12 @@ public partial class Hud : CanvasLayer
     public void SetCrosshair(bool on) => _crosshair.Visible = on;
     public void SetHelp(string text) => _help.Text = text ?? "";
 
+    /// <summary>Every message shown (the ship's log picks out the ones worth keeping).</summary>
+    public event System.Action<string> Messaged;
+
     public void Message(string text, float seconds = 5f)
     {
+        Messaged?.Invoke(text);
         _message.Text = text;
         _messageTime = seconds;
         _message.Modulate = Colors.White;
@@ -175,6 +179,48 @@ public partial class Hud : CanvasLayer
     public void ShowHelm(bool on) => _helmGroup.Visible = on;
     public ProxStrip Prox { get; private set; }
     public ProxStrip FeedProx { get; private set; }
+
+    // ---- the ship's log terminal / journal, full screen
+    private TextureRect _term;
+    private ColorRect _termBg;
+    private bool _termCrt;
+
+    public void ShowTerminal(Texture2D tex, bool crt = true)
+    {
+        if (_term == null)
+        {
+            _termBg = new ColorRect { Color = new Color(0, 0, 0, 0.92f), MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+            _termBg.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            _root.AddChild(_termBg);
+            _term = new TextureRect
+            {
+                Visible = false, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+                Material = new ShaderMaterial { Shader = GD.Load<Shader>("res://Shaders/terminal_canvas.gdshader") },
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+            };
+            _term.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            _root.AddChild(_term);
+        }
+        bool on = tex != null;
+        _term.Visible = on; _termBg.Visible = on;
+        if (!on) return;
+        _term.Texture = tex;
+        _termCrt = crt;
+        ((ShaderMaterial)_term.Material).SetShaderParameter("crt", crt);
+    }
+
+    /// <summary>Window pixel → terminal pixel (0..640, 0..480), through the same curve the shader draws.</summary>
+    public Vector2 TerminalPoint(Vector2 window)
+    {
+        if (_term == null) return new Vector2(-1, -1);
+        Vector2 size = _term.Size;
+        float k = Mathf.Min(size.X / 640f, size.Y / 480f);
+        Vector2 drawn = new(640f * k, 480f * k), off = (size - drawn) * 0.5f + _term.GlobalPosition;
+        Vector2 uv = (window - off) / drawn;
+        if (_termCrt) { Vector2 cc = uv - new Vector2(0.5f, 0.5f); uv = new Vector2(0.5f, 0.5f) + cc * (1f + 0.06f * cc.Dot(cc)); }
+        return uv * new Vector2(640f, 480f);
+    }
 
     public void ShowFeed(Texture2D tex, string name, float signal, string hint = "[1-6] switch   [F] close")
     {

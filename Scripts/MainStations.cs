@@ -342,6 +342,8 @@ public partial class Main
     private void ShowLog(StationLogs.Log log)
     {
         _reading = log;
+        if (_shipLog.AddNote(log.Title, log.Body, _station?.Site.Name ?? "unknown station"))
+            Log($"Note found on {_station?.Site.Name ?? "a station"}: \"{log.Title}\". Copied to the journal.");
         _mode = Mode.Reading;
         _player.InputEnabled = false;
         Input.MouseMode = Input.MouseModeEnum.Visible;

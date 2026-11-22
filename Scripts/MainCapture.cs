@@ -699,6 +699,37 @@ public partial class Main
                 _view = HelmView.Bridge; ApplyHelmView(); EnterWalking();
             }),
             (t += 1.0f, () => { }),
+            // --- The ship's log terminal (galley wall) and the carried journal
+            (t += 0.1f, CaptureMarkTerminal),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                _shipLog.AddNote("Day 31. Hydrologist's log", "Day 31. Sonar shows a return at 400 m that wasn't there yesterday. Large. Bram logged it as a fault. I didn't argue.\n\nDay 33. Something has been at the intake grilles. Scrape marks on the inside of the filter housing. Inside.", "RESEARCH STATION LANTERN-8");
+                _shipLog.AddNote("Galley whiteboard", "WHO TOOK THE LAST COFFEE. I am not angry. I am writing this down so the sea knows.", "OUTPOST KESTREL-4");
+                _hud.Message("BEACON ACQUIRED: RESEARCH STATION LANTERN-8. Bearing added to the helm.");
+                _hud.Message("You can't undock with nobody at the helm.");   // not logged
+                _hull.OpenBreach(2);
+                _hud.Message("HYDROPHONE: something plated just turned toward the floodlights. FLOODS OFF [L]. Slow down.");
+                _hud.Message("THE HADAL DEEP. The dark here has a colour, and it is red.");
+                _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.3f, 0.05f, 2.5f));
+                _player.SetLook(0f, 0.05f);
+            }),
+            (t += 1.5f, () => { Shot("42a_log_wall"); GD.Print($"[capture] log entries {_shipLog.Entries.Count}: {string.Join(" / ", System.Linq.Enumerable.Select(_shipLog.Entries, e => e.Text))}"); GD.Print($"[capture] focused: {_player.Focused?.Prompt ?? "nothing"}"); }),
+            (t += 0.1f, () => _player.Focused?.Use()),
+            (t += 1.2f, () => Shot("42b_terminal_log")),
+            (t += 0.1f, () => _logScreen.SetTab(1)),
+            (t += 0.4f, () => Shot("42c_terminal_notes")),
+            (t += 0.1f, () => _logScreen.SetTab(2)),
+            (t += 0.4f, () => Shot("42d_terminal_goals")),
+            (t += 0.1f, () => _logScreen.SetTab(3)),
+            (t += 0.4f, () => Shot("42e_terminal_boat")),
+            (t += 0.1f, () => { CloseTerminal(); GD.Print($"[capture] after close: mode {_mode}"); }),
+            (t += 0.5f, () => OpenJournal()),
+            (t += 0.6f, () => Shot("42f_journal_notes")),
+            (t += 0.1f, () => _journalScreen.SetTab(1)),
+            (t += 0.4f, () => Shot("42g_journal_goals")),
+            (t += 0.1f, () => { CloseTerminal(); GD.Print($"[capture] after journal: mode {_mode}"); }),
+            (t += 0.5f, () => { }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -970,6 +1001,7 @@ public partial class Main
     private void CaptureMarkTest() => CaptureSection("test");
     private void CaptureMarkProx() => CaptureSection("prox");
     private void CaptureMarkGloam() => CaptureSection("gloam");
+    private void CaptureMarkTerminal() => CaptureSection("terminal");
     private void LogGloam(string what)
     {
         GD.Print(_gloam == null ? $"[capture] gloam {what}: none" :
@@ -1017,7 +1049,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

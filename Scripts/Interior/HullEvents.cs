@@ -70,6 +70,7 @@ public partial class HullEvents : Node3D
 
     public float Unease;     // story progress raises the knock rate
     public int ActiveBreaches => _breaches.Count;
+    public System.Collections.Generic.IEnumerable<string> BreachRooms() { foreach (var b in _breaches) yield return RoomNames[b.Room]; }
     public float TotalFlood { get { float s = 0; foreach (var l in _level) s += l; return s; } }
 
     public override void _Ready()

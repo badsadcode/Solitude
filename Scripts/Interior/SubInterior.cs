@@ -30,6 +30,11 @@ public partial class SubInterior : Node3D
     public Action OnSonar;
     public Action OnHydrophone;
     public Action OnHolo;
+    /// <summary>The ship's log terminal on the galley wall.</summary>
+    public Action OnTerminal;
+    public Texture2D LogTexture;
+    public ShaderMaterial LogScreen;
+    public Transform3D TerminalView { get; private set; }
     public Action OnArm;
     public Action<string> OnPanel;
     public Action OnHatch;
@@ -487,6 +492,27 @@ public partial class SubInterior : Node3D
         Solid(_dark, new Vector3(-1.75f, 0.22f, 1.25f), new Vector3(1.0f, 0.44f, 0.4f), Grey.Shade(0.8f));
         Solid(_dark, new Vector3(-1.75f, 0.22f, 3.75f), new Vector3(1.0f, 0.44f, 0.4f), Grey.Shade(0.8f));
         _machine.Cylinder(new Vector3(-1.6f, 0.75f, 2.2f), 0.05f, 0.045f, 0.1f, 6, new Color(0.7f, 0.68f, 0.6f)); // a mug
+
+        // The ship's log: a green terminal on the wall above the mess table. Always on, always writing.
+        float tx = -HalfW + 0.06f;
+        _dark.Box(new Vector3(tx, 1.62f, 2.5f), new Vector3(0.16f, 0.66f, 0.84f), new Color(0.13f, 0.13f, 0.13f));
+        _machine.Box(new Vector3(tx + 0.1f, 1.24f, 2.5f), new Vector3(0.12f, 0.06f, 0.7f), Grey.Shade(0.6f));   // keyboard shelf
+        _dark.Box(new Vector3(tx + 0.13f, 1.28f, 2.5f), new Vector3(0.14f, 0.02f, 0.55f), new Color(0.2f, 0.2f, 0.18f));
+        LogScreen = Art.Crt(LogTexture);
+        LogScreen.SetShaderParameter("scan_lines", 240f);
+        LogScreen.SetShaderParameter("desaturate", 0.0f);
+        LogScreen.SetShaderParameter("brightness", 1.3f);
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(0.72f, 0.54f) },
+            Position = new Vector3(tx + 0.085f, 1.64f, 2.5f),
+            Rotation = new Vector3(0, Mathf.Pi / 2f, 0),
+            MaterialOverride = LogScreen,
+        });
+        Label("SHIP'S LOG", new Vector3(tx + 0.02f, 2.06f, 2.5f), Mathf.Pi / 2f, 28, new Color(0.6f, 1f, 0.75f));
+        Light(new Vector3(tx + 0.4f, 1.64f, 2.5f), new Color(0.4f, 1f, 0.6f), 0.25f, 1.8f, fixture: false);
+        Interactable.Create(this, new Vector3(-1.85f, 1.45f, 2.5f), new Vector3(0.7f, 0.7f, 0.9f), "Read the ship's log", () => OnTerminal?.Invoke());
+        TerminalView = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-1.0f, 1.62f, 2.5f));
 
         Light(new Vector3(0, Height - 0.15f, 2.5f), new Color(1f, 0.82f, 0.6f), 0.9f, 6f, flicker: 0.6f, shadows: true);
     }
