@@ -69,6 +69,8 @@ public partial class Main : Node
 	public override void _Ready()
 	{
 		GameInput.Setup();
+		Settings.Load();
+		GetTree().Paused = false; // in case we arrived here from the pause menu
 		if (PendingLoad != null) Seed = PendingLoad.Seed; // CONTINUE: same world as the save
 		if (Seed == 0) Seed = ParseSeed() ?? (int)(GD.Randi() % 1_000_000);
 		GD.Print($"[Solitude] seed {Seed}");
@@ -224,6 +226,8 @@ public partial class Main : Node
 
 		SetupCapture();
 		SetupDebugStart();
+		SetupSaveTest();
+		SetupPause();
 		// Normal launches open on the title screen; dev launches (--start, --capture) go straight in.
 		if (PendingLoad != null)
 		{
@@ -273,7 +277,7 @@ public partial class Main : Node
 		_hud.ShowArm(false);
 		_arm.Stow();
 		_hud.SetCrosshair(true);
-		_hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC release mouse · F11 fullscreen");
+		_hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC pause · F11 fullscreen");
 		_rig.MonitorsActive = true;
 		_rig.BridgeActive = true;
 		_audio.Inside = true;
@@ -529,24 +533,34 @@ public partial class Main : Node
 
 	public override void _Input(InputEvent e)
 	{
+		// Esc pauses wherever it isn't already "back out of this station".
+		if (e is InputEventKey esc && esc.Pressed && !esc.Echo && esc.PhysicalKeycode == Key.Escape
+			&& _mode is Mode.Walking or Mode.Helm or Mode.Diving && !_endingRunning && !_pause.Visible)
+		{
+			OpenPause();
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+
 		if (e is InputEventMouseMotion mm && Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
-			if (_mode == Mode.Walking) { _player.Look(mm.Relative); _weapons.AddSway(mm.Relative); }
-			else if (_mode == Mode.Diving) _diver.Look(mm.Relative);
+			Vector2 rel = mm.Relative * Settings.MouseSensitivity;
+			if (_mode == Mode.Walking) { _player.Look(rel); _weapons.AddSway(rel); }
+			else if (_mode == Mode.Diving) _diver.Look(rel);
 			else if (_mode == Mode.Helm)
 			{
-				_sub.Rudder = Mathf.Clamp(_sub.Rudder + mm.Relative.X * 0.0025f, -1f, 1f);
-				_sub.Planes = Mathf.Clamp(_sub.Planes - mm.Relative.Y * 0.0025f, -1f, 1f);
+				_sub.Rudder = Mathf.Clamp(_sub.Rudder + rel.X * 0.0025f, -1f, 1f);
+				_sub.Planes = Mathf.Clamp(_sub.Planes - rel.Y * 0.0025f, -1f, 1f);
 			}
 			else if (_mode == Mode.Holo)
 			{
-				_holoYaw -= mm.Relative.X * 0.006f;
-				_holoPitch = Mathf.Clamp(_holoPitch + mm.Relative.Y * 0.005f, 0.3f, 1.35f);
+				_holoYaw -= rel.X * 0.006f;
+				_holoPitch = Mathf.Clamp(_holoPitch + rel.Y * 0.005f, 0.3f, 1.35f);
 			}
 			else if (_mode == Mode.Arm)
 			{
 				// Mouse right = claw to starboard (+X), mouse up = claw forward (-Z).
-				_arm.Steer(mm.Relative.X * 0.008f, mm.Relative.Y * 0.008f, 0f);
+				_arm.Steer(rel.X * 0.008f, rel.Y * 0.008f, 0f);
 			}
 		}
 		else if (e is InputEventMouseButton aw && aw.Pressed && _mode == Mode.Arm)
@@ -607,8 +621,9 @@ public partial class Main : Node
 
 		if (Input.IsActionJustPressed(GameInput.ToggleFullscreenWindow))
 		{
-			var m = DisplayServer.WindowGetMode();
-			DisplayServer.WindowSetMode(m == DisplayServer.WindowMode.Fullscreen ? DisplayServer.WindowMode.Windowed : DisplayServer.WindowMode.Fullscreen);
+			Settings.Fullscreen = DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Fullscreen;
+			Settings.Apply();
+			Settings.Save();
 		}
 
 		if (Input.IsActionJustPressed(GameInput.SummonCreature))
@@ -649,13 +664,12 @@ public partial class Main : Node
 		_hud.SetPrompt(_player.Focused != null ? $"[E] {_player.Focused.Prompt}" : "");
 		if (Input.IsActionJustPressed(GameInput.Interact) && _player.Focused != null)
 			_player.Focused.Use();
-		if (Input.IsActionJustPressed(GameInput.Cancel))
-			Input.MouseMode = Input.MouseMode == Input.MouseModeEnum.Captured ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
 	}
 
 	private void UpdateHelm(float dt)
 	{
-		if (Input.IsActionJustPressed(GameInput.Interact) || Input.IsActionJustPressed(GameInput.Cancel))
+		// E (or Tab) leaves the helm; Esc now opens the pause menu.
+		if (Input.IsActionJustPressed(GameInput.Interact) || (Input.IsActionJustPressed(GameInput.Cancel) && !Input.IsKeyPressed(Key.Escape)))
 		{
 			EnterWalking();
 			_audio.PlayBlip(440f, 0.08f);

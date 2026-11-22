@@ -42,7 +42,8 @@ public sealed class StationSave
 /// </summary>
 public partial class Main
 {
-    public const string SavePath = "user://save.json";
+    /// <summary>The real save; dev tests swap in their own file so they never touch it.</summary>
+    public static string SavePath = "user://save.json";
     /// <summary>Set by CONTINUE before the scene reloads; consumed in _Ready.</summary>
     public static SaveData PendingLoad;
 
@@ -60,7 +61,70 @@ public partial class Main
         catch (Exception e) { GD.PushWarning($"[save] unreadable save: {e.Message}"); return null; }
     }
 
-    private bool _saveBlocked => _captureDir != null || _titleCaptureDir != null || _mode == Mode.Title;
+    private bool _saveBlocked => !_saveTestForce && (_captureDir != null || _titleCaptureDir != null || _mode == Mode.Title);
+
+    // ------------------------------------------------------------------ dev: --save-test
+    // Phase 1: change state, save to user://save_test.json, CONTINUE (real path: scene reload).
+    // Phase 2 (after the reload): compare what came back, print PASS/FAIL, delete the file, quit.
+
+    private static bool _saveTestPhase2;
+    private static SaveData _saveTestExpected;
+    private bool _saveTestForce;
+
+    private bool SetupSaveTest()
+    {
+        bool on = false;
+        foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--save-test") on = true;
+        if (!on) return false;
+        SavePath = "user://save_test.json";
+        var tw = CreateTween();
+        if (!_saveTestPhase2)
+        {
+            tw.TweenInterval(2.0);
+            tw.TweenCallback(Callable.From(() =>
+            {
+                _systems.Hold.Add(ItemId.StationAlloy, 3);
+                _systems.Hold.Add(ItemId.Clam, 2);
+                _upgrades.Installed.Add(UpgradeId.HullI);
+                ApplyUpgrades();
+                _coreSites.Add(-42);
+                _weapons.Give(WeaponId.Shotgun, 6);
+                _sub.SetHull(63f);
+                _sub.GlobalPosition += new Vector3(120f, 15f, -80f);
+                _saveTestForce = true;
+                Autosave("save-test");
+                _saveTestForce = false;
+                _saveTestExpected = Capture();
+                _saveTestPhase2 = true;
+                GD.Print($"[save-test] phase 1 saved: seed={Seed} hull=63 alloy=3 upgrades=HullI cores=1 pos={_sub.GlobalPosition}");
+                ContinueDive();
+            }));
+        }
+        else
+        {
+            tw.TweenInterval(2.5);
+            tw.TweenCallback(Callable.From(() =>
+            {
+                var e = _saveTestExpected;
+                var errs = new List<string>();
+                void Check(bool ok, string what) { if (!ok) errs.Add(what); }
+                Check(Seed == e.Seed, $"seed {Seed} != {e.Seed}");
+                Check(Mathf.Abs(_sub.Hull - e.Hull) < 0.5f, $"hull {_sub.Hull} != {e.Hull}");
+                Check(_systems.Hold.Count(ItemId.StationAlloy) == e.Hold.GetValueOrDefault("StationAlloy"), "alloy count");
+                Check(_systems.Hold.Count(ItemId.Clam) == e.Hold.GetValueOrDefault("Clam"), "clam count");
+                Check(_upgrades.Has(UpgradeId.HullI) && Mathf.IsEqualApprox(_sub.CrushDepth, 1250f), $"Hull I / crush {_sub.CrushDepth}");
+                Check(_coreSites.Contains(-42), "data core");
+                Check(_weapons.Owned.Contains(WeaponId.Shotgun), "shotgun");
+                var p = new Vector3(e.SubPos[0], e.SubPos[1], e.SubPos[2]);
+                Check(_sub.GlobalPosition.DistanceTo(p) < 3f, $"position {_sub.GlobalPosition} vs {p}");
+                Check(_mode == Mode.Walking, $"mode {_mode}");
+                GD.Print(errs.Count == 0 ? "[save-test] PASS: everything came back after CONTINUE" : "[save-test] FAIL: " + string.Join("; ", errs));
+                DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
+                GetTree().Quit();
+            }));
+        }
+        return true;
+    }
 
     private void Autosave(string reason)
     {

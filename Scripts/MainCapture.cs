@@ -312,6 +312,18 @@ public partial class Main
             (t += 0.1f, () => _creatures.Wyrm.JawOverride = Solitude.Creatures.CreatureProfile.Fangwyrm().JawOpen),
             (t += 0.4f, () => Shot("23d_wyrm_jaw_open")),
             (t += 0.1f, () => { _creatures.Wyrm.JawOverride = null; _docCam.QueueFree(); _docCam = null; _docTarget = null; _docForward = 0f; }),
+            // Pause menu (the world is frozen, so shots run on a pause-proof timer).
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                OpenPause();
+                var tree = GetTree();
+                tree.CreateTimer(0.6, processAlways: true).Timeout += () => { Shot("25a_pause"); GD.Print($"[capture] paused={tree.Paused} menu={_pause.Visible}"); };
+                tree.CreateTimer(0.7, processAlways: true).Timeout += () => _pause.ShowSettings(true);
+                tree.CreateTimer(1.3, processAlways: true).Timeout += () => Shot("25b_pause_settings");
+                tree.CreateTimer(1.4, processAlways: true).Timeout += () => { ClosePause(); GD.Print($"[capture] resumed: paused={tree.Paused}"); };
+            }),
+            (t += 0.2f, () => { }),
             // Holo table: the red own-ship dot.
             (t += 0.1f, () => { EnterWalking(); _player.Position = new Vector3(0.2f, 0.05f, -2.0f); EnterHolo(); _holoPitch = 0.9f; TryPing(); }),
             (t += 2.5f, () => Shot("24_holo_red_dot")),

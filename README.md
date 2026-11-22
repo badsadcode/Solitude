@@ -101,6 +101,13 @@ or open, give a size and a temperament. Debug: **F8** rays, **F9** ravager pass,
 - **Audio** — synthesized in real time on its own thread: abyssal drone, ventilation, engine,
   hull creaks and groans that worsen with depth, and distant calls you won't get an explanation for.
 
+## Playing
+
+Download the Windows build from the releases page (when published), unzip, run `Solitude.exe`.
+In game: **Esc** pauses (settings: volume, music, mouse sensitivity, fullscreen; save and return to title).
+
+The dive log: https://badsadcode.github.io/Solitude/
+
 ## Running
 
 Open the folder in Godot 4.7.2 (.NET build) and press Play, or:

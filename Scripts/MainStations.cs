@@ -203,7 +203,7 @@ public partial class Main
             _rig.MonitorsActive = true;
             _rig.BridgeActive = true;
             _hud.FadeTo(0f, 1.0f);
-            _hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC release mouse · F11 fullscreen");
+            _hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC pause · F11 fullscreen");
             Autosave("back aboard");
         }));
     }

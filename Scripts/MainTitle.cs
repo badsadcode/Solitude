@@ -2,6 +2,7 @@ using System;
 using Godot;
 using Solitude.Creatures;
 using Solitude.Stations;
+using Solitude.Systems;
 
 namespace Solitude;
 
@@ -25,7 +26,7 @@ public partial class Main
     private bool SkipTitle()
     {
         if (_captureDir != null) return true;
-        foreach (var arg in OS.GetCmdlineUserArgs()) if (arg.StartsWith("--start=")) return true;
+        foreach (var arg in OS.GetCmdlineUserArgs()) if (arg.StartsWith("--start=") || arg == "--save-test") return true;
         return false;
     }
 
@@ -83,7 +84,7 @@ public partial class Main
         _titleMusic.Finished += () => _titleMusic?.Play(); // loop for as long as you linger
         _titleMusic.Play();
         if (_titleCaptureDir != null) GD.Print($"[title] music: {stream.GetLength():0.0} s, playing={_titleMusic.Playing}");
-        CreateTween().TweenProperty(_titleMusic, "volume_db", TitleMusicDb, 4.0).SetTrans(Tween.TransitionType.Sine);
+        CreateTween().TweenProperty(_titleMusic, "volume_db", Settings.MusicDb(TitleMusicDb), 4.0).SetTrans(Tween.TransitionType.Sine);
         _audio.Duck(-9f, 2f); // let the music lead; the hull still creaks underneath
     }
 
@@ -195,7 +196,7 @@ public partial class Main
     {
         Input.MouseMode = Input.MouseModeEnum.Captured;
         _hud.Intro("S O L I T U D E", $"depth {_sub.Depth:0} m   ·   seed {Seed}   ·   you are alone down here");
-        _hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC release mouse · F11 fullscreen");
+        _hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC pause · F11 fullscreen");
     }
 
     /// <summary>Dev: `-- --capture-title=dir` shoots the title screen, a forced ray flyby and the start.</summary>
