@@ -68,7 +68,9 @@ public partial class Main
         _titleRayTimer = 22f + (float)GD.RandRange(0, 8);
         Input.MouseMode = Input.MouseModeEnum.Visible;
         // Once per launch, the studio splash first (Tom's logo, under the sea); the title fades in after it.
-        if (!_splashShown && _titleCaptureDir == null) ShowStudioSplash(BeginTitle);
+        // Dev launches (model shots, tests: any command-line option but the splash test itself) skip it.
+        bool devLaunch = System.Linq.Enumerable.Any(OS.GetCmdlineUserArgs(), x => x.StartsWith("--") && !x.StartsWith("--splash-shot"));
+        if (!_splashShown && _titleCaptureDir == null && !devLaunch) ShowStudioSplash(BeginTitle);
         else BeginTitle();
     }
 
