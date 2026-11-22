@@ -21,6 +21,16 @@ public static class PropFactory
 {
     private static readonly Dictionary<string, int> _variants = new();
 
+    /// <summary>
+    /// How hard a modelled prop's glowing material shines in the game (multiplies Blender's Emission
+    /// Strength). The station's bloom only catches things brighter than white, so screens need a push
+    /// to glow *around* themselves, not just light up. Default for every prop; per-class overrides here
+    /// ("too bright / too dim? one number", MODELS.md).
+    /// </summary>
+    public const float GlowBoost = 4f;
+    private static readonly Dictionary<string, float> GlowByClass = new() { };
+    private static readonly HashSet<Material> _boosted = new();
+
     /// <summary>How many asset variants exist for a class (0 = none, use a placeholder).</summary>
     private static int Variants(string cls)
     {
@@ -47,6 +57,7 @@ public static class PropFactory
                 GD.Print($"[props] {path}.glb: object was off the origin by ({only.Position.X:0.00}, {only.Position.Z:0.00}) m; recentred");
                 only.Position = new Vector3(0f, only.Position.Y, 0f);
             }
+            PrepareMaterials(prop, GlowByClass.TryGetValue(cls, out float g) ? g : GlowBoost);
             return prop;
         }
         var root = new Node3D { Name = $"prop_{cls}" };
@@ -60,6 +71,22 @@ public static class PropFactory
                 Modulate = broken ? new Color(0.5f, 0.5f, 0.45f) : new Color(0.85f, 0.9f, 0.8f), TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest,
             });
         return root;
+    }
+
+    /// <summary>
+    /// Make an imported prop's materials fit the game (once per material: they're shared between copies):
+    /// nearest-neighbour texture filtering for the PS1 look (Tom: "they're blurred"), and the glow boost.
+    /// </summary>
+    private static void PrepareMaterials(Node n, float boost)
+    {
+        if (n is MeshInstance3D mi && mi.Mesh != null)
+            for (int s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
+                if ((mi.GetSurfaceOverrideMaterial(s) ?? mi.Mesh.SurfaceGetMaterial(s)) is BaseMaterial3D m && _boosted.Add(m))
+                {
+                    m.TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest;
+                    if (m.EmissionEnabled) m.EmissionEnergyMultiplier *= boost;
+                }
+        foreach (var c in n.GetChildren()) PrepareMaterials(c, boost);
     }
 
     /// <summary>Should the player bump into it? (Floor furniture with some height, not runs or decals.)</summary>
