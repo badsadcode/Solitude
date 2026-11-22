@@ -416,17 +416,17 @@ public partial class Main
                 // Bring it in close so we don't wait two minutes for it to arrive.
                 var w = _creatures.Whale;
                 Vector3 d = -w.GlobalBasis.Z;
-                w.GlobalPosition = _sub.GlobalPosition + w.GlobalBasis.X * 70f - d * 40f + Vector3.Up * 10f;
-                _docTarget = w; _docScale = 1.5f; _docSide = 1f; _docForward = 0f;
+                w.GlobalPosition = _sub.GlobalPosition + w.GlobalBasis.X * 100f - d * 40f + Vector3.Up * 10f;
+                _docTarget = w; _docScale = 2.3f; _docSide = 1f; _docForward = 0f;
                 _docCam = new Camera3D { Fov = 60f, Far = 400f };
                 _docCam.AddChild(new SpotLight3D { SpotRange = 160f, SpotAngle = 45f, LightEnergy = 10f });
                 _game.AddChild(_docCam); _docCam.MakeCurrent();
             }),
             (t += 1.5f, () => { Shot("31a_whale_side"); GD.Print($"[capture] whale at {_creatures.Whale?.DistanceToFocus:0} m, speed-ish, sonar bodies {System.Linq.Enumerable.Count(_creatures.Bodies())}"); }),
             (t += 2.5f, () => Shot("31b_whale_side_later")),
-            (t += 0.1f, () => { _docSide = -1f; _docScale = 1.4f; }),
+            (t += 0.1f, () => { _docSide = -1f; _docScale = 2.1f; }),
             (t += 1.0f, () => Shot("31c_whale_front")),
-            (t += 0.1f, () => { _docSide = 2f; _docScale = 1.4f; }),
+            (t += 0.1f, () => { _docSide = 2f; _docScale = 2.2f; }),
             (t += 1.0f, () => Shot("31d_whale_top")),
             (t += 0.1f, () =>
             {

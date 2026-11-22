@@ -60,7 +60,7 @@ public partial class Main
             _creatures.DismissWhale();
             _creatures.SummonWhale(overhead: true);
             var w = _creatures.Whale;
-            w.GlobalPosition = FocusPoint() - (-w.GlobalBasis.Z) * 120f + Vector3.Up * 28f;
+            w.GlobalPosition = FocusPoint() - (-w.GlobalBasis.Z) * 150f + Vector3.Up * 44f;
             _hud.Message("[debug] something very large is coming over", 3f);
         }
     }

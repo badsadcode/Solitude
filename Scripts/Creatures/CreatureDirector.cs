@@ -41,7 +41,7 @@ public partial class CreatureDirector : Node3D
         foreach (var r in Rays) yield return r.GlobalPosition;
         if (Whale != null)
             // The biggest thing on the scope is a chain of blips, not one: a ridge that moves.
-            for (int i = -4; i <= 4; i++) yield return Whale.GlobalPosition + Whale.GlobalBasis.Z * i * 5f;
+            for (int i = -4; i <= 4; i++) yield return Whale.GlobalPosition + Whale.GlobalBasis.Z * i * 8f;
         if (Wyrm != null)
         {
             // A long body: several returns along the spine.
@@ -104,12 +104,13 @@ public partial class CreatureDirector : Node3D
         float a = (float)_rng.NextDouble() * Mathf.Tau;
         Vector3 dir = new(MathF.Sin(a), 0, MathF.Cos(a));
         Vector3 side = new(-dir.Z, 0, dir.X);
-        float lateral = overhead ? 0f : 45f + (float)_rng.NextDouble() * 50f;
-        float rise = overhead ? 30f + (float)_rng.NextDouble() * 10f : (float)_rng.NextDouble() * 20f - 4f;
+        // Sized for a 70 m whale ~20 m tall: alongside it keeps its distance; overhead its belly clears the sail.
+        float lateral = overhead ? 0f : 70f + (float)_rng.NextDouble() * 60f;
+        float rise = overhead ? 42f + (float)_rng.NextDouble() * 10f : (float)_rng.NextDouble() * 24f - 4f;
         Vector3 cross = f + side * lateral + Vector3.Up * rise;
         Vector3 start = cross - dir * 320f, end = cross + dir * 360f;
         float floorS = Gen?.Height(start.X, start.Z) ?? start.Y;
-        start.Y = Math.Max(start.Y, floorS + 25f);
+        start.Y = Math.Max(start.Y, floorS + 35f);
         Whale = Spawn(CreatureProfile.Whale(), start, f);
         Whale.Transit(end);
     }

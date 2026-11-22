@@ -70,6 +70,8 @@ public partial class Swimmer : Node3D, IHarpoonable
             mi.MaterialOverride = _mat;
         }
         _mat.SetShaderParameter("eye_energy", 0f); // derived-eye glow is for the ravager only
+        _mat.SetShaderParameter("wet_spec", Profile.WetSpec);
+        _mat.SetShaderParameter("roughness_v", Profile.Roughness);
 
         _skel = FindAll<Skeleton3D>(model).GetEnumerator() is var e && e.MoveNext() ? e.Current : null;
         if (_skel != null)

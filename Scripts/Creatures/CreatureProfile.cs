@@ -33,6 +33,8 @@ public sealed class CreatureProfile
     public float TurnRate = 0.4f;        // rad/s
     public float CycleBase = 0.3f, CyclePerSpeed = 0.08f; // swim beats per second
     public float EmissionEnergy = 3f;
+    /// <summary>Surface: the wet sheen (0..1) and roughness. The swimmers' defaults are glossy; skins can be matte.</summary>
+    public float WetSpec = 0.6f, Roughness = 0.45f;
 
     public readonly List<(string bone, float amp, float phase, float curl)> Yaw = new();
     public readonly List<(string bone, float amp, float phase)> Pitch = new();
@@ -89,10 +91,11 @@ public sealed class CreatureProfile
         var p = new CreatureProfile
         {
             Name = "Whale of the Abyss", Scene = "res://assets/Whale_of_the_Abyss.glb",
-            Length = 45f, ModelLength = 19.24f, Temperament = Temperament.Grazer,
+            Length = 70f, ModelLength = 19.24f, Temperament = Temperament.Grazer,   // Tom: "grow it bigger"
             CruiseSpeed = 2.4f, PassSpeed = 2.8f, TurnRate = 0.05f, CycleBase = 0.07f, CyclePerSpeed = 0.012f,
             // Tom's glow map: dim teal patches over ~4% of the skin, painted gently, so it can run hot.
             EmissionEnergy = 2.6f,
+            WetSpec = 0.1f, Roughness = 0.85f,   // Tom: "specular is too high"
         };
         const float k = 0.7f;
         p.Pitch.Add(("Bone", 0.015f, 0 * k));
