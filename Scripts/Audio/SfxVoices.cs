@@ -53,12 +53,13 @@ public sealed class SfxVoice : Voice
             "spearhit" => (0.4f, 0.6f),
             "listener" => (7.0f, 0.55f),
             "powerup" => (4.0f, 0.6f),
+            "whalesong" => (9.0f, 0.5f),
             _ => (0.2f, 0.2f),
         };
         Gain *= gain;
         _bp1 = new BandPass(kind switch { "chitter" => 2600f * jitter, "shotgun" => 900f, "rifle" => 1500f, "pistol" => 1800f, "door" => 300f, "knock" => 220f * jitter, "weld" => 4200f, "shock" => 3600f, "reel" => 2400f, "spearhit" => 500f, _ => 1200f * jitter }, kind == "chitter" ? 12f : 2.5f, rate);
         _bp2 = new BandPass(kind switch { "pistol" => 2900f, "rifle" => 3400f, "shotgun" => 2100f, "knock" => 160f * jitter, _ => 700f }, 30f, rate);
-        _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, "klaxon" => 1800f, "breach" => 600f, "harpoon" => 900f, "listener" => 260f, _ => 4000f }, rate);
+        _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, "klaxon" => 1800f, "breach" => 600f, "harpoon" => 900f, "listener" => 260f, "whalesong" => 900f, _ => 4000f }, rate);
     }
 
     public override float Next(out bool alive)
@@ -225,6 +226,20 @@ public sealed class SfxVoice : Voice
                 _clk *= 0.993f;
                 float crackle = _bp1.Process(w) * 2.5f * _clk;
                 s = (buzz + crackle) * MathF.Min(1f, T * 80f) * MathF.Exp(-T * 4f);
+                break;
+            }
+            case "whalesong":
+            {
+                // A long call: a voice that slides up, wavers and falls away, with a second voice a
+                // fifth above it fading in and out, the whole thing smeared by water.
+                float env = MathF.Pow(MathF.Sin(MathF.PI * u), 1.5f);
+                float glide = 70f + 120f * MathF.Sin(MathF.PI * MathF.Min(1f, u * 1.3f)) - 40f * u;
+                float vib = 1f + 0.015f * MathF.Sin(T * 5.3f);
+                _ph1 += glide * vib * dt; _ph1 -= MathF.Floor(_ph1);
+                _ph2 += glide * 1.5f * vib * dt; _ph2 -= MathF.Floor(_ph2);
+                float voice = MathF.Sin(_ph1 * MathF.Tau) + 0.35f * MathF.Sin(_ph1 * 2f * MathF.Tau) + 0.15f * MathF.Sin(_ph1 * 3f * MathF.Tau);
+                float second = MathF.Sin(_ph2 * MathF.Tau) * 0.4f * MathF.Max(0f, MathF.Sin(T * 0.9f));
+                s = _lp.Process((voice + second) * 0.45f + w * 0.02f) * env;
                 break;
             }
             case "powerup":

@@ -404,6 +404,44 @@ public partial class Main
             (t += 10.0f, () => Shot("10_chase_turning")),
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
+            // --- The whale: a gentle giant passing, filmed from the side, the front, above, and from the boat
+            (t += 0.1f, CaptureMarkWhale),
+            (t += 0.1f, () =>
+            {
+                EnterWalking(); EnterHelm(); _view = HelmView.Chase; ApplyHelmView();
+                var sp = _sub.GlobalPosition;
+                _sub.GlobalPosition = new Vector3(sp.X, Mathf.Min(_gen.Height(sp.X, sp.Z) + 60f, -420f), sp.Z);
+                _sub.LinearVelocity = Vector3.Zero; _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LightsOn = true;
+                _creatures.SummonWhale();
+                // Bring it in close so we don't wait two minutes for it to arrive.
+                var w = _creatures.Whale;
+                Vector3 d = -w.GlobalBasis.Z;
+                w.GlobalPosition = _sub.GlobalPosition + w.GlobalBasis.X * 70f - d * 40f + Vector3.Up * 10f;
+                _docTarget = w; _docScale = 1.5f; _docSide = 1f; _docForward = 0f;
+                _docCam = new Camera3D { Fov = 60f, Far = 400f };
+                _docCam.AddChild(new SpotLight3D { SpotRange = 160f, SpotAngle = 45f, LightEnergy = 10f });
+                _game.AddChild(_docCam); _docCam.MakeCurrent();
+            }),
+            (t += 1.5f, () => { Shot("31a_whale_side"); GD.Print($"[capture] whale at {_creatures.Whale?.DistanceToFocus:0} m, speed-ish, sonar bodies {System.Linq.Enumerable.Count(_creatures.Bodies())}"); }),
+            (t += 2.5f, () => Shot("31b_whale_side_later")),
+            (t += 0.1f, () => { _docSide = -1f; _docScale = 1.4f; }),
+            (t += 1.0f, () => Shot("31c_whale_front")),
+            (t += 0.1f, () => { _docSide = 2f; _docScale = 1.4f; }),
+            (t += 1.0f, () => Shot("31d_whale_top")),
+            (t += 0.1f, () =>
+            {
+                // From the boat: it goes right overhead.
+                _docCam.QueueFree(); _docCam = null; _docTarget = null;
+                _creatures.DismissWhale();
+                _creatures.SummonWhale(overhead: true);
+                var w = _creatures.Whale;
+                Vector3 d = -w.GlobalBasis.Z;
+                w.GlobalPosition = _sub.GlobalPosition - d * 20f + Vector3.Up * 24f;
+                _view = HelmView.BowCamera; ApplyHelmView();
+                _bowCam.RotationDegrees = new Vector3(60f, 0, 0);
+            }),
+            (t += 3.0f, () => { Shot("31e_whale_overhead"); _audio.PlayAt("whalesong", 0f, 1f); }),
+            (t += 4.0f, () => { Shot("31f_whale_overhead_later"); _bowCam.RotationDegrees = Vector3.Zero; _view = HelmView.Bridge; ApplyHelmView(); }),
             // --- The hydrophone: waterfall, the Sounding, recording, a creature, own noise
             (t += 0.1f, CaptureMarkHydrophone),
             (t += 0.1f, () =>
@@ -801,6 +839,7 @@ public partial class Main
         var (src, level) = InBeam();
         GD.Print($"[capture] hydrophone {what}: beam {_beam:0} band {_phone.Filter} level {level:0.00} in beam {(src is HydroSource s ? $"{s.Class} {s.Level:0.00} @ {s.Distance:0} m" : "nothing")} | sources {_hydroSources.Count}: {string.Join(", ", _hydroSources.ConvertAll(x => $"{x.Class}:{x.Level:0.00}@{x.Bearing:0}"))} | lines: {_hydroDisplay.Line2} / {_hydroDisplay.Line3} | recs {_phone.Recordings.Count} noise {_listener.Noise:0.00}");
     }
+    private void CaptureMarkWhale() => CaptureSection("whale");
     private void CaptureMarkHydrophone() => CaptureSection("hydrophone");
     private void CaptureMarkListener() => CaptureSection("listener");
     private void CaptureMarkModules() => CaptureSection("modules");
@@ -840,7 +879,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

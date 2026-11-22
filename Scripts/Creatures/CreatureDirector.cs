@@ -29,6 +29,9 @@ public partial class CreatureDirector : Node3D
 
     public readonly List<Swimmer> Rays = new();
     public Swimmer Wyrm { get; private set; }
+    /// <summary>The gentle giant, while one is passing.</summary>
+    public Swimmer Whale { get; private set; }
+    private float _whaleT = 240f, _songT = 8f;
 
     private float _rayCheck = 3f, _deepTime, _wyrmCooldown;
     private readonly Random _rng = new();
@@ -36,6 +39,9 @@ public partial class CreatureDirector : Node3D
     public IEnumerable<Vector3> Bodies()
     {
         foreach (var r in Rays) yield return r.GlobalPosition;
+        if (Whale != null)
+            // The biggest thing on the scope is a chain of blips, not one: a ridge that moves.
+            for (int i = -4; i <= 4; i++) yield return Whale.GlobalPosition + Whale.GlobalBasis.Z * i * 5f;
         if (Wyrm != null)
         {
             // A long body: several returns along the spine.
@@ -84,6 +90,30 @@ public partial class CreatureDirector : Node3D
         Wyrm.ForcePass(teleport: true);
     }
 
+    /// <summary>
+    /// The gentle giant passes: from far out on one side to far out on the other, at a distance from
+    /// the focus (sometimes right overhead). It never attacks, never stops, never doubles back.
+    /// </summary>
+    /// <summary>Gone (dev / capture).</summary>
+    public void DismissWhale() { Whale?.QueueFree(); Whale = null; }
+
+    public void SummonWhale(bool overhead = false)
+    {
+        if (Whale != null) return;
+        Vector3 f = Focus();
+        float a = (float)_rng.NextDouble() * Mathf.Tau;
+        Vector3 dir = new(MathF.Sin(a), 0, MathF.Cos(a));
+        Vector3 side = new(-dir.Z, 0, dir.X);
+        float lateral = overhead ? 0f : 45f + (float)_rng.NextDouble() * 50f;
+        float rise = overhead ? 30f + (float)_rng.NextDouble() * 10f : (float)_rng.NextDouble() * 20f - 4f;
+        Vector3 cross = f + side * lateral + Vector3.Up * rise;
+        Vector3 start = cross - dir * 320f, end = cross + dir * 360f;
+        float floorS = Gen?.Height(start.X, start.Z) ?? start.Y;
+        start.Y = Math.Max(start.Y, floorS + 25f);
+        Whale = Spawn(CreatureProfile.Whale(), start, f);
+        Whale.Transit(end);
+    }
+
     // ------------------------------------------------------------------ director
 
     public override void _Process(double delta)
@@ -119,6 +149,27 @@ public partial class CreatureDirector : Node3D
             Wyrm = Spawn(CreatureProfile.Fangwyrm(), OffscreenPoint(f, 260f, 25f), f);
             _deepTime = 0f;
         }
+        // --- the whale: rare, in deep water, never while the wyrm is about
+        _whaleT -= dt;
+        if (Whale == null && Wyrm == null && _whaleT <= 0f)
+        {
+            _whaleT = 420f + (float)_rng.NextDouble() * 480f;   // 7-15 minutes between chances
+            if (depth > 300f && _rng.NextDouble() < 0.6) SummonWhale(_rng.NextDouble() < 0.3);
+        }
+        if (Whale != null)
+        {
+            // It sings while it passes: long, low, gliding calls through the hull.
+            _songT -= dt;
+            float wd = Whale.DistanceToFocus;
+            if (_songT <= 0f && wd < 450f)
+            {
+                _songT = 14f + (float)_rng.NextDouble() * 18f;
+                Vector3 rel = Whale.GlobalPosition - f;
+                Audio?.PlayAt("whalesong", Mathf.Clamp(rel.X / Mathf.Max(1f, rel.Length()), -0.8f, 0.8f), Mathf.Clamp(1f - wd / 450f, 0.15f, 1f));
+            }
+            if (Whale.Leaving || wd > 700f) { Whale.QueueFree(); Whale = null; _songT = 6f; }
+        }
+
         if (Wyrm != null)
         {
             if (!Wyrm.Leaving && (depth < DeepThreshold - 60f || _rng.NextDouble() < dt / 400f)) Wyrm.Leave();

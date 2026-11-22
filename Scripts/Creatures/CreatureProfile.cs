@@ -81,6 +81,34 @@ public sealed class CreatureProfile
         return p;
     }
 
+    public static CreatureProfile Whale()
+    {
+        // Tom's "Whale of the Abyss", a gentle giant. Spine: Bone -> .004 -> .001 -> .002 -> .003 (fluke),
+        // running from behind the head to the tail; Bone.005 the head; Bone.L/R + Bone2 the pectoral fins.
+        // Whales swim with the tail going UP AND DOWN, so the travelling wave is pitch, not yaw.
+        var p = new CreatureProfile
+        {
+            Name = "Whale of the Abyss", Scene = "res://assets/Whale_of_the_Abyss.glb",
+            Length = 45f, ModelLength = 19.24f, Temperament = Temperament.Grazer,
+            CruiseSpeed = 2.4f, PassSpeed = 2.8f, TurnRate = 0.05f, CycleBase = 0.07f, CyclePerSpeed = 0.012f,
+            // Tom's glow map: dim teal patches over ~4% of the skin, painted gently, so it can run hot.
+            EmissionEnergy = 2.6f,
+        };
+        const float k = 0.7f;
+        p.Pitch.Add(("Bone", 0.015f, 0 * k));
+        p.Pitch.Add(("Bone.004", 0.035f, 1 * k));
+        p.Pitch.Add(("Bone.001", 0.06f, 2 * k));
+        p.Pitch.Add(("Bone.002", 0.1f, 3 * k));
+        p.Pitch.Add(("Bone.003", 0.16f, 4 * k));      // the fluke
+        p.Pitch.Add(("Bone.005", 0.02f, -0.6f));     // the head nods against the stroke
+        p.Roll.Add(("Bone.L", 0.08f, 0.5f));          // fins scull slowly
+        p.Roll.Add(("Bone2.L", 0.1f, 1.1f));
+        p.Roll.Add(("Bone.R", -0.08f, 0.5f));
+        p.Roll.Add(("Bone2.R", -0.1f, 1.1f));
+        p.Yaw.Add(("Bone.003", 0.02f, 4 * k, 0.15f)); // a little steering in the fluke on turns
+        return p;
+    }
+
     public static CreatureProfile CrystalRay()
     {
         // 9 m wingspan ray. Disc/head = Bone; tail whip Bone.001 → .004; wings .005→.008 (right), .006→.007 (left).

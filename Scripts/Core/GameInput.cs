@@ -47,6 +47,7 @@ public static class GameInput
     public const string DebugKnock = "debug_knock";
     public const string DebugListener = "debug_listener";
     public const string SummonWyrm = "debug_summon_wyrm";
+    public const string SummonWhale = "debug_summon_whale";
 
     // Monitor station
     public const string Fullscreen = "feed_fullscreen";
@@ -81,6 +82,7 @@ public static class GameInput
         Bind(DebugKnock, Godot.Key.F6);
         Bind(DebugListener, Godot.Key.F5);
         Bind(SummonWyrm, Godot.Key.F10);
+        Bind(SummonWhale, Godot.Key.F4);
         Bind(Inventory, Godot.Key.I);
         Bind(IntakeToggle, Godot.Key.G);
         Bind(Dock, Godot.Key.K);
