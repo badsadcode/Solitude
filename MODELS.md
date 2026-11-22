@@ -66,7 +66,7 @@ These are "blockout" furniture: the level generator already builds them as rough
 
 ### Station hardware (also replaceable, ask Sage to hook them up)
 
-- [ ] **pressure door leaf**: about 1.0 × 0.12 × 2.4. One half of a sliding door; two slide apart.
+- [x] **pressure door leaf**: done (2026-11-22), `pressure_door_leaf_0.glb`. Both halves of every sliding door; more variants welcome.
 - [ ] **junction box**: 0.6 × 0.25 × 0.8, wall. Needs a lever and a status lamp (red / green).
 - [ ] **porthole frame**: about 0.6 m across, wall. The game puts the water behind it.
 - [ ] **airlock hatch**: 1.0 × 2.2, wall. A heavy door with a wheel.
