@@ -87,7 +87,21 @@ $families = @(
     }
 )
 
-$allowed = @("nl_floor", "nl_wall", "nl_ceiling", "nl_door", "nl_secret", "nl_trigger", "nl_sky")
+# True deep-sea stations (NoorLevel's `station` preset, 2026-11-22): pods on a spine of pressure
+# tubes, airlock on the top deck, core at the bottom, dressed with prop and gameplay markers.
+# The preset brings its own rules, so these use $stationCommon, not $common.
+$stationCommon = @("--format", "glb", "--json-result", "--max-ms", "30000", "--set", "keys=1")
+foreach ($style in "research", "mining", "military", "derelict") {
+    $families += @{ Name = "pod_$style"; Preset = "station"; Seeds = 1..5; Common = $stationCommon; Variants = @(
+        @("--set", "station_style=$style", "--set", "spine=line", "--set", "corridor_profile=round", "--set", "map_size=56"),
+        @("--set", "station_style=$style", "--set", "spine=ring", "--set", "corridor_profile=chamfer", "--set", "map_size=64"),
+        @("--set", "station_style=$style", "--set", "spine=tree", "--set", "corridor_profile=round", "--set", "map_size=64"),
+        @("--set", "station_style=$style", "--set", "spine=line", "--set", "corridor_profile=box", "--set", "map_size=48", "--set", "character_rooms=2"),
+        @("--set", "station_style=$style", "--set", "spine=auto", "--set", "corridor_profile=round", "--set", "map_size=72", "--set", "character_rooms=3"))
+    }
+}
+
+$allowed = @("nl_floor", "nl_wall", "nl_ceiling", "nl_door", "nl_secret", "nl_trigger", "nl_sky", "nl_water")
 
 function Test-Station([string]$path) {
     # Read the GLB's JSON chunk: markers Solitude needs, and only materials it knows.
@@ -115,7 +129,8 @@ foreach ($f in $families) {
         if ((Test-Path $glb) -and -not $Force) {
             $kept++
         } else {
-            $cliArgs = @("generate", "--preset", $f.Preset, "--seed", "$seed") + $common + $extra + @("--out", $glb)
+            $base = if ($f.Common) { $f.Common } else { $common }
+            $cliArgs = @("generate", "--preset", $f.Preset, "--seed", "$seed") + $base + $extra + @("--out", $glb)
             $result = (& $Cli @cliArgs | Select-Object -Last 1) | ConvertFrom-Json
             if (-not $result.ok) { Write-Warning "$name failed: $($result.errors -join '; ')"; $rejected++; continue }
             $recipe = [ordered]@{ tool = "NoorLevel"; preset = $f.Preset; seed = $seed; family = $f.Name; command = "noorlevel-cli " + ($cliArgs -join " ") }

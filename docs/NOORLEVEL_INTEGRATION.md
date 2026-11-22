@@ -17,6 +17,13 @@ The script never regenerates an existing GLB without `-Force` (saves remember lo
 validates each one, and writes `Scripts/Stations/StationBank.g.cs`. Each family stocks its loot
 and crawlers differently (`StationInterior`). `-- --station-sweep` loads every station once.
 
+**Pods (2026-11-22):** 20 more from NoorLevel's `station` preset (`pod_research|mining|military|derelict_01..05`),
+about 45% of all stations. They carry the station markers (consumer contract in NoorLevel's README),
+read by `Scripts/Stations/StationDressing.cs`: props (`PropFactory`: Tom's `assets/props/<class>_<n>.glb`
+if it exists, else a placeholder), bulkheads as sliding doors, portholes, flooded / electrified zones,
+the airlock hatch, loot / log / creature spots, and a wall tint per station style. `nl_water` renders
+as water. Dev views: `--stairs-test=view:prop:console` (or `view:viewport`, `view:bulkhead`).
+
 Generator settings (see the script): originally the `facility` and `bunker` presets, `underground` (entered from
 the top = the docking airlock; the exit = the station core), **no lifts / ladders / spiral stairs**
 yet, ramps over stairs, no windows / skylights / open yards, one keycard door, a secret room.

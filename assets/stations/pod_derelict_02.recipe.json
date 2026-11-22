@@ -1,0 +1,7 @@
+﻿{
+    "tool":  "NoorLevel",
+    "preset":  "station",
+    "seed":  2,
+    "family":  "pod_derelict",
+    "command":  "noorlevel-cli generate --preset station --seed 2 --format glb --json-result --max-ms 30000 --set keys=1 --set station_style=derelict --set spine=ring --set corridor_profile=chamfer --set map_size=64 --out F:\\Sage\\Solitude\\tools\\..\\assets\\stations\\pod_derelict_02.glb"
+}

@@ -101,13 +101,22 @@ public partial class StationInterior : Node3D
                 string mat = (src.SurfaceGetMaterial(s)?.ResourceName ?? src.SurfaceGetName(s) ?? "").ToLowerInvariant();
                 var arrays = src.SurfaceGetArrays(s);
                 if (mat.Contains("sky") || mat.Contains("trigger")) continue;
+                if (mat.Contains("water"))
+                {
+                    // Flooded floors and moon pools: something to wade through, nothing to stand on.
+                    var wm = new ArrayMesh();
+                    wm.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+                    wm.SurfaceSetMaterial(0, WaterMaterial());
+                    AddChild(new MeshInstance3D { Mesh = wm, Transform = toLocal, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+                    continue;
+                }
                 if (mat.Contains("door") || mat.Contains("secret"))
                 {
                     CollectTriangles(arrays, toLocal, mat.Contains("secret"));
                     continue;
                 }
                 keep.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-                Material m = mat.Contains("floor") ? Art.StationFloor : mat.Contains("ceiling") ? Art.StationCeiling : Art.StationWall;
+                Material m = Styled(mat.Contains("floor") ? Art.StationFloor : mat.Contains("ceiling") ? Art.StationCeiling : Art.StationWall);
                 keep.SurfaceSetMaterial(keep.GetSurfaceCount() - 1, m);
             }
             if (keep.GetSurfaceCount() == 0) continue;
@@ -126,10 +135,19 @@ public partial class StationInterior : Node3D
         {
             var extras = n.GetMeta("extras").AsGodotDictionary();
             string kind = null;
-            if (extras.TryGetValue("noor", out var noorV) && noorV.VariantType == Variant.Type.Dictionary
-                && noorV.AsGodotDictionary().TryGetValue("marker", out var mk)) kind = mk.AsString();   // Noor Interchange marker
-            else if (extras.TryGetValue("kind", out var k)) kind = k.AsString();                     // NoorLevel today
-            if (kind != null) _markers.Add((ToLocal(n3.GlobalPosition), Normalise(kind), extras));
+            var noor = extras.TryGetValue("noor", out var noorV) && noorV.VariantType == Variant.Type.Dictionary ? noorV.AsGodotDictionary() : null;
+            // NoorLevel's flat kind is the more specific one (loot, airlock, bulkhead...) where both exist;
+            // a pure Interchange file only has noor.marker.
+            if (extras.TryGetValue("kind", out var k)) kind = k.AsString();
+            else if (noor != null && noor.TryGetValue("marker", out var mk)) kind = mk.AsString();
+            // The station root names its style.
+            if (noor != null && noor.TryGetValue("station", out var st) && st.VariantType == Variant.Type.Dictionary
+                && st.AsGodotDictionary().TryGetValue("style", out var style)) _style = style.AsString();
+            if (kind != null)
+            {
+                _markers.Add((ToLocal(n3.GlobalPosition), Normalise(kind), extras));
+                _markerBasis.Add((GlobalTransform.AffineInverse() * n3.GlobalTransform).Basis.Orthonormalized());
+            }
         }
         foreach (var c in n.GetChildren()) Walk(c, meshes);
     }
@@ -285,6 +303,7 @@ public partial class StationInterior : Node3D
         AddChild(new MeshInstance3D { Mesh = hatch.Build(Art.Machine), Position = startPos + Vector3.Up * 0.02f });
         var ret = Interactable.Create(this, startPos + Vector3.Up * 0.3f, new Vector3(1.4f, 0.6f, 1.4f), "Airlock: return to the submarine", () => ReturnToSub?.Invoke());
        AddChild(new OmniLight3D { Position = startPos + Vector3.Up * 2.2f, LightColor = new Color(1f, 0.7f, 0.3f), LightEnergy = 0.9f, OmniRange = 6f });
+        DressStation(startPos);
 
         // Candidate floor points under the light fittings (rooms and corridors).
         var spots = new List<Vector3>();
@@ -328,18 +347,26 @@ public partial class StationInterior : Node3D
         if (key.kind != null && !State.DoorOpen && Floor(key.pos + Vector3.Up) is Vector3 kp)
             Loot(kp, "Keycard (red)", keycard, () => { State.HasKeycard = true; Message?.Invoke("RED KEYCARD. Somebody's photo on it has been scratched out."); });
 
-        // Earlier logs, then general loot, across the floor spots.
+        // Earlier logs, then general loot, across the floor spots. Stations baked with markers say
+        // where: logs on terminals, loot on shelves and desks, crawlers in nests. The light spots
+        // fill in after those run out (and are all an older layout has, exactly as before).
         int s = 0;
-        for (int i = 0; i < logs.Count - 1 && s < spots.Count; i++, s++)
+        var logMarks = MarkerSpots("log_terminal");
+        var lootMarks = MarkerSpots("loot");
+        var nestMarks = MarkerSpots("creature_spawn");
+        int logI = 0, lootI = 0, nestI = 0;
+        bool HasSpot(List<(Vector3 p, bool marker)> pref, int pi) => pi < pref.Count || s < spots.Count;
+        (Vector3 p, bool marker) NextSpot(List<(Vector3 p, bool marker)> pref, ref int pi) => pi < pref.Count ? pref[pi++] : (spots[s++], false);
+        for (int i = 0; i < logs.Count - 1 && HasSpot(logMarks, logI); i++)
         {
             var log = logs[i];
-            Loot(spots[s], "Read crew log", datapad, () => ReadLog?.Invoke(log));
+            Loot(NextSpot(logMarks, ref logI).p, "Read crew log", datapad, () => ReadLog?.Invoke(log));
         }
         // A weapon: the starter station always has the rifle; others sometimes a shotgun or rifle.
-        if (s < spots.Count && (Site.Id == -1 || _rng.NextDouble() < 0.45))
+        if (HasSpot(lootMarks, lootI) && (Site.Id == -1 || _rng.NextDouble() < 0.45))
         {
             WeaponId w = Site.Id == -1 ? WeaponId.Rifle : (_rng.NextDouble() < 0.5 ? WeaponId.Shotgun : WeaponId.Rifle);
-            Loot(spots[s++], $"Weapon locker: {Weapons.Defs[w].Name.ToLowerInvariant()}", gunCase, () =>
+            Loot(NextSpot(lootMarks, ref lootI).p, $"Weapon locker: {Weapons.Defs[w].Name.ToLowerInvariant()}", gunCase, () =>
             {
                 Weapons.Give(w, w == WeaponId.Shotgun ? 6 : 30);
                 Weapons.AddAmmo(w, w == WeaponId.Shotgun ? 6 : 30);
@@ -350,7 +377,7 @@ public partial class StationInterior : Node3D
         int lootCount = 6 + _rng.Next(7);
         // Each family stocks differently: habitats feed you, outposts arm you, works and relays
         // are full of machinery, labs hold blueprints. Cumulative thresholds: food, med, blueprint, parts, ammo.
-        var (tFood, tMed, tPrint, tParts, tAmmo) = Site.Family switch
+        var (tFood, tMed, tPrint, tParts, tAmmo) = Site.LootFamily switch
         {
             "habitat" => (0.32, 0.47, 0.51, 0.63, 0.78),
             "outpost" => (0.12, 0.22, 0.26, 0.40, 0.80),
@@ -359,7 +386,7 @@ public partial class StationInterior : Node3D
             "deck" => (0.12, 0.20, 0.27, 0.55, 0.72),
             _ => (0.18, 0.28, 0.34, 0.52, 0.74),        // research: the original mix
         };
-        var familyParts = Site.Family switch
+        var familyParts = Site.LootFamily switch
         {
             "works" => new[] { ItemId.Servo, ItemId.Valve, ItemId.Impeller, ItemId.Impeller, ItemId.Coil },
             "deeplab" => new[] { ItemId.Optics, ItemId.LogicBoard, ItemId.Coil, ItemId.Optics },
@@ -367,10 +394,12 @@ public partial class StationInterior : Node3D
             "habitat" => new[] { ItemId.Valve, ItemId.Impeller, ItemId.Servo },
             _ => Parts,
         };
-        for (int i = 0; i < lootCount && s < spots.Count; i++, s++)
+        for (int i = 0; i < lootCount && HasSpot(lootMarks, lootI); i++)
         {
+            var (spot, onMarker) = NextSpot(lootMarks, ref lootI);
             double r = _rng.NextDouble();
-            var p = spots[s] + new Vector3((float)_rng.NextDouble() - 0.5f, 0, (float)_rng.NextDouble() - 0.5f);
+            var jitter = new Vector3((float)_rng.NextDouble() - 0.5f, 0, (float)_rng.NextDouble() - 0.5f);
+            var p = onMarker ? spot : spot + jitter;   // marker loot sits exactly where it was put (on a desk, a shelf)
             if (r < tFood) Loot(p, "Station tin", crate, () => Systems.Collect(ItemId.CannedFood));
             else if (r < tMed) Loot(p, "Medkit", medbox, () => Systems.Collect(ItemId.Medkit));
             else if (r < tPrint) Loot(p, "Blueprint (engineer's datapad)", datapad, () => Blueprint?.Invoke(false));
@@ -405,11 +434,12 @@ public partial class StationInterior : Node3D
 
         // Infestation: some stations are empty. Most are not.
         // Outposts and works were overrun hardest; habitats are often just... empty.
-        int crawlers = Site.Id == -1 ? 3 : (_rng.NextDouble() < (Site.Family == "habitat" ? 0.5 : 0.3) ? 0 : 2 + _rng.Next(Site.Family is "outpost" or "works" ? 7 : 5));
-        for (int i = 0; i < crawlers && s < spots.Count; i++, s++)
+        int crawlers = Site.Id == -1 ? 3 : (_rng.NextDouble() < (Site.LootFamily == "habitat" ? 0.5 : 0.3) ? 0 : 2 + _rng.Next(Site.LootFamily is "outpost" or "works" ? 7 : 5));
+        for (int i = 0; i < crawlers && HasSpot(nestMarks, nestI); i++)
         {
-            if (spots[s].DistanceTo(startPos) < 12f) continue;
-            var c = new Crawler { Player = Player, Index = i, Position = spots[s] + Vector3.Up * 0.3f, Rotation = new Vector3(0, (float)_rng.NextDouble() * Mathf.Tau, 0) };
+            var (cp, nest) = NextSpot(nestMarks, ref nestI);
+            if (!nest && cp.DistanceTo(startPos) < 12f) continue;
+            var c = new Crawler { Player = Player, Index = i, Position = cp + Vector3.Up * 0.3f, Rotation = new Vector3(0, (float)_rng.NextDouble() * Mathf.Tau, 0) };
             c.Sound = (kind, pos) => Sound?.Invoke(kind, pos);
             c.Killed = k => State.Killed.Add(k.Index);
             AddChild(c);
@@ -487,6 +517,7 @@ public partial class StationInterior : Node3D
     {
         float dt = (float)delta;
         _t += dt;
+        UpdateDressing(dt);
         foreach (var (l, e, flicker) in _lights)
         {
             if (flicker && _rng.NextDouble() < 0.04) l.LightEnergy = e * (float)_rng.NextDouble() * 0.3f;

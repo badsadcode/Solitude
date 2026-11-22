@@ -1,0 +1,7 @@
+﻿{
+    "tool":  "NoorLevel",
+    "preset":  "station",
+    "seed":  5,
+    "family":  "pod_mining",
+    "command":  "noorlevel-cli generate --preset station --seed 5 --format glb --json-result --max-ms 30000 --set keys=1 --set station_style=mining --set spine=auto --set corridor_profile=round --set map_size=72 --set character_rooms=3 --out F:\\Sage\\Solitude\\tools\\..\\assets\\stations\\pod_mining_05.glb"
+}

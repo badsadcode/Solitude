@@ -32,6 +32,7 @@ public partial class PlayerController : CharacterBody3D
     public SpotLight3D Flashlight { get; private set; }
     public float SpeedFactor = 1f;          // starving / wounded slows you down
     public float WaterFactor = 1f;          // wading through a flooded compartment
+    public float StationWade = 1f;          // the same, in a station's flooded zone
     private const float StepHeight = 0.55f;
 
     private const float WalkSpeed = 2.6f, SprintSpeed = 4.2f, CrouchSpeed = 1.3f, Accel = 10f, Gravity = 9.8f, EyeHeight = 1.62f;
@@ -153,7 +154,7 @@ public partial class PlayerController : CharacterBody3D
             if (wish.LengthSquared() > 1f) wish = wish.Normalized();
             sprint = Input.IsActionPressed(GameInput.Sprint);
         }
-        float speed = (Crouching ? CrouchSpeed : sprint ? SprintSpeed : WalkSpeed) * SpeedFactor * (InStation ? 1f : WaterFactor);
+        float speed = (Crouching ? CrouchSpeed : sprint ? SprintSpeed : WalkSpeed) * SpeedFactor * (InStation ? StationWade : WaterFactor);
         Vector3 hv = new(v.X, 0, v.Z);
         hv = hv.Lerp(wish * speed, Mathf.Clamp(Accel * dt, 0f, 1f));
 

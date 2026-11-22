@@ -71,7 +71,10 @@ public partial class Main
     /// </summary>
     private void StairsTest(string spec)
     {
-        bool airlock = spec == "airlock";   // just stand at the airlock and look (with --stairs-shot)
+        _stairsView = spec.StartsWith("view:") ? spec.Substring(5) : null;   // view:prop:console, view:viewport, view:bulkhead
+        if (_stairsView != null) spec = "airlock";
+        bool airlock = spec is "airlock" or "airlock-walk";   // stand at the airlock and look (with --stairs-shot); -walk: then walk in
+        _stairsWalkIn = spec == "airlock-walk";
         if (airlock) spec = "0,0,0,0";
         _stairsAirlock = airlock;
         var p = spec.Split(',');
@@ -92,7 +95,8 @@ public partial class Main
         };
     }
 
-    private bool _stairsAirlock;
+    private bool _stairsAirlock, _stairsWalkIn;
+    private string _stairsView;
 
     private void StairsWalk(Vector3 local, float yaw)
     {
@@ -101,8 +105,15 @@ public partial class Main
         tw.TweenCallback(Callable.From(() =>
         {
             _player.GlobalTransform = _stairsAirlock ? _station.GlobalTransform * _station.AirlockPose : new Transform3D(new Basis(Vector3.Up, yaw), _station.ToGlobal(local));
+            if (_stairsView != null)
+            {
+                var parts = _stairsView.Split(':');
+                var v = _station.ViewOf(parts[0], parts.Length > 1 ? parts[1] : null);
+                if (v is Transform3D vt) _player.GlobalTransform = _station.GlobalTransform * vt;
+                else GD.Print($"[stairs] no marker for {_stairsView}");
+            }
             _player.SetLook(0f, OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--stairs-shot=")) ? 0.05f : -0.3f);
-            if (!_stairsAirlock) Input.ActionPress(GameInput.Forward);
+            if (!_stairsAirlock || _stairsWalkIn) Input.ActionPress(GameInput.Forward);
             GD.Print($"[stairs] start local {local} layout {_station.Site.Layout}");
         }));
         for (int i = 1; i <= 12; i++)
@@ -113,7 +124,7 @@ public partial class Main
             {
                 var l = _station.ToLocal(_player.GlobalPosition);
                 GD.Print($"[stairs] t={k * 0.5f:0.0} local=({l.X:0.00}, {l.Y:0.00}, {l.Z:0.00}) onFloor={_player.IsOnFloor()} onWall={_player.IsOnWall()} step={Solitude.Core.Stepper.Why}");
-                if (k == 1)
+                if (k == (_stairsWalkIn ? 5 : 1))
                     foreach (var arg in OS.GetCmdlineUserArgs())
                         if (arg.StartsWith("--stairs-shot=")) GetViewport().GetTexture().GetImage().SavePng(arg.Substring(14));
             }));
@@ -145,7 +156,9 @@ public partial class Main
                 if (!ok) bad++;
                 int loot = 0, doors = 0;
                 foreach (var n in cur.GetChildren()) if (n is Interactable it) { if (it.Prompt.Contains("door") || it.Prompt.Contains("panel")) doors++; else loot++; }
-                GD.Print($"[sweep] {names[i],-12} {(ok ? "OK " : "BAD")} ready={cur.Ready} floorUnderAirlock={hit.Count > 0} interactables={loot} crawlers={cur.Crawlers.Count} powered={cur.Powered} {(Time.GetTicksMsec() - t0)} ms");
+                int props = 0, bulk = 0;
+                foreach (var n in cur.GetChildren()) { if (n is Solitude.Stations.SlideDoor) bulk++; else if (n.Name.ToString().StartsWith("prop_") || n.GetChildCount() > 0 && n is Node3D && n.GetParent() == cur && n.Name.ToString().Contains("prop")) props++; }
+                GD.Print($"[sweep] {names[i],-12} {(ok ? "OK " : "BAD")} ready={cur.Ready} floorUnderAirlock={hit.Count > 0} interactables={loot} props={props} bulkheads={bulk} crawlers={cur.Crawlers.Count} powered={cur.Powered} {(Time.GetTicksMsec() - t0)} ms");
                 cur.QueueFree();
                 cur = null;
                 return;   // next tick: the next station

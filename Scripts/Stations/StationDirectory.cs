@@ -18,6 +18,15 @@ public sealed class StationSite
     public bool Known;           // beacon heard or found on a map fragment
     /// <summary>The station family, from the layout name: research, outpost, habitat, works, deeplab, deck.</summary>
     public string Family => Layout.Contains('_') ? Layout.Substring(0, Layout.LastIndexOf('_')) : Layout;
+    /// <summary>Which stocking table a station uses (pods borrow their nearest older cousin's).</summary>
+    public string LootFamily => Family switch
+    {
+        "pod_research" => "deeplab",
+        "pod_mining" => "works",
+        "pod_military" => "outpost",
+        "pod_derelict" => "habitat",
+        var f => f,
+    };
 
     /// <summary>Where the submarine sits when docked (alongside the berth gantry).</summary>
     public Transform3D DockPose => new Transform3D(new Basis(Vector3.Up, Yaw), Position) * StationExterior.DockLocal;
@@ -46,6 +55,10 @@ public sealed class StationDirectory
         "works" => "MINING WORKS",
         "deeplab" => "DEEP LABORATORY",
         "deck" => "RELAY STATION",
+        "pod_research" => "SEAFLOOR LAB",
+        "pod_mining" => "PRESSURE MINE",
+        "pod_military" => "NAVAL STATION",
+        "pod_derelict" => "DERELICT",
         _ => "STATION",
     };
     private static readonly string[] Names =
@@ -91,6 +104,13 @@ public sealed class StationDirectory
         int h = (int)(Perlin.Hash((int)(id & 0xFFFF), (int)(id >> 16), seed + salt) * int.MaxValue);
         var rng = new Random(h);
         string layout = id == -1 ? StationBank.Starter[rng.Next(StationBank.Starter.Length)] : Bank[rng.Next(Bank.Length)]; // starter is a research station
+        // The true deep-sea stations (pods) are the most common kind: a separate hash decides, so the
+        // name draws below stay where they were.
+        if (id != -1 && Perlin.Hash((int)(id & 0xFFFF), (int)(id >> 16), seed + salt + 77) < 0.45f)
+        {
+            var pods = Array.FindAll(Bank, b => b.StartsWith("pod_"));
+            if (pods.Length > 0) layout = pods[(int)(Perlin.Hash((int)(id & 0xFFFF), (int)(id >> 16), seed + salt + 78) * pods.Length) % pods.Length];
+        }
         if (id != -1) rng.Next(Prefix.Length);   // (the old random prefix draw, kept so names stay put)
         return new StationSite
         {
