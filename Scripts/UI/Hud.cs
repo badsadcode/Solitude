@@ -460,17 +460,18 @@ public partial class Hud : CanvasLayer
         engine.GrowVertical = Control.GrowDirection.Begin;
         engine.Position += new Vector2(-60, -34);
         engine.Modulate = new Color(1, 1, 1, 0.55f);
-        if (ResourceLoader.Exists("res://assets/branding/godot_logo.png"))
-            engine.AddChild(new TextureRect
-            {
-                Texture = GD.Load<Texture2D>("res://assets/branding/godot_logo.png"), CustomMinimumSize = new Vector2(24, 24),
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                TextureFilter = CanvasItem.TextureFilterEnum.Nearest, MouseFilter = Control.MouseFilterEnum.Ignore,
-            });
+        // With the logo (Tom's file, pre-pixelated to 30 px tall): "MADE WITH" + the Godot wordmark.
+        var logo = ResourceLoader.Exists("res://assets/branding/godot_logo.png") ? GD.Load<Texture2D>("res://assets/branding/godot_logo.png") : null;
         var made = MakeLabel(new Color(0.4f, 0.48f, 0.45f), 12);
-        made.Text = "MADE WITH GODOT ENGINE";
+        made.Text = logo != null ? "MADE WITH" : "MADE WITH GODOT ENGINE";
         made.VerticalAlignment = VerticalAlignment.Center;
         engine.AddChild(made);
+        if (logo != null)
+            engine.AddChild(new TextureRect
+            {
+                Texture = logo, CustomMinimumSize = logo.GetSize(), Modulate = new Color(0.42f, 0.62f, 0.54f),
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest, MouseFilter = Control.MouseFilterEnum.Ignore,
+            });
         _titleGroup.AddChild(engine);
 
         _titleGroup.Modulate = new Color(1, 1, 1, 0);
