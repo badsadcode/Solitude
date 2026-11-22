@@ -37,6 +37,7 @@ public partial class AudioDirector : Node
     public volatile float Exertion;   // 0..1, breathing rate
     public volatile float Heartbeat;  // 0..1, panic
     public volatile float Unease;     // 0..1, story progress: the distant calls come more often
+    public volatile float Spray;      // 0..1, open hull breaches: water forcing in
 
     private AudioStreamGeneratorPlayback _pb;
     private Thread _thread;
@@ -54,6 +55,7 @@ public partial class AudioDirector : Node
     private float _breathPh, _bubbleT, _heartPh, _heartEnv, _bubblePh, _bubbleF, _bubbleEnv;
     private OnePole _muffleL = new(900f, Rate), _muffleR = new(900f, Rate), _breathLp = new(1400f, Rate), _exhaleLp = new(500f, Rate);
     private OnePole _servoLp = new(900f, Rate), _intakeLp = new(350f, Rate);
+    private OnePole _sprayLp = new(2500f, Rate), _sprayLowLp = new(300f, Rate);
     private float _creakTimer = 6f, _groanTimer = 25f, _callTimer = 40f;
     private float _master;
 
@@ -235,6 +237,14 @@ public partial class AudioDirector : Node
             _servoPh = Wrap(_servoPh + (170f + Servo * 140f + MathF.Sin(_t * 7f) * 6f) * inv);
             float servo = _servoLp.Process(_servoPh * 2f - 1f) * Servo * 0.07f;
             float intake = (_intakeLp.Process(w) * 0.08f + MathF.Sin(_humPh * 1.5f * MathF.Tau) * 0.015f) * Intake;
+            // Breach spray: a hard, bright hiss with a low roar under it, wobbling with pressure.
+            float spr = Spray;
+            if (spr > 0.001f)
+            {
+                float hissS = (w - _sprayLp.Process(w)) * 0.22f;
+                float roar = _sprayLowLp.Process(w) * 0.5f;
+                intake += (hissS + roar) * spr * (0.85f + 0.15f * MathF.Sin(_t * 7.3f));
+            }
 
             float bed = rumble + drone + hiss + hum + rush + eng + servo + intake;
             float l = bed, r = bed;

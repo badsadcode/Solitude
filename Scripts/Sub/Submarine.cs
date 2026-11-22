@@ -56,6 +56,8 @@ public partial class Submarine : RigidBody3D
     public bool LightsOn = true;
     /// <summary>Max |engine output| the power bus allows (1 normally, low on emergency power).</summary>
     public float EngineLimit = 1f;
+    /// <summary>Downward force from flooded compartments (set by HullEvents).</summary>
+    public float FloodWeight;
 
     public static readonly (string name, float throttle)[] Telegraph =
     {
@@ -189,6 +191,7 @@ public partial class Submarine : RigidBody3D
         force -= right * (vr * Mathf.Abs(vr) * DragSideQ + vr * DragSideL);
         force -= up * (vu * Mathf.Abs(vu) * DragVertQ + vu * DragVertL);
         force += Vector3.Up * Ballast * BallastForce;
+        force += Vector3.Down * FloodWeight;
         ApplyCentralForce(force);
 
         // Torques in local space: x = pitch (+ nose up), y = yaw (+ left), z = roll (+ right side up)

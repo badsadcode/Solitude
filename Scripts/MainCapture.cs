@@ -324,6 +324,33 @@ public partial class Main
                 tree.CreateTimer(1.4, processAlways: true).Timeout += () => { ClosePause(); GD.Print($"[capture] resumed: paused={tree.Paused}"); };
             }),
             (t += 0.2f, () => { }),
+            // Hull events: a breach in the galley, flooding, steam, drips, a real weld, knocks.
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                _sub.SetHull(45f);                       // damaged: drips start
+                _systems.Hold.Add(ItemId.Sealant, 1);
+                _systems.Hold.Add(ItemId.MultiTool, 1);
+                _hull.OpenBreach(2, 1f);
+                var b = _hull.FirstBreach.Value;
+                // Stand 1.4 m in front of the breach, looking at it.
+                Vector3 stand = b.pos + b.normal * 1.4f; stand.Y = 0.05f;
+                _player.Position = stand;
+                _player.Transform = new Transform3D(Basis.LookingAt(-b.normal, Vector3.Up), stand);
+                _player.SetLook(0f, -0.25f);
+                GD.Print($"[capture] breach in {HullEvents.RoomNames[b.room]} at {b.pos}");
+            }),
+            (t += 1.5f, () => Shot("26a_breach")),
+            (t += 9.8f, () => _player.SetLook(0.5f, -0.85f)),
+            (t += 0.2f, () => { Shot("26b_flooding"); GD.Print($"[capture] galley water {_hull.Level(2):0.00} m, flood weight {_sub.FloodWeight:0}, player water factor {_player.WaterFactor:0.00}, warning '{_hull.Warning()}'"); }),
+            (t += 0.1f, () => { _hull.Vent(new Vector3(1.6f, 2.42f, 2.6f)); _player.SetLook(0.4f, 0.35f); }),
+            (t += 0.5f, () => Shot("26c_steam")),
+            (t += 0.1f, () => { _player.SetLook(0f, -0.25f); Input.ActionPress(GameInput.Interact); }),
+            (t += 1.2f, () => Shot("26c2_welding")),
+            (t += 1.8f, () => { Input.ActionRelease(GameInput.Interact); GD.Print($"[capture] after welding: breaches={_hull.ActiveBreaches} sealant={_systems.Hold.Count(ItemId.Sealant)} focused='{_player.Focused?.Prompt}'"); }),
+            (t += 8.0f, () => { Shot("26d_draining"); GD.Print($"[capture] galley water after pumping {_hull.Level(2):0.00} m"); }),
+            (t += 0.1f, () => _hull.Knock()),
+            (t += 3.0f, () => { _sub.SetHull(100f); }),
             // Holo table: the red own-ship dot.
             (t += 0.1f, () => { EnterWalking(); _player.Position = new Vector3(0.2f, 0.05f, -2.0f); EnterHolo(); _holoPitch = 0.9f; TryPing(); }),
             (t += 2.5f, () => Shot("24_holo_red_dot")),

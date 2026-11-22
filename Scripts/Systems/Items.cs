@@ -15,6 +15,8 @@ public enum ItemId
     Ration, ClamStew, GlowBroth,
     // Found aboard stations
     CannedFood, Medkit, StationAlloy,
+    // Tools
+    MultiTool,
 }
 
 public sealed record ItemInfo(string Name, string Description, int Weight, float Food = 0f);
@@ -38,6 +40,7 @@ public static class Items
         [ItemId.ClamStew] = new("Clam stew", "Hot, salty, almost comforting.", 1, 50f),
         [ItemId.GlowBroth] = new("Glow broth", "Your mouth glows for an hour afterwards. You dream in blue.", 1, 35f),
         [ItemId.CannedFood] = new("Station tin", "Label long gone. Best before: the incident.", 1, 40f),
+        [ItemId.MultiTool] = new("Multi-tool", "Arc welder, cutter, pry bar and torch in one battered housing. Needed to weld breaches.", 1),
         [ItemId.StationAlloy] = new("Station alloy", "Pressure-rated plate salvaged from a station. Nothing you can press from nodules is this strong.", 2),
         [ItemId.Medkit] = new("Medkit", "Gauze, sealant spray, something in an autoinjector. Press H to use.", 1),
     };

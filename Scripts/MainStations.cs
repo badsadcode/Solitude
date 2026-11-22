@@ -259,7 +259,15 @@ public partial class Main
         var cam = _player.Camera;
         Vector3 rel = cam.GlobalBasis.Inverse() * (pos - cam.GlobalPosition);
         float dist = rel.Length();
-        float range = kind is "screech" or "die" or "door" ? 45f : kind == "chitter" ? 22f : 30f;
+        float range = kind switch
+        {
+            "screech" or "die" or "door" or "breach" => 45f,
+            "knock" => 60f,          // the whole hull carries it
+            "chitter" or "steam" => 22f,
+            "drip" => 9f,
+            "weld" => 12f,
+            _ => 30f,
+        };
         float gain = Mathf.Pow(Mathf.Clamp(1f - dist / range, 0f, 1f), 1.4f);
         float pan = Mathf.Clamp(rel.X / Mathf.Max(1f, dist), -1f, 1f);
         _audio.PlayAt(kind, pan, gain);

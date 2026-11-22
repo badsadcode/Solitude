@@ -41,12 +41,18 @@ public sealed class SfxVoice : Voice
             "pickup" => (0.18f, 0.3f),
             "empty" => (0.08f, 0.35f),
             "reload" => (0.5f, 0.3f),
+            "klaxon" => (2.4f, 0.22f),
+            "knock" => (0.9f, 0.9f),
+            "drip" => (0.35f, 0.18f),
+            "steam" => (1.6f, 0.32f),
+            "weld" => (0.35f, 0.25f),
+            "breach" => (1.8f, 0.7f),
             _ => (0.2f, 0.2f),
         };
         Gain *= gain;
-        _bp1 = new BandPass(kind switch { "chitter" => 2600f * jitter, "shotgun" => 900f, "rifle" => 1500f, "pistol" => 1800f, "door" => 300f, _ => 1200f * jitter }, kind == "chitter" ? 12f : 2.5f, rate);
-        _bp2 = new BandPass(kind switch { "pistol" => 2900f, "rifle" => 3400f, "shotgun" => 2100f, _ => 700f }, 30f, rate);
-        _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, _ => 4000f }, rate);
+        _bp1 = new BandPass(kind switch { "chitter" => 2600f * jitter, "shotgun" => 900f, "rifle" => 1500f, "pistol" => 1800f, "door" => 300f, "knock" => 220f * jitter, "weld" => 4200f, _ => 1200f * jitter }, kind == "chitter" ? 12f : 2.5f, rate);
+        _bp2 = new BandPass(kind switch { "pistol" => 2900f, "rifle" => 3400f, "shotgun" => 2100f, "knock" => 160f * jitter, _ => 700f }, 30f, rate);
+        _lp = new OnePole(kind switch { "airlock" => 1800f, "beacon" => 2500f, "die" => 1400f, "klaxon" => 1800f, "breach" => 600f, _ => 4000f }, rate);
     }
 
     public override float Next(out bool alive)
@@ -140,6 +146,58 @@ public sealed class SfxVoice : Voice
             case "reload":
                 s = _bp1.Process(w) * (MathF.Exp(-T * 120f) + MathF.Exp(-MathF.Max(0f, T - 0.3f) * 120f) * (T > 0.3f ? 1f : 0f)) * 3f;
                 break;
+            case "klaxon":
+            {
+                // Two-tone alarm, slightly detuned square, softened.
+                float f = (T % 0.8f) < 0.4f ? 440f : 554f;
+                _ph1 += f * dt; _ph1 -= MathF.Floor(_ph1);
+                float sq = _ph1 < 0.5f ? 1f : -1f;
+                s = _lp.Process(sq) * 0.5f * MathF.Min(1f, (_dur - T) * 4f);
+                break;
+            }
+            case "knock":
+            {
+                // Something solid against the outside of a steel hull: thud + the hull ringing.
+                _ph1 += 52f * dt;
+                float thud = MathF.Sin(_ph1 * MathF.Tau) * MathF.Exp(-T * 9f) * 1.6f;
+                float hit = _bp1.Process(w * MathF.Exp(-T * 90f) * 4f);
+                float ring = _bp2.Process(w * MathF.Exp(-T * 60f)) * 5f * MathF.Exp(-T * 4f);
+                s = thud + hit * 0.5f + ring * 0.6f;
+                break;
+            }
+            case "drip":
+            {
+                // A drop: a quick upward chirp, then a tiny ring.
+                float f = 1200f + 1400f * MathF.Min(1f, T * 30f);
+                _ph1 += f * dt; _ph1 -= MathF.Floor(_ph1);
+                s = MathF.Sin(_ph1 * MathF.Tau) * MathF.Exp(-T * 28f);
+                break;
+            }
+            case "steam":
+            {
+                // Pressurised hiss: bright noise, quick attack, long tail.
+                _bp1.Set(3200f, 0.8f, Rate);
+                float env = MathF.Min(1f, T * 20f) * MathF.Exp(-T * 2.2f);
+                s = _bp1.Process(w) * 2.5f * env;
+                break;
+            }
+            case "weld":
+            {
+                // Arc crackle: noise gated by random bursts.
+                if (Rng.NextDouble() < 0.02) _clk = 1f;
+                _clk *= 0.995f;
+                s = _bp1.Process(w) * 2f * _clk * MathF.Min(1f, (_dur - T) * 8f);
+                break;
+            }
+            case "breach":
+            {
+                // The hull giving way: a deep crack, then water forcing its way in.
+                _ph1 += (70f - 30f * u) * dt;
+                float crack = MathF.Sin(_ph1 * MathF.Tau) * MathF.Exp(-T * 3f) * 1.4f + w * MathF.Exp(-T * 30f);
+                float rush = _lp.Process(w) * MathF.Min(1f, T * 3f) * 0.8f;
+                s = crack + rush;
+                break;
+            }
         }
         return s * Gain;
     }

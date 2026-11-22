@@ -205,6 +205,7 @@ public partial class Main : Node
 		SetupStations(spawn);
 		SetupDiving();
 		SetupCreatures();
+		SetupHullEvents();
 		SetupStory();
 		ApplyUpgrades();
 
@@ -652,7 +653,8 @@ public partial class Main : Node
 		UpdateAudioAndPost(dt);
 		UpdateWarnings(dt);
 		UpdateHatchBeacon(dt);
-		if (_mode != Mode.Title) UpdateCreatureDebugKeys();
+		if (_mode != Mode.Title) { UpdateCreatureDebugKeys(); UpdateHullDebugKeys(); }
+		_hull.Unease = _audio.Unease;
 		UpdateTitleCapture(dt);
 		UpdateBiomeNotice(dt);
 		UpdateStory(dt);
@@ -880,6 +882,7 @@ public partial class Main : Node
 		if (_sub.Depth > _sub.CrushDepth) warn = "!! CRUSH DEPTH EXCEEDED — HULL FAILING !!";
 		else if (_sub.Depth > _sub.TestDepth) warn = "HULL STRESS — BELOW TEST DEPTH";
 		else if (_sub.Hull < 35f) warn = "HULL INTEGRITY CRITICAL";
+		if (_hull.Warning() is string hw) warn = hw; // a breach outranks everything
 
 		if (_mode == Mode.Helm)
 		{

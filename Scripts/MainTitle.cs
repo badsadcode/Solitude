@@ -45,6 +45,7 @@ public partial class Main
         Sleep(_ravager, true);
         Sleep(_creatures, true);
         Sleep(_systems, true);
+        _hull.ProcessMode = ProcessModeEnum.Disabled; // nothing breaks on the title screen
         _player.InputEnabled = false;
         _rig.MonitorsActive = false;
         _rig.BridgeActive = false;
@@ -183,6 +184,7 @@ public partial class Main
             Sleep(_ravager, false);
             Sleep(_creatures, false);
             Sleep(_systems, false);
+            _hull.ProcessMode = ProcessModeEnum.Inherit;
             _player.Transform = _interior.PlayerSpawn;
             _player.SetLook(0f, -0.05f);
             _hud.SetGameplayHud(true);
