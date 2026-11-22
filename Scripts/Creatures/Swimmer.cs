@@ -27,6 +27,8 @@ public partial class Swimmer : Node3D
     public event Action<float> HullBrush;    // impact strength
     public event Action<float> BiteDiver;    // damage
     public bool Leaving { get; private set; }
+    /// <summary>Debug/capture: force the jaw angle.</summary>
+    public float? JawOverride;
 
     private enum State { Wander, Curious, Lurk, Approach, Pass, Transit }
     private Vector3 _transitTo;
@@ -243,8 +245,12 @@ public partial class Swimmer : Node3D
             if (_bones.TryGetValue(bone, out var bi)) rot[bone] = Get(bone) * new Quaternion(bi.fwd, amp * MathF.Sin(_phase - ph));
         if (Profile.Jaw != null && _bones.TryGetValue(Profile.Jaw, out var jb))
         {
-            float open = 0.05f + 0.04f * MathF.Sin(_t * 0.7f) + (_state == State.Pass && distToFocus < Profile.Length * 1.5f ? Profile.JawOpen : 0f);
-            _jaw = Mathf.Lerp(_jaw, open, 2f * dt);
+            // Closed at rest (models are sculpted open-mouthed); opens only on the strike: the last
+            // stretch of a pass, close to its target.
+            bool attacking = _state == State.Pass && distToFocus < Profile.Length * 1.2f;
+            float open = attacking ? Profile.JawOpen : Profile.JawClosed + 0.02f * MathF.Sin(_t * 0.7f);
+            _jaw = Mathf.Lerp(_jaw, open, (attacking ? 3f : 1.5f) * dt);
+            if (JawOverride is float jo) _jaw = jo;
             rot[Profile.Jaw] = Get(Profile.Jaw) * new Quaternion(jb.right, _jaw);
         }
         foreach (var (bone, q) in rot)

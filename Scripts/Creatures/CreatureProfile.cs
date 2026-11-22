@@ -40,6 +40,7 @@ public sealed class CreatureProfile
     public float BodySway;               // whole-body heading sway with the swim cycle (rad), for serpents
     public string Jaw;                   // opens toward targets when close
     public float JawOpen = 0.5f;
+    public float JawClosed = 0f;         // offset that shuts a jaw sculpted open in the rest pose
 
     // Apex
     public float OrbitRadius = 120f, PassDistance = 30f, PassIntervalMin = 70f, PassIntervalMax = 140f;
@@ -55,7 +56,7 @@ public sealed class CreatureProfile
             Name = "Abyssal Fangwyrm", Scene = "res://assets/Abyssal_Fangwyrm.glb",
             Length = 40f, ModelLength = 39.8f, Temperament = Temperament.Apex,
             CruiseSpeed = 4.5f, PassSpeed = 8f, TurnRate = 0.22f, CycleBase = 0.18f, CyclePerSpeed = 0.045f,
-            EmissionEnergy = 4f, Jaw = "Bone.008", JawOpen = 0.45f,
+            EmissionEnergy = 4f, Jaw = "Bone.008", JawOpen = 0.3f, JawClosed = -0.78f,
             OrbitRadius = 140f, PassDistance = 32f, PassIntervalMin = 60f, PassIntervalMax = 120f,
         };
         // Serpentine (anguilliform) swimming, tuned after Tom: "too stiff, it's a serpent".

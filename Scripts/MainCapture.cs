@@ -23,6 +23,7 @@ public partial class Main
     private float _docSide = 1f;
     private Node3D _docTarget;
     private float _docScale = 1f;
+    private float _docForward;
 
     /// <summary>
     /// Dev shortcut: `-- --start=dive` (suited up, outside the boat) or `-- --start=station`
@@ -288,6 +289,33 @@ public partial class Main
             (t += 10.0f, () => GD.Print($"[capture] turned {Mathf.PosMod(_sub.Heading - _captureHeading0, 360f):0}° in 10 s, yaw rate {Mathf.Abs(_sub.YawRate):0.0}°/s, roll {_sub.RollDeg:0.0}°")),
             (t += 0.1f, () => { _sub.TelegraphIndex = 2; _sub.ApplyTelegraph(); _sub.LinearVelocity = Vector3.Zero; _sub.Rudder = 1f; _captureHeading0 = _sub.Heading; }),
             (t += 10.0f, () => GD.Print($"[capture] at a stop (bow thrusters): {Mathf.PosMod(_sub.Heading - _captureHeading0, 360f):0}° in 10 s")),
+            // Jaws: side close-ups, forced closed then open, for the ravager and the Fangwyrm.
+            (t += 0.1f, () =>
+            {
+                _ravager.ForcePass(26f, teleport: true);
+                _docTarget = _ravager; _docScale = 0.3f; _docSide = 1f; _docForward = 5.5f;
+                _docCam = new Camera3D { Fov = 55f, Far = 200f };
+                _docCam.AddChild(new SpotLight3D { SpotRange = 60f, SpotAngle = 45f, LightEnergy = 10f });
+                _game.AddChild(_docCam); _docCam.MakeCurrent();
+                _ravager.JawOverride = Solitude.Creatures.Ravager.JawClosedAngle;
+            }),
+            (t += 0.8f, () => Shot("23a_ravager_jaw_closed")),
+            (t += 0.1f, () => _ravager.JawOverride = Solitude.Creatures.Ravager.JawOpenAngle),
+            (t += 0.4f, () => Shot("23b_ravager_jaw_open")),
+            (t += 0.1f, () =>
+            {
+                _ravager.JawOverride = null;
+                _creatures.SummonWyrm(); _docTarget = _creatures.Wyrm; _docScale = 0.45f; _docSide = 1f; _docForward = 16f;
+                _creatures.Wyrm.JawOverride = Solitude.Creatures.CreatureProfile.Fangwyrm().JawClosed;
+            }),
+            (t += 0.8f, () => Shot("23c_wyrm_jaw_closed")),
+            (t += 0.1f, () => _creatures.Wyrm.JawOverride = Solitude.Creatures.CreatureProfile.Fangwyrm().JawOpen),
+            (t += 0.4f, () => Shot("23d_wyrm_jaw_open")),
+            (t += 0.1f, () => { _creatures.Wyrm.JawOverride = null; _docCam.QueueFree(); _docCam = null; _docTarget = null; _docForward = 0f; }),
+            // Holo table: the red own-ship dot.
+            (t += 0.1f, () => { EnterWalking(); _player.Position = new Vector3(0.2f, 0.05f, -2.0f); EnterHolo(); _holoPitch = 0.9f; TryPing(); }),
+            (t += 2.5f, () => Shot("24_holo_red_dot")),
+            (t += 0.1f, () => EnterWalking()),
             // --- Milestone 6: biomes
             (t += 0.1f, CaptureMarkBiomes),
             (t += 0.1f, () => CaptureGoToBiome(Solitude.World.Biome.Crystal)),
@@ -481,8 +509,9 @@ public partial class Main
             Vector3 f = -rt.Basis.Z, r = rt.Basis.X;
             float k = _docScale; // 1 = sized for the 15 m ravager
             Vector3 offset = _docSide switch { -1f => f * 22f * k + Vector3.Up * 3f * k, 2f => Vector3.Up * 26f * k + f * 2f * k, _ => r * 24f * k + Vector3.Up * 4f * k };
-            _docCam.GlobalPosition = rt.Origin + offset;
-            _docCam.LookAt(rt.Origin, _docSide == 2f ? f : Vector3.Up);
+            Vector3 focus = rt.Origin + f * _docForward;   // e.g. frame the head instead of the body centre
+            _docCam.GlobalPosition = focus + offset;
+            _docCam.LookAt(focus, _docSide == 2f ? f : Vector3.Up);
         }
         while (_captureStep < _captureScript.Count && _captureT >= _captureScript[_captureStep].at)
             _captureScript[_captureStep++].act();

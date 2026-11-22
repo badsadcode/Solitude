@@ -30,6 +30,9 @@ public partial class Ravager : Node3D
     private const float ModelLength = 0.96f;
 
     private enum State { Lurk, Approach, Pass }
+    public const float JawClosedAngle = -0.65f, JawOpenAngle = 0.35f;
+    /// <summary>Debug/capture: force the jaw angle.</summary>
+    public float? JawOverride;
     private State _state = State.Lurk;
 
     private Skeleton3D _skel;
@@ -250,10 +253,12 @@ public partial class Ravager : Node3D
         _phase += dt * freq * Mathf.Tau;
         float curl = Math.Clamp(_yawRate * 0.9f, -0.5f, 0.5f);
 
-        // Jaw: slow breathing; gapes when it's close to the boat.
-        float gape = distToSub < 45f ? 0.55f : 0f;
-        float jawTarget = 0.06f + 0.05f * MathF.Sin(_t * 0.8f) + gape * (0.7f + 0.3f * MathF.Sin(_t * 3f));
-        _jaw = Mathf.Lerp(_jaw, jawTarget, 2.5f * dt);
+        // Jaw (Tom: "close them, open only when they attack"). The model's rest pose is sculpted open,
+        // so "closed" is a negative offset. It opens only during a pass that comes close — the strike.
+        bool attacking = _state == State.Pass && distToSub < 32f;
+        float jawTarget = attacking ? JawOpenAngle * (0.85f + 0.15f * MathF.Sin(_t * 3f)) : JawClosedAngle + 0.02f * MathF.Sin(_t * 0.8f);
+        _jaw = Mathf.Lerp(_jaw, jawTarget, (attacking ? 4f : 2f) * dt);
+        if (JawOverride is float jo) _jaw = jo;
 
         // Curl into turns: positive yaw swings forward-pointing bones (head) to the creature's left and
         // backward-pointing bones (tail) to its right, so both take +curl on a left turn.

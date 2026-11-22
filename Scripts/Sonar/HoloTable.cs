@@ -30,6 +30,7 @@ public partial class HoloTable : Node3D
     private ImmediateMesh _overlay;
     private ShaderMaterial _mat;
     private OmniLight3D _glow;
+    private MeshInstance3D _ownShip;
     private int _builtVersion = -1;
     private Vector3 _builtAt;
     private int _builtZoom = -1;
@@ -47,6 +48,19 @@ public partial class HoloTable : Node3D
         _overlay = new ImmediateMesh();
         AddChild(new MeshInstance3D { Mesh = _overlay, MaterialOverride = _mat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         _glow = new OmniLight3D { Position = new Vector3(0, 0.9f, 0), LightColor = new Color(0.3f, 0.9f, 1f), LightEnergy = 0.12f, OmniRange = 2.2f };
+        _ownShip = new MeshInstance3D
+        {
+            Mesh = new SphereMesh { Radius = 0.03f, Height = 0.06f, RadialSegments = 10, Rings = 6 },
+            MaterialOverride = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                AlbedoColor = new Color(1f, 0.12f, 0.08f),
+                EmissionEnabled = true, Emission = new Color(1f, 0.1f, 0.05f), EmissionEnergyMultiplier = 3f,
+                NoDepthTest = true, // always visible, even inside the terrain wireframe
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        AddChild(_ownShip);
         AddChild(_glow);
     }
 
@@ -186,9 +200,12 @@ public partial class HoloTable : Node3D
         var r = new Vector3(-f.Z, 0, f.X);
         var o = new Vector3(0, subY, 0);
         var white = new Color(1f, 1f, 1f, 0.9f);
-        Line(o - f * 0.03f, o + f * 0.04f, white);
-        Line(o + f * 0.04f, o - f * 0.01f + r * 0.018f, white);
-        Line(o + f * 0.04f, o - f * 0.01f - r * 0.018f, white);
+        // Tom: "just a red dot" — a solid, pulsing red sphere, plus a short red heading tick.
+        float shipPulse = 1f + 0.18f * MathF.Sin((float)now * 5f);
+        _ownShip.Position = o;
+        _ownShip.Scale = Vector3.One * shipPulse;
+        var red = new Color(1f, 0.15f, 0.1f, 1f);
+        Line(o + f * 0.02f, o + f * 0.055f, red);
         float below = Sonar.Map.TryGet(SonarMap.CellOf(sp.X, sp.Z), out float gh, out _) ? MapY(gh, sp.Y, scale) : BaseHeight - 0.2f;
         for (float y = subY; y > below; y -= 0.02f)
             Line(new Vector3(0, y, 0), new Vector3(0, MathF.Max(y - 0.01f, below), 0), new Color(white, 0.4f));
