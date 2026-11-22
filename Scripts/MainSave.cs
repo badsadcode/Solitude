@@ -36,6 +36,8 @@ public sealed class SaveData
     public List<string> LogEntries = new(), Notes = new();
     /// <summary>The lab: studied sample kinds, plus "RUN|item|seconds left" for one under the scope.</summary>
     public List<string> Lab = new();
+    /// <summary>Wreck pingers heard and wrecks reached (their salvage is in TakenPickups).</summary>
+    public List<long> WrecksHeard = new(), WrecksVisited = new();
 }
 
 public sealed class StationSave
@@ -195,6 +197,7 @@ public partial class Main
         foreach (var (id, count) in _systems.Hold.All()) d.Hold[id.ToString()] = count;
         d.Clock = _shipLog.Clock; d.LogEntries = _shipLog.SaveEntries(); d.Notes = _shipLog.SaveNotes();
         d.Lab = _lab.Save();
+        d.WrecksHeard = _wrecksHeard.ToList(); d.WrecksVisited = _wrecksVisited.ToList();
         foreach (var s in _stations.Directory.Generated) if (s.Known) d.KnownStations.Add(s.Id);
         foreach (var (id, st) in _stations.States)
             d.Stations.Add(new StationSave
@@ -210,6 +213,8 @@ public partial class Main
     {
         _shipLog.Load(d.Clock, d.LogEntries, d.Notes);
         _lab.Load(d.Lab);
+        foreach (var id in d.WrecksHeard ?? new List<long>()) _wrecksHeard.Add(id);
+        foreach (var id in d.WrecksVisited ?? new List<long>()) _wrecksVisited.Add(id);
         ApplyDiscoveries();
         foreach (var m in d.Modules) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Fitted.Add(id);
         foreach (var m in d.Blueprints) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Known.Add(id);

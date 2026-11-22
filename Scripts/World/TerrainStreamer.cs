@@ -176,7 +176,22 @@ public partial class TerrainStreamer : Node3D
         public Vector3 Position;
         public MultiMesh Mesh;
         public int Instance;
+        /// <summary>For pickups that aren't seabed multimesh instances (wreck salvage): hidden when taken.</summary>
+        public Node3D Node;
     }
+
+    // Salvage placed by other systems (wrecks): same Nearest/Take/save path as seabed pickups.
+    private readonly List<Pickup> _extra = new();
+
+    /// <summary>Add salvage that isn't part of a terrain chunk. Already-taken ids are ignored (and hidden).</summary>
+    public void AddExternal(Pickup pk)
+    {
+        if (_taken.Contains(pk.Id)) { if (pk.Node != null) pk.Node.Visible = false; return; }
+        _extra.Add(pk);
+    }
+
+    public void RemoveExternal(Predicate<Pickup> match) => _extra.RemoveAll(match);
+    public bool IsTaken(long id) => _taken.Contains(id);
 
     private readonly Dictionary<Vector2I, List<Pickup>> _pickups = new();
     private readonly Dictionary<Vector2I, List<Vector3>> _vents = new();
@@ -228,6 +243,11 @@ public partial class TerrainStreamer : Node3D
                     if (d < bestD) { bestD = d; best = pk; }
                 }
             }
+        foreach (var pk in _extra)
+        {
+            float d = pk.Position.DistanceTo(p);
+            if (d < bestD) { bestD = d; best = pk; }
+        }
         return best;
     }
 
@@ -235,6 +255,7 @@ public partial class TerrainStreamer : Node3D
     public void Take(Pickup pk)
     {
         _taken.Add(pk.Id);
+        if (pk.Node != null) { pk.Node.Visible = false; _extra.Remove(pk); return; }
         pk.Mesh.SetInstanceTransform(pk.Instance, new Transform3D(Basis.FromScale(Vector3.Zero), pk.Position));
         foreach (var list in _pickups.Values) list.Remove(pk);
     }

@@ -26,6 +26,8 @@ public enum ItemId
     TissueRavager, TissueRay, ScaleWyrm, PlateGloam,
     // Made in the lab once the lumen is understood
     LureFlare,
+    // A wreck's recorder (read on the spot; never stays in the bag)
+    Recorder,
 }
 
 public sealed record ItemInfo(string Name, string Description, int Weight, float Food = 0f);
@@ -62,6 +64,7 @@ public static class Items
         [ItemId.TissueRay] = new("Ray wing-edge", "Still flickering. In a pattern. For the lab.", 1),
         [ItemId.ScaleWyrm] = new("Fangwyrm scale", "Big as your palm, ringed like a tree stump. For the lab.", 1),
         [ItemId.PlateGloam] = new("Plate fragment", "A chip of dark armour that came back on the barbs. Something on its underside is wet and looks back. For the lab.", 1),
+        [ItemId.Recorder] = new("Recorder", "A wreck's data recorder.", 1),
         [ItemId.LureFlare] = new("Lure flare", "Lumen gel in a sealant shell. Release from the helm (B): it drifts and glows for a while.", 1),
     };
 

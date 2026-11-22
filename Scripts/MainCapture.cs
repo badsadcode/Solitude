@@ -813,6 +813,56 @@ public partial class Main
             (t += 1.5f, () => Shot("44g_red_floods")),
             (t += 0.1f, () => { _sub.RedFloods = false; _view = HelmView.Bridge; ApplyHelmView(); EnterWalking(); }),
             (t += 0.5f, () => { }),
+            // --- Wrecks and distress calls
+            (t += 0.1f, CaptureMarkWrecks),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                var all = _wrecks.Near(_sub.GlobalPosition, 12000f).ToList();
+                GD.Print($"[capture] wrecks within 12 km: {all.Count} ({string.Join(", ", all.GroupBy(w => w.Kind).Select(g => $"{g.Key} {g.Count()}"))}), pingers {all.Count(w => w.Pinger)}, wrong {all.Count(w => w.Wrong)}");
+                _capWrecks = Enum.GetValues<Solitude.Systems.WreckKind>().Select(k => all.Where(w => w.Kind == k).OrderBy(w => Flatness(w.Position) * 400f + w.Position.DistanceTo(_sub.GlobalPosition)).FirstOrDefault()).Where(w => w != null).ToList();
+                // Hearing: park 1.2 km from the nearest pinger.
+                var pw = all.Where(w => w.Pinger).OrderBy(w => w.Position.DistanceTo(_sub.GlobalPosition)).First();
+                Vector3 at = pw.Position + new Vector3(1200f, 0, 0);
+                _terrain.GenerateImmediate(at, 2);
+                _sub.GlobalPosition = new Vector3(at.X, _gen.Height(at.X, at.Z) + 30f, at.Z); _sub.LinearVelocity = Vector3.Zero;
+                _capPinger = pw;
+                EnterHelm(); _view = HelmView.Bridge; ApplyHelmView();
+            }),
+            (t += 5f, () => GD.Print($"[capture] pinger heard: {_wrecksHeard.Contains(_capPinger.Id)}  helm:{WreckHelmText().Replace("\n", " ")}")),
+            (t += 8f, () => { Shot("45a_pinger_heard"); }),
+            (t += 0.1f, () => CapWreckShot(0)),
+            (t += 2.5f, () => Shot("45b_wreck_0")),
+            (t += 0.1f, () => CapWreckShot(1)),
+            (t += 2.5f, () => Shot("45c_wreck_1")),
+            (t += 0.1f, () => CapWreckShot(2)),
+            (t += 2.5f, () => Shot("45d_wreck_2")),
+            (t += 0.1f, () => CapWreckShot(3)),
+            (t += 2.5f, () => Shot("45e_wreck_3")),
+            (t += 0.1f, () =>
+            {
+                _docCam?.QueueFree(); _docCam = null;
+                // Pull the recorder of the first wreck with one (as the diver would).
+                var w = _capWrecks.FirstOrDefault(x => x.HasRecorder && _wreckNodes.ContainsKey(x.Id)) ?? _capWrecks.First(x => x.HasRecorder);
+                if (!_wreckNodes.ContainsKey(w.Id)) { _terrain.GenerateImmediate(w.Position, 2); SpawnWreck(w); }
+                var rec = _terrain.NearestPickup(_wreckNodes[w.Id].built.Recorder + Vector3.Up * 0.2f, 1f);
+                GD.Print($"[capture] recorder pickup found: {rec != null} type {rec?.Type}");
+                if (rec != null) { _diver.Bag.Add(rec.Type); _terrain.Take(rec); OnWreckSalvage(rec.Id, rec.Type); }
+                GD.Print($"[capture] silenced now: {Silenced(w)}, notes {_shipLog.Notes.Count}, bag {_diver.Bag.Count}, salvage left nearby {(_terrain.NearestPickup(w.Position, 30f) != null)}");
+                _view = HelmView.Bridge; ApplyHelmView();
+            }),
+            (t += 0.1f, () => { EnterWalking(); OpenJournal(); }),
+            (t += 0.8f, () => Shot("45f_recorder_note")),
+            (t += 0.1f, () =>
+            {
+                CloseTerminal();
+                var w = _capWrecks[0];
+                Vector3 at = w.Position + new Vector3(60f, 0, 0);
+                _sub.GlobalPosition = new Vector3(at.X, _gen.Height(at.X, at.Z) + 25f, at.Z); _sub.LinearVelocity = Vector3.Zero;
+                EnterSonar(); _sonar.RangeIndex = 0; TryPing();
+            }),
+            (t += 1.5f, () => { _feedFullscreen = true; _hud.ShowFeed(_sonarScope.GetTexture(), "SONAR  -  ACTIVE", 1f); }),
+            (t += 0.5f, () => { Shot("45g_wreck_sonar"); _feedFullscreen = false; _hud.ShowFeed(null, null, 1f); EnterWalking(); LogProx(); }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -1087,6 +1137,29 @@ public partial class Main
     private void CaptureMarkTerminal() => CaptureSection("terminal");
     private void CaptureMarkSilt() => CaptureSection("silt");
     private void CaptureMarkLab() => CaptureSection("lab");
+    private void CaptureMarkWrecks() => CaptureSection("wrecks");
+    private List<Solitude.Systems.WreckSite> _capWrecks = new();
+    private Solitude.Systems.WreckSite _capPinger;
+    private float Flatness(Vector3 p) => Mathf.Abs(_gen.Height(p.X + 20f, p.Z) - _gen.Height(p.X - 20f, p.Z)) + Mathf.Abs(_gen.Height(p.X, p.Z + 20f) - _gen.Height(p.X, p.Z - 20f));
+    private void CapWreckShot(int i)
+    {
+        if (i >= _capWrecks.Count) return;
+        var w = _capWrecks[i];
+        _terrain.GenerateImmediate(w.Position, 2);
+        // The boat waits nearby (wrecks stream in around the focus).
+        _sub.GlobalPosition = w.Position + new Vector3(45f, 30f, 0); _sub.LinearVelocity = Vector3.Zero;
+        if (!_wreckNodes.ContainsKey(w.Id)) SpawnWreck(w);
+        _docCam ??= new Camera3D { Fov = 62f, Far = 200f };
+        if (!_docCam.IsInsideTree()) { _docCam.AddChild(new SpotLight3D { SpotRange = 70f, SpotAngle = 45f, LightEnergy = 9f }); _game.AddChild(_docCam); }
+        // Frame it from the side with the doc camera's lamp (it follows _docTarget each frame).
+        var mark = new Node3D();
+        _game.AddChild(mark);
+        mark.GlobalTransform = new Transform3D(new Basis(Vector3.Up, w.Yaw + 0.6f), w.Position + Vector3.Up * 1.5f);
+        _docTarget = mark; _docSide = 1f; _docForward = 0f;
+        _docScale = w.Kind is Solitude.Systems.WreckKind.SupplySub or Solitude.Systems.WreckKind.CargoString ? 0.95f : 0.45f;
+        _docCam.MakeCurrent();
+        GD.Print($"[capture] wreck {i}: {w.Name} ({w.Kind}) depth {-w.Position.Y:0} pinger {w.Pinger} wrong {w.Wrong}");
+    }
     private Vector3 _siltMark;
     private void LogSilt(string what)
     {
@@ -1147,7 +1220,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

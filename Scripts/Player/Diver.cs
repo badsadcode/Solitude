@@ -28,6 +28,8 @@ public partial class Diver : CharacterBody3D
     public bool Active { get; private set; }
     public float TimeOutside { get; private set; }
     public readonly List<ItemId> Bag = new();
+    /// <summary>Id of the last pickup collected (wreck salvage is recognised by it).</summary>
+    public long LastId;
     public const int BagSize = 6;
     public TerrainStreamer.Pickup Nearest { get; private set; }
 
@@ -97,6 +99,7 @@ public partial class Diver : CharacterBody3D
     {
         if (Nearest == null || Bag.Count >= BagSize) return null;
         var pk = Nearest;
+        LastId = pk.Id;
         Terrain.Take(pk);
         Bag.Add(pk.Type);
         Nearest = null;

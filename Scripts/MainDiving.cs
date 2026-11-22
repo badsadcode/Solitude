@@ -141,6 +141,7 @@ public partial class Main
             if (_diver.Collect() is ItemId got)
             {
                 _audio.PlayAt("pickup", 0f, 0.5f);
+                if (OnWreckSalvage(_diver.LastId, got)) return;
                 _hud.Message($"Bagged: {Items.Name(got)} ({_diver.Bag.Count}/{Diver.BagSize}).", 3f);
             }
         }

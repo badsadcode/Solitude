@@ -727,6 +727,7 @@ public partial class Main : Node
 		UpdateGloam(dt);
 		UpdateSilt(dt);
 		UpdateLab(dt);
+		UpdateWrecks(dt);
 		UpdateTerminalWorld(dt);
 		UpdateProximity(dt);
 		if (_mode != Mode.Monitors) _camServo = Mathf.MoveToward(_camServo, 0f, dt * 6f);
@@ -817,7 +818,7 @@ public partial class Main : Node
 
 		float alt = _sub.GlobalPosition.Y - _gen.Height(_sub.GlobalPosition.X, _sub.GlobalPosition.Z);
 		string view = _view switch { HelmView.Bridge => "BRIDGE [V]", HelmView.BowCamera => "CAM 1 BOW [V]", _ => "EXTERNAL [V]" };
-		view += DockingText() + StoryHelmText() + CurrentHelmText();
+		view += DockingText() + StoryHelmText() + WreckHelmText() + CurrentHelmText();
 		view += _sonar.RechargeLeft > 0 ? $"\nSONAR    CHARGING {_sonar.RechargeLeft:0.0}s" : "\nSONAR    READY [P]";
 		_hud.UpdateHelm(_sub, alt, view);
 	}

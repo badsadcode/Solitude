@@ -31,6 +31,9 @@ public partial class SonarSystem : Node
     public AudioDirector Audio;
     /// <summary>Positions of things that swim (creatures). Sampled at ping time.</summary>
     public Func<IEnumerable<Vector3>> Bodies;
+    /// <summary>Big man-made things that don't move (stations, wrecks): bright returns on the scope,
+    /// but not "moving contacts" for the proximity panel. Sampled at ping time.</summary>
+    public Func<IEnumerable<Vector3>> Structures;
 
     public static readonly float[] Ranges = { 150f, 300f, 500f, 800f };
     public int RangeIndex = 1;
@@ -111,9 +114,12 @@ public partial class SonarSystem : Node
                     Ghost = true,
                 });
             }
-        // Living things echo too: a tight, bright cluster the map never records.
-        if (Bodies != null)
-            foreach (var b in Bodies())
+        // Living things echo too: a tight, bright cluster the map never records. So do structures.
+        var echoes = new List<Vector3>();
+        if (Bodies != null) echoes.AddRange(Bodies());
+        if (Structures != null) echoes.AddRange(Structures());
+        if (echoes.Count > 0)
+            foreach (var b in echoes)
             {
                 float d = new Vector2(b.X - origin.X, b.Z - origin.Z).Length();
                 if (d > range || d < 1f) continue;

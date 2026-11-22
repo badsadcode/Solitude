@@ -65,6 +65,9 @@ public partial class Main
         foreach (var r in _creatures.Rays) if (r.IsInsideTree()) AddSource(SoundClass.Ray, r.GlobalPosition, 0.5f, 350f);
         if (_creatures.Wyrm is { } w && w.IsInsideTree()) AddSource(SoundClass.Wyrm, w.GlobalPosition, 1f, 1400f, 7f);
         if (_creatures.Whale is { } wh && wh.IsInsideTree()) AddSource(SoundClass.Whale, wh.GlobalPosition, 1f, 2000f, 9f);
+        if (_wrecks != null)
+            foreach (var wk in _wrecks.Near(p, PingerRange))
+                if (!Silenced(wk)) AddSource(SoundClass.Pinger, wk.Position + Vector3.Up * 2f, 0.6f, PingerRange, 3f);
         if (SiltRumble(out var siltAt, out var siltLvl)) AddSource(SoundClass.Geology, siltAt, siltLvl, 3000f, 30f);
         if (_gloam != null && _gloam.IsInsideTree()) AddSource(SoundClass.Gloam, _gloam.Head, _gloam.Current == Creatures.Gloam.State.Prowl ? 0.5f : 0.85f, 700f, 5f);
         int vents = 0;
@@ -231,6 +234,7 @@ public partial class Main
         {
             SoundClass.Ravager or SoundClass.Ray or SoundClass.Wyrm or SoundClass.Gloam => s.Distance < 70f,
             SoundClass.Whale => s.Distance < 150f,   // impossible to miss at that range
+            SoundClass.Pinger => s.Distance < 600f,
             SoundClass.Station => s.Distance < 300f,
             SoundClass.Vent => s.Distance < 120f,
             _ => false,

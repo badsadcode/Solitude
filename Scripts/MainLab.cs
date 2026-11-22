@@ -25,6 +25,15 @@ public partial class Main
 
     private void SetupLab()
     {
+        SetupWrecks();
+        // The holo table marks distress calls you've heard, too.
+        var beacons = _interior.Holo.Beacons;
+        _interior.Holo.Beacons = () =>
+        {
+            var list = new List<Vector3>(beacons?.Invoke() ?? new List<Vector3>());
+            list.AddRange(HeardWreckBeacons());
+            return list;
+        };
         _lab.Finished += OnStudyDone;
         _harpoon.SpearHit += OnSpearHit;
     }

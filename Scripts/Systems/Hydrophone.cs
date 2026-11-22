@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Solitude.Systems;
 
 /// <summary>What made a sound. The operator never sees this directly, only its signature.</summary>
-public enum SoundClass { Ravager, Wyrm, Ray, Vent, Station, Listener, Sounding, Geology, Whale, Gloam }
+public enum SoundClass { Ravager, Wyrm, Ray, Vent, Station, Listener, Sounding, Geology, Whale, Gloam, Pinger }
 
 /// <summary>
 /// A sound's fingerprint: how much energy in the low / mid / high bands, whether it pulses (and
@@ -70,6 +70,7 @@ public sealed class Hydrophone
         SoundClass.Geology => new(0.6f, 0.5f, 0.3f, 0f, 1f, 0f, 0f),           // cracks, slumps
         SoundClass.Whale => new(0.85f, 0.55f, 0.1f, 0.12f, 0.8f, 0f, 0f),      // song: long low glides
         SoundClass.Gloam => new(0.35f, 0.85f, 0.4f, 7f, 0.12f, 0f, 0f),        // a dry rattle of plates, quick
+        SoundClass.Pinger => new(0.05f, 0.25f, 0.9f, 0.42f, 0.07f, 1800f, 0.9f), // a thin electronic pip, every couple of seconds
         _ => new(0.3f, 0.3f, 0.3f, 0f, 1f, 0f, 0f),
     };
 
@@ -95,6 +96,7 @@ public sealed class Hydrophone
         SoundClass.Geology => "GEOLOGIC",
         SoundClass.Whale => "WHALE OF THE ABYSS",
         SoundClass.Gloam => "THE GLOAM",
+        SoundClass.Pinger => "DISTRESS PINGER",
         _ => "UNKNOWN",
     };
 

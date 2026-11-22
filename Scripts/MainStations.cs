@@ -69,12 +69,15 @@ public partial class Main
         };
         _player.Died += OnPlayerDied;
 
-        // Sonar hears stations (big bright structures) as well as creatures.
-        _sonar.Bodies = () =>
+        // Sonar hears stations (big bright structures) as well as creatures. Structures are kept apart
+        // from bodies so the proximity panel doesn't call a station a "moving contact".
+        _sonar.Bodies = () => new List<Vector3> { _ravager.GlobalPosition };
+        _sonar.Structures = () =>
         {
-            var list = new List<Vector3> { _ravager.GlobalPosition };
+            var list = new List<Vector3>();
             foreach (var s in _stations.Directory.Near(_sub.GlobalPosition, 600f))
                 for (int i = 0; i < 6; i++) list.Add(s.Position + new Basis(Vector3.Up, s.Yaw) * new Vector3((i % 3 - 1) * 6f, 10f, (i / 3 - 0.5f) * 18f));
+            list.AddRange(WreckStructures(_sub.GlobalPosition, 800f));
             return list;
         };
         _interior.Holo.Beacons = () =>
