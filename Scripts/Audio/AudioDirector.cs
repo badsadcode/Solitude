@@ -281,7 +281,7 @@ public partial class AudioDirector : Node
                     env = 0.15f + 0.85f * env;
                 }
                 _hydTonePh = Wrap(_hydTonePh + MathF.Max(1f, HydToneHz) * inv);
-                float sea = _hydLowBp.Process(w) * _hLo * 0.9f + _hydMidBp.Process(w) * _hMi * 0.7f + _hydHighBp.Process(w) * _hHi * 0.5f;
+                float sea = _hydLowBp.Process(w) * _hLo * 1.35f + _hydMidBp.Process(w) * _hMi * 1.05f + _hydHighBp.Process(w) * _hHi * 0.75f;
                 float hTone = MathF.Sin(_hydTonePh * MathF.Tau) * HydTone * 0.08f;
                 float self = _hydSelfLp.Process(w) * HydSelf * 0.9f;
                 float hyd = ((sea + hTone) * env + self + w * 0.004f) * _hydOn;

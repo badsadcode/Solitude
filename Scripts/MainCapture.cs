@@ -753,8 +753,19 @@ public partial class Main
         return n;
     }
 
-    private void CaptureMarkCreatures() => GD.Print("[capture] --- creatures section ---");
-    private void CaptureMarkBiomes() => GD.Print("[capture] --- biomes section ---");
+    /// <summary>
+    /// A section mark. `-- --capture-until=listener` stops when that section begins, saving the
+    /// audio dump so far (handy with --capture-from to record one section's sound).
+    /// </summary>
+    private void CaptureSection(string name)
+    {
+        GD.Print($"[capture] --- {name} section ---");
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg == $"--capture-until={name}") { _audio.SaveDebugRecording(_captureDir); GD.Print("[capture] stopped (capture-until)"); GetTree().Quit(); }
+    }
+
+    private void CaptureMarkCreatures() => CaptureSection("creatures");
+    private void CaptureMarkBiomes() => CaptureSection("biomes");
     private float _capHull;
     private void LogListener(string what) =>
         GD.Print($"[capture] listener {what}: attention {_listener.Attention:0.0} noise {_listener.Noise:0.00} ({NoiseDb:0} dB) tier {_listener.Current} encounter {(_listener.InEncounter ? _listener.EncounterT.ToString("0.0") : "-")} depth {_sub.Depth:0}");
@@ -763,13 +774,13 @@ public partial class Main
         var (src, level) = InBeam();
         GD.Print($"[capture] hydrophone {what}: beam {_beam:0} band {_phone.Filter} level {level:0.00} in beam {(src is HydroSource s ? $"{s.Class} {s.Level:0.00} @ {s.Distance:0} m" : "nothing")} | sources {_hydroSources.Count}: {string.Join(", ", _hydroSources.ConvertAll(x => $"{x.Class}:{x.Level:0.00}@{x.Bearing:0}"))} | lines: {_hydroDisplay.Line2} / {_hydroDisplay.Line3} | recs {_phone.Recordings.Count} noise {_listener.Noise:0.00}");
     }
-    private void CaptureMarkHydrophone() => GD.Print("[capture] --- hydrophone section ---");
-    private void CaptureMarkListener() => GD.Print("[capture] --- listener section ---");
-    private void CaptureMarkModules() => GD.Print("[capture] --- modules section ---");
-    private void CaptureMarkHarpoon() => GD.Print("[capture] --- harpoon section ---");
-    private void CaptureMarkTest() => GD.Print("[capture] --- test section ---");
+    private void CaptureMarkHydrophone() => CaptureSection("hydrophone");
+    private void CaptureMarkListener() => CaptureSection("listener");
+    private void CaptureMarkModules() => CaptureSection("modules");
+    private void CaptureMarkHarpoon() => CaptureSection("harpoon");
+    private void CaptureMarkTest() => CaptureSection("test");
     private float _captureHeading0;
-    private void CaptureMarkStory() => GD.Print("[capture] --- story section ---");
+    private void CaptureMarkStory() => CaptureSection("story");
 
     /// <summary>Find the nearest spot of a biome (spiral search, 40 m steps) and park the boat there.</summary>
     private void CaptureGoToBiome(Solitude.World.Biome biome)
