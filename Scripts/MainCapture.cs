@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Solitude.Core;
 using Solitude.Interior;
@@ -341,13 +342,24 @@ public partial class Main
                 GD.Print($"[capture] breach in {HullEvents.RoomNames[b.room]} at {b.pos}");
             }),
             (t += 1.5f, () => Shot("26a_breach")),
-            (t += 9.8f, () => _player.SetLook(0.5f, -0.85f)),
+            (t += 9.8f, () =>
+            {
+                _player.SetLook(0.5f, -0.85f);
+                GD.Print($"[capture] levels after 10 s: {string.Join(" | ", System.Linq.Enumerable.Range(0, 5).Select(i => $"{HullEvents.RoomNames[i]} {_hull.Level(i):0.000}"))}");
+            }),
             (t += 0.2f, () => { Shot("26b_flooding"); GD.Print($"[capture] galley water {_hull.Level(2):0.00} m, flood weight {_sub.FloodWeight:0}, player water factor {_player.WaterFactor:0.00}, warning '{_hull.Warning()}'"); }),
             (t += 0.1f, () => { _hull.Vent(new Vector3(1.6f, 2.42f, 2.6f)); _player.SetLook(0.4f, 0.35f); }),
             (t += 0.5f, () => Shot("26c_steam")),
             (t += 0.1f, () => { _player.SetLook(0f, -0.25f); Input.ActionPress(GameInput.Interact); }),
             (t += 1.2f, () => Shot("26c2_welding")),
             (t += 1.8f, () => { Input.ActionRelease(GameInput.Interact); GD.Print($"[capture] after welding: breaches={_hull.ActiveBreaches} sealant={_systems.Hold.Count(ItemId.Sealant)} focused='{_player.Focused?.Prompt}'"); }),
+            (t += 0.1f, () =>
+            {
+                // Side view down the length of the boat, through the doorways, to see one continuous surface.
+                _player.Transform = new Transform3D(Basis.Identity, new Vector3(0f, 0.05f, 8.5f));
+                _player.SetLook(0f, -0.35f);
+            }),
+            (t += 0.6f, () => Shot("26c3_through_doorways")),
             (t += 8.0f, () => { Shot("26d_draining"); GD.Print($"[capture] galley water after pumping {_hull.Level(2):0.00} m"); }),
             (t += 0.1f, () => _hull.Knock()),
             (t += 3.0f, () => { _sub.SetHull(100f); }),

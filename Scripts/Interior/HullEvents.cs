@@ -39,6 +39,7 @@ public partial class HullEvents : Node3D
     private static readonly (float z0, float z1)[] Rooms = { (-13f, -6f), (-6f, 0f), (0f, 5f), (5f, 9f), (9f, 13f) };
     private static readonly float[] Bulkheads = { -6f, 0f, 5f, 9f };   // bulkhead k sits between room k and k+1
     private const float MaxLevel = 1.3f;
+    private static float RoomLen(int i) => Rooms[i].z1 - Rooms[i].z0;
 
     private sealed class Breach
     {
@@ -85,7 +86,9 @@ public partial class HullEvents : Node3D
         for (int i = 0; i < 5; i++)
         {
             var (z0, z1) = Rooms[i];
-            float w = SubInterior.HalfW * 2f - 0.02f, len = z1 - z0 - 0.22f;
+            // Full room length: neighbouring volumes meet inside the bulkhead, so where a doorway is
+            // open the surface simply continues through it (sealed hatches cover the seam).
+            float w = SubInterior.HalfW * 2f - 0.02f, len = z1 - z0;
             // Body of water (darker, under the surface) + a subdivided, wave-animated surface on top.
             _water[i] = new MeshInstance3D
             {
@@ -341,30 +344,47 @@ public partial class HullEvents : Node3D
 
     private void UpdateWater(float dt)
     {
-        // Inflow from breaches.
-        foreach (var b in _breaches) _level[b.Room] = Mathf.Min(MaxLevel, _level[b.Room] + b.Severity * 0.045f * dt);
+        // Water is tracked as volume per room (level × room length; the width is the same everywhere),
+        // so spreading through the boat conserves it. (Tom: "it would flow to other segments since
+        // we don't have doors between segments" — the doorways are open, so it does.)
 
-        // Spill through open hatches once it's deep enough.
-        for (int k = 0; k < 4; k++)
+        // Inflow from breaches (m² of cross-section per second: a big breach floods a room in
+        // ~30 s on its own, or the whole boat in a couple of minutes).
+        foreach (var b in _breaches) _level[b.Room] += b.Severity * 0.25f / RoomLen(b.Room) * dt;
+
+        // Flow through every open doorway, at any depth: levels equalise within a second or two.
+        for (int iter = 0; iter < 2; iter++)
+            for (int k = 0; k < 4; k++)
+            {
+                if (_sealed[k]) continue;
+                float la = _level[k], lb = _level[k + 1];
+                if (Mathf.Abs(la - lb) < 0.0005f) continue;
+                float lenA = RoomLen(k), lenB = RoomLen(k + 1);
+                float target = (la * lenA + lb * lenB) / (lenA + lenB);  // shared level, same volume
+                float f = Mathf.Clamp(2.5f * dt, 0f, 1f);
+                _level[k] = Mathf.Lerp(la, target, f);
+                _level[k + 1] = Mathf.Lerp(lb, target, f);
+            }
+
+        // Bilge pumps take a fixed volume from the boat (if there's power), wettest rooms first.
+        // A small breach they outpace; a big one they can't.
+        if (!Systems.Emergency)
         {
-            if (_sealed[k]) continue;
-            float a = _level[k], c = _level[k + 1];
-            float hi = Mathf.Max(a, c);
-            if (hi < 0.6f && Mathf.Abs(a - c) < 0.25f) continue;
-            float flow = (a - c) * 0.35f * dt;
-            _level[k] -= flow; _level[k + 1] += flow;
+            float pump = 0.09f * dt, used = 0f;
+            for (int pass = 0; pass < 5 && pump > 1e-6f; pass++)
+            {
+                int wettest = -1;
+                for (int i = 0; i < 5; i++) if (_level[i] > 0.001f && (wettest < 0 || _level[i] > _level[wettest])) wettest = i;
+                if (wettest < 0) break;
+                float take = Mathf.Min(pump, _level[wettest] * RoomLen(wettest));
+                _level[wettest] -= take / RoomLen(wettest);
+                pump -= take; used += take;
+            }
+            if (used > 0f) Systems.UsePower(used * 2.0f);
         }
 
-        // Bilge pumps drain rooms without an open breach (if there's power).
         for (int i = 0; i < 5; i++)
         {
-            bool leaking = _breaches.Exists(b => b.Room == i);
-            if (!leaking && _level[i] > 0f && !Systems.Emergency)
-            {
-                float d = Mathf.Min(_level[i], 0.03f * dt);
-                _level[i] -= d;
-                Systems.UsePower(d * 2.5f);
-            }
             _level[i] = Mathf.Clamp(_level[i], 0f, MaxLevel);
 
             var w = _water[i];

@@ -50,8 +50,8 @@ void fragment() {
 	vec4 col = mix(deep_color, shallow_color, clamp(crest * 18.0 + 0.4, 0.0, 1.0));
 
 	// Foam: along the walls, on crests, and in a churned ring around the inflow.
-	vec2 edge = half_size - abs(local_xz);
-	float wall = 1.0 - smoothstep(0.0, 0.18, min(edge.x, edge.y));
+	// Foam hugs the side walls only; at the room ends the water carries on through the doorway.
+	float wall = 1.0 - smoothstep(0.0, 0.18, half_size.x - abs(local_xz.x));
 	float churn = turbulence * (1.0 - smoothstep(0.0, 1.2, distance(local_xz, inflow)));
 	float speck = step(0.72, hash(floor(local_xz * 22.0) + floor(TIME * 6.0)));
 	float foam = clamp(wall * 0.6 + churn * speck + smoothstep(0.02, 0.05, crest) * 0.5, 0.0, 1.0);
