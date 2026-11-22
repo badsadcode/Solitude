@@ -39,7 +39,9 @@ public partial class Harpoon : Node3D
         ? _spear switch { SpearState.Ready => "SPEAR READY", SpearState.Reeling => "REELING", _ => "LINE OUT" }
         : Charge >= 1f ? "PROD CHARGED" : $"PROD {Charge * 100f:0}%";
 
-    private const float LineLength = 25f, SpearSpeed = 26f, ProdReach = 2.6f, ProdRecharge = 3f;
+    private const float SpearSpeed = 26f, ProdReach = 2.6f;
+    /// <summary>Modules: reel motor (line length, reel speed), prod capacitor (recharge, insulation).</summary>
+    public float LineLength = 25f, ReelSpeed = 11f, ProdRecharge = 3f, SelfZapChance = 0.12f;
     private static readonly Vector3 HoldOffset = new(0.22f, -0.22f, -0.42f);
 
     private Node3D _rig, _muzzle, _spearNode, _prongs;
@@ -336,7 +338,7 @@ public partial class Harpoon : Node3D
             {
                 Vector3 to = muzzle + _rig.GlobalBasis.Z * 0.5f;
                 Vector3 d = to - _sPos;
-                float step = 11f * dt;
+                float step = ReelSpeed * dt;
                 if (d.Length() <= step + 0.05f) { _spear = SpearState.Ready; Sound?.Invoke("reload", muzzle); return; }
                 _sPos += d.Normalized() * step;
                 // The spear trails nose-out on its way back in.
@@ -409,7 +411,7 @@ public partial class Harpoon : Node3D
             Message?.Invoke("ZAP. It convulses and veers away.");
         }
         // Salt water is a conductor. Usually the suit's insulation holds.
-        if (_rng.NextDouble() < 0.12)
+        if (_rng.NextDouble() < SelfZapChance)
         {
             SelfShock?.Invoke(5f);
             Message?.Invoke("The prod bites you too. Your fillings hum.");

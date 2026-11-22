@@ -223,6 +223,11 @@ public partial class Hud : CanvasLayer
     private PanelContainer _panel;
     private Label _panelTitle, _panelBody;
     private VBoxContainer _panelButtons;
+    private ScrollContainer _panelScroll;
+    private readonly System.Collections.Generic.List<int> _panelKeys = new();
+
+    /// <summary>Number keys skip section headers: key n → the n-th real option's index.</summary>
+    public int PanelKeyToIndex(int n) => n >= 0 && n < _panelKeys.Count ? _panelKeys[n] : -1;
     private Control _armGroup;
 
     private void EnsureM3()
@@ -256,10 +261,14 @@ public partial class Hud : CanvasLayer
         _panelBody.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _panelBody.CustomMinimumSize = new Vector2(530, 0);
         _panelButtons = new VBoxContainer();
+        // Long lists (modules) scroll instead of running off the screen.
+        _panelScroll = new ScrollContainer { CustomMinimumSize = new Vector2(530, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        _panelButtons.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _panelScroll.AddChild(_panelButtons);
         v.AddChild(_panelTitle);
         v.AddChild(_panelBody);
         v.AddChild(new HSeparator());
-        v.AddChild(_panelButtons);
+        v.AddChild(_panelScroll);
 
         _armGroup = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
         _armGroup.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -397,12 +406,27 @@ public partial class Hud : CanvasLayer
         _panelTitle.Text = title;
         _panelBody.Text = body;
         foreach (var c in _panelButtons.GetChildren()) c.QueueFree();
+        _panelKeys.Clear();
+        int rows = 0;
         for (int i = 0; i < options.Count; i++)
         {
             int idx = i;
+            if (options[i].label.StartsWith("## "))
+            {
+                // A section header, not an option.
+                var h = MakeLabel(new Color(0.55f, 0.85f, 0.7f), 13);
+                h.Text = options[i].label.Substring(3);
+                if (i > 0) _panelButtons.AddChild(new HSeparator());
+                _panelButtons.AddChild(h);
+                rows++;
+                continue;
+            }
+            _panelKeys.Add(i);
+            rows++;
+            string key = _panelKeys.Count <= 9 ? $"[{_panelKeys.Count}]" : "[  ]";
             var b = new Button
             {
-                Text = $"[{i + 1}]  {options[i].label}",
+                Text = $"{key}  {options[i].label}",
                 Disabled = !options[i].enabled,
                 Alignment = HorizontalAlignment.Left,
                 FocusMode = Control.FocusModeEnum.None,
@@ -413,6 +437,9 @@ public partial class Hud : CanvasLayer
             b.Pressed += () => onPick(idx);
             _panelButtons.AddChild(b);
         }
+        // Grow with the list up to most of the screen height, then scroll.
+        float vh = GetViewport().GetVisibleRect().Size.Y;
+        _panelScroll.CustomMinimumSize = new Vector2(530, Mathf.Min(rows * 31f, vh * 0.55f));
     }
 
     public void HidePanel() { if (_panel != null) _panel.Visible = false; }

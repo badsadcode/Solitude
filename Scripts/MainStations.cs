@@ -145,6 +145,7 @@ public partial class Main
                 Message = m => _hud.Message(m, 5f),
                 ReadLog = ShowLog,
                 MapFragment = OnMapFragment,
+                Blueprint = OnBlueprint,
                 ReturnToSub = ReturnToSub,
                 Sound = PlaySpatial,
             };

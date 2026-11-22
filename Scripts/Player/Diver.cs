@@ -40,8 +40,10 @@ public partial class Diver : CharacterBody3D
 
     // Tuned by Tom's first swim (2026-11-22): "a bit slower" — ~15% off, slightly heavier starts.
     private const float SwimSpeed = 1.6f, BoostSpeed = 2.6f, Accel = 1.35f, Drag = 1.4f;
-    /// <summary>Minutes of air in the tank (Suit Tank upgrade raises it).</summary>
+    /// <summary>Minutes of air in the tank (the Suit tank module raises it).</summary>
     public float TankMinutes = 4f;
+    /// <summary>Rebreather module: how much harder you breathe when working (1 = stock).</summary>
+    public float ExertionAir = 1f;
     private float O2PerSecond => 100f / (TankMinutes * 60f);
 
     public override void _Ready()
@@ -132,7 +134,7 @@ public partial class Diver : CharacterBody3D
         // Air
         float effort = wish.Length() * (boost ? 1f : 0.4f);
         Exertion = Mathf.Lerp(Exertion, effort, Mathf.Clamp(0.8f * dt, 0f, 1f));
-        Oxygen = Mathf.Max(0f, Oxygen - O2PerSecond * (1f + Exertion * 1.2f) * dt);
+        Oxygen = Mathf.Max(0f, Oxygen - O2PerSecond * (1f + Exertion * 1.2f * ExertionAir) * dt);
         if (Oxygen < 25f && _warn <= 0f) { OxygenWarning?.Invoke(); _warn = 12f; }
         _warn -= dt;
         if (Oxygen <= 0f)

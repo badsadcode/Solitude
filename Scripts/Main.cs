@@ -207,7 +207,7 @@ public partial class Main : Node
 		SetupCreatures();
 		SetupHullEvents();
 		SetupStory();
-		ApplyUpgrades();
+		ApplyModules();
 
 		_sub.Impact += s =>
 		{
@@ -422,6 +422,17 @@ public partial class Main : Node
 			case "workbench":
 				title = "WORKBENCH  —  process & fabricate";
 				AddRecipes(Station.Workbench);
+				// Modules: only the blueprints you know. Unknown ones are counted so you know there's more.
+				opts.Add(($"## MODULES  —  {_modules.Known.Count}/{Modules.All.Length} blueprints known  (4 pwr each)", false));
+				_panelActions.Add(() => { });
+				foreach (var m in Modules.All)
+				{
+					if (!_modules.Known.Contains(m.Id)) continue;
+					int have = hold.Count(m.Item) + (_modules.Has(m.Id) ? 1 : 0);
+					opts.Add(($"Fabricate {m.Name}{(have > 0 ? $" (have {have})" : "")}: {m.Effect}   <-  {Modules.CostText(m)}", hold.Has(m.Cost) && _systems.Power >= 4f));
+					var def = m;
+					_panelActions.Add(() => FabricateModule(def));
+				}
 				break;
 			case "galley":
 				title = "GALLEY  —  cook & eat";
@@ -443,14 +454,28 @@ public partial class Main : Node
 				_panelActions.Add(_systems.ApplyPatch);
 				opts.Add(($"{(_systems.IntakeOn ? "Close" : "Open")} intake filter", !_systems.Emergency));
 				_panelActions.Add(_systems.ToggleIntake);
-				// Upgrades (milestone 6): installed ones drop off the list.
-				foreach (var u in Upgrades.All)
+				// The module rack (milestone 7): fitted modules can be pulled; fabricated ones fitted.
+				opts.Add(($"## MODULE RACK  —  {_modules.Used}/{_modules.Bays} bays", false));
+				_panelActions.Add(() => { });
+				foreach (var id in _modules.Fitted)
 				{
-					if (_upgrades.Has(u.Id)) continue;
-					string req = u.Requires is UpgradeId r && !_upgrades.Has(r) ? $"   [needs {Upgrades.Def(r).Name}]" : "";
-					opts.Add(($"UPGRADE {u.Name}: {u.Effect}   <-  {Recipes.CostText(new Recipe(Station.Workbench, ItemId.MetalPlate, 0, u.Cost, 0f, ""))}{req}", _upgrades.CanInstall(u, hold)));
-					var def = u;
-					_panelActions.Add(() => InstallUpgrade(def));
+					var m = Modules.Def(id);
+					opts.Add(($"Remove {m.Name}  [{m.Effect}]", true));
+					_panelActions.Add(() => RemoveModule(m));
+				}
+				foreach (var m in Modules.All)
+				{
+					if (hold.Count(m.Item) == 0 || _modules.Has(m.Id)) continue;
+					string why = _modules.WhyNot(m);
+					string swap = _modules.Displaces(m) is ModuleId d ? $" (replaces {Modules.Def(d).Name})" : "";
+					opts.Add(($"Fit {m.Name}{swap}: {m.Effect}{(why != null ? $"   [{why}]" : "")}", why == null));
+					var def = m;
+					_panelActions.Add(() => FitModule(def));
+				}
+				if (_modules.Fitted.Count == 0 && !System.Linq.Enumerable.Any(Modules.All, m => hold.Count(m.Item) > 0))
+				{
+					opts.Add(("(no modules yet: fabricate them at the workbench)", false));
+					_panelActions.Add(() => { });
 				}
 				break;
 		}
@@ -460,6 +485,8 @@ public partial class Main : Node
 		sb.AppendLine($"HOLD {hold.Weight}/{hold.Capacity}:");
 		var items = new System.Collections.Generic.List<string>();
 		foreach (var (id, count) in hold.All()) items.Add($"{Items.Name(id)} x{count}");
+		if (_panelKind == "workbench" && _modules.Known.Count < Modules.All.Length)
+			items.Add("\n(More module blueprints are out there: every station core keeps one.)");
 		sb.Append(items.Count > 0 ? string.Join(",  ", items) : "(empty)");
 		body = sb.ToString();
 		_hud.ShowPanel(title, body, opts, PickPanel);
@@ -577,7 +604,7 @@ public partial class Main : Node
 		else if (e is InputEventKey pk && pk.Pressed && !pk.Echo && _mode == Mode.Panel)
 		{
 			int n = (int)(pk.PhysicalKeycode - Key.Key1);
-			if (n >= 0 && n < 9) PickPanel(n);
+			if (n >= 0 && n < 9) PickPanel(_hud.PanelKeyToIndex(n));
 		}
 		else if (e is InputEventMouseButton wheel && wheel.Pressed && _mode == Mode.Holo &&
 				 (wheel.ButtonIndex == MouseButton.WheelUp || wheel.ButtonIndex == MouseButton.WheelDown))

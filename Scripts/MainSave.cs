@@ -12,14 +12,16 @@ namespace Solitude;
 /// <summary>Everything needed to resume a dive. Plain JSON in user://save.json.</summary>
 public sealed class SaveData
 {
-    public int Version = 1;
+    public int Version = 2;
     public int Seed;
     public string SavedAt;
     public float[] SubPos, SubRot;
     public float Hull, Power, Food, Health;
     public bool SuitOn, OriginKnown, Ended;
     public Dictionary<string, int> Hold = new();
+    /// <summary>v1 only (engineering-panel upgrades); migrated to fitted modules on load.</summary>
     public List<string> Upgrades = new();
+    public List<string> Modules = new(), Blueprints = new();
     public List<long> CoreSites = new();
     public List<string> WeaponsOwned = new();
     public Dictionary<string, int> Mag = new(), Reserve = new();
@@ -85,8 +87,10 @@ public partial class Main
             {
                 _systems.Hold.Add(ItemId.StationAlloy, 3);
                 _systems.Hold.Add(ItemId.Clam, 2);
-                _upgrades.Installed.Add(UpgradeId.HullI);
-                ApplyUpgrades();
+                _modules.Fitted.Add(ModuleId.FrameI);
+                _modules.Known.Add(ModuleId.Bilge);
+                _systems.Hold.Add(ItemId.ModReelMotor);
+                ApplyModules();
                 _coreSites.Add(-42);
                 _weapons.Give(WeaponId.Shotgun, 6);
                 _sub.SetHull(63f);
@@ -96,7 +100,7 @@ public partial class Main
                 _saveTestForce = false;
                 _saveTestExpected = Capture();
                 _saveTestPhase2 = true;
-                GD.Print($"[save-test] phase 1 saved: seed={Seed} hull=63 alloy=3 upgrades=HullI cores=1 pos={_sub.GlobalPosition}");
+                GD.Print($"[save-test] phase 1 saved: seed={Seed} hull=63 alloy=3 modules=FrameI cores=1 pos={_sub.GlobalPosition}");
                 ContinueDive();
             }));
         }
@@ -112,7 +116,9 @@ public partial class Main
                 Check(Mathf.Abs(_sub.Hull - e.Hull) < 0.5f, $"hull {_sub.Hull} != {e.Hull}");
                 Check(_systems.Hold.Count(ItemId.StationAlloy) == e.Hold.GetValueOrDefault("StationAlloy"), "alloy count");
                 Check(_systems.Hold.Count(ItemId.Clam) == e.Hold.GetValueOrDefault("Clam"), "clam count");
-                Check(_upgrades.Has(UpgradeId.HullI) && Mathf.IsEqualApprox(_sub.CrushDepth, 1250f), $"Hull I / crush {_sub.CrushDepth}");
+                Check(_modules.Has(ModuleId.FrameI) && Mathf.IsEqualApprox(_sub.CrushDepth, 1250f), $"Frame I / crush {_sub.CrushDepth}");
+                Check(_modules.Known.Contains(ModuleId.Bilge), "bilge blueprint");
+                Check(_systems.Hold.Count(ItemId.ModReelMotor) == 1, "reel motor in hold");
                 Check(_coreSites.Contains(-42), "data core");
                 Check(_weapons.Owned.Contains(WeaponId.Shotgun), "shotgun");
                 var p = new Vector3(e.SubPos[0], e.SubPos[1], e.SubPos[2]);
@@ -159,7 +165,8 @@ public partial class Main
             Hull = _sub.Hull, Power = _systems.Power, Food = _systems.Food,
             Health = Mathf.Max(_player.Health, 30f),
             SuitOn = _suitOn, OriginKnown = _originKnown, Ended = _ended,
-            Upgrades = _upgrades.Installed.Select(u => u.ToString()).ToList(),
+            Modules = _modules.Fitted.Select(m => m.ToString()).ToList(),
+            Blueprints = _modules.Known.Select(m => m.ToString()).ToList(),
             CoreSites = _coreSites.ToList(),
             WeaponsOwned = _weapons.Owned.Select(w => w.ToString()).ToList(),
             Mag = _weapons.Mag.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
@@ -180,8 +187,21 @@ public partial class Main
     /// <summary>Re-apply a save on top of a freshly built world with the same seed.</summary>
     private void ApplySave(SaveData d)
     {
-        foreach (var u in d.Upgrades) if (Enum.TryParse<UpgradeId>(u, out var id)) _upgrades.Installed.Add(id);
-        ApplyUpgrades();
+        foreach (var m in d.Modules) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Fitted.Add(id);
+        foreach (var m in d.Blueprints) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Known.Add(id);
+        // v1 saves: the old engineering upgrades become fitted modules (and known blueprints).
+        foreach (var u in d.Upgrades)
+        {
+            ModuleId? m = u switch
+            {
+                "HullI" => ModuleId.FrameI, "HullII" => ModuleId.FrameII, "Battery" => ModuleId.Battery, "HoldRack" => ModuleId.HoldRacks,
+                "SuitTank" => ModuleId.SuitTank, "LongSonar" => ModuleId.LongSonar, "Floods" => ModuleId.Floods, _ => null,
+            };
+            if (m is ModuleId id && !_modules.Has(id)) { _modules.Known.Add(id); _modules.Fitted.Add(id); }
+        }
+        // Mk I and Mk II both fitted (old saves had both): keep the better one.
+        if (_modules.Has(ModuleId.FrameI) && _modules.Has(ModuleId.FrameII)) _modules.Fitted.Remove(ModuleId.FrameI);
+        ApplyModules();
 
         _systems.Hold.Clear();
         foreach (var (k, n) in d.Hold) if (Enum.TryParse<ItemId>(k, out var id)) _systems.Hold.Set(id, n);

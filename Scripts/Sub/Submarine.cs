@@ -163,9 +163,12 @@ public partial class Submarine : RigidBody3D
     public void Repair(float amount) => Hull = Mathf.Min(100f, Hull + amount);
     public void SetHull(float hull) => Hull = Mathf.Clamp(hull, 0f, 100f);
 
+    /// <summary>Ablative skin module: scales all hull damage.</summary>
+    public float DamageScale = 1f;
+
     public void Damage(float amount)
     {
-        Hull = Mathf.Max(0f, Hull - amount);
+        Hull = Mathf.Max(0f, Hull - amount * DamageScale);
     }
 
     public override void _PhysicsProcess(double delta)

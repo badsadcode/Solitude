@@ -275,6 +275,42 @@ public partial class Main
             (t += 10.0f, () => Shot("10_chase_turning")),
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
+            // --- Modules: components, blueprints, the workbench, the rack
+            (t += 0.1f, CaptureMarkModules),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                var h = _systems.Hold;
+                h.Capacity = 999;
+                foreach (var (id, n) in new[] { (ItemId.Servo, 3), (ItemId.Valve, 3), (ItemId.Coil, 4), (ItemId.Optics, 1), (ItemId.LogicBoard, 3), (ItemId.Impeller, 2),
+                                                 (ItemId.MetalPlate, 10), (ItemId.StationAlloy, 6), (ItemId.Crystal, 6), (ItemId.Sealant, 3), (ItemId.Circuit, 3), (ItemId.PowerCell, 2) })
+                    h.Add(id, n);
+                _systems.SetState(100f, _systems.Food);
+                OnBlueprint(core: true); OnBlueprint(core: true); OnBlueprint(core: false);
+                EnterPanel("workbench");
+            }),
+            (t += 1.0f, () => { Shot("28a_workbench_modules"); GD.Print($"[capture] blueprints: {string.Join(",", _modules.Known)}"); }),
+            (t += 0.1f, () =>
+            {
+                FabricateModule(Modules.Def(ModuleId.HoldRacks));
+                FabricateModule(Modules.Def(ModuleId.Thermal));
+                FabricateModule(Modules.Def(ModuleId.FrameI));
+                FabricateModule(Modules.Def(ModuleId.SuitTank));
+                FabricateModule(Modules.Def(ModuleId.Battery));
+                EnterWalking();
+                EnterPanel("engineering");
+                FitModule(Modules.Def(ModuleId.HoldRacks)); FitModule(Modules.Def(ModuleId.Thermal)); FitModule(Modules.Def(ModuleId.FrameI)); FitModule(Modules.Def(ModuleId.SuitTank));
+                FitModule(Modules.Def(ModuleId.Battery));   // must refuse: rack full
+                RefreshPanel();
+            }),
+            (t += 1.0f, () => { Shot("28b_engineering_rack"); GD.Print($"[capture] rack {_modules.Used}/{_modules.Bays}: {string.Join(",", _modules.Fitted)}; hold cap {_systems.Hold.Capacity}, vent range {_systems.VentRange}, crush {_sub.CrushDepth}, tank {_diver.TankMinutes}"); }),
+            (t += 0.1f, () =>
+            {
+                RemoveModule(Modules.Def(ModuleId.SuitTank));
+                foreach (var id in new[] { ModuleId.FrameI, ModuleId.HoldRacks, ModuleId.Thermal, ModuleId.SuitTank }) RemoveModule(Modules.Def(id));
+                GD.Print($"[capture] after removing all: rack {_modules.Used}/{_modules.Bays}, crush {_sub.CrushDepth}, hold cap {_systems.Hold.Capacity}");
+                EnterWalking();
+            }),
             // --- The diver's harpoon: lag, spear on a tether, the shock prod
             (t += 0.1f, CaptureMarkHarpoon),
             (t += 0.1f, () =>
@@ -460,17 +496,20 @@ public partial class Main
                 GD.Print($"[capture] origin at {_gen.Origin} rim depth {-_gen.Origin.Y:0} m, shaft floor {-_gen.OriginFloor:0} m, {new Vector2(_gen.Origin.X - _spawnPoint.X, _gen.Origin.Z - _spawnPoint.Z).Length():0} m from spawn");
                 var h = _systems.Hold;
                 h.Capacity = 999;
-                h.Add(ItemId.MetalPlate, 8); h.Add(ItemId.StationAlloy, 6); h.Add(ItemId.Sealant, 1); h.Add(ItemId.Circuit, 2);
-                InstallUpgrade(Upgrades.Def(UpgradeId.HullII));   // must refuse: needs Hull I
-                InstallUpgrade(Upgrades.Def(UpgradeId.HullI));
-                InstallUpgrade(Upgrades.Def(UpgradeId.HullII));
-                GD.Print($"[capture] upgrades={string.Join(",", _upgrades.Installed)} test={_sub.TestDepth} crush={_sub.CrushDepth}");
+                h.Add(ItemId.MetalPlate, 8); h.Add(ItemId.StationAlloy, 6); h.Add(ItemId.Valve, 3); h.Add(ItemId.Circuit, 2);
+                _systems.SetState(100f, _systems.Food);
+                FabricateModule(Modules.Def(ModuleId.FrameI));
+                FitModule(Modules.Def(ModuleId.FrameI));
+                OnBlueprint(core: true);                          // first core blueprint: the Mk II frame
+                FabricateModule(Modules.Def(ModuleId.FrameII));
+                FitModule(Modules.Def(ModuleId.FrameII));         // swaps Mk I back into the hold
+                GD.Print($"[capture] modules={string.Join(",", _modules.Fitted)} bays={_modules.Used}/{_modules.Bays} frameI in hold={h.Count(ItemId.ModFrameI)} test={_sub.TestDepth} crush={_sub.CrushDepth}");
                 for (int i = 0; i < 3; i++) OnDataCore(new Solitude.Stations.StationSite { Id = -100 - i, Name = "TEST" });
                 GD.Print($"[capture] cores={_coreSites.Count} originKnown={_originKnown}");
                 // Save round-trip (in memory: capture runs never touch the real save file).
                 var json = System.Text.Json.JsonSerializer.Serialize(Capture(), Json);
                 var back = System.Text.Json.JsonSerializer.Deserialize<SaveData>(json, Json);
-                GD.Print($"[capture] save {json.Length} bytes; round-trip seed={back.Seed} upgrades={back.Upgrades.Count} cores={back.CoreSites.Count} hold items={back.Hold.Count} taken={back.TakenPickups.Count} stations={back.Stations.Count}");
+                GD.Print($"[capture] save {json.Length} bytes; round-trip seed={back.Seed} modules={back.Modules.Count} blueprints={back.Blueprints.Count} cores={back.CoreSites.Count} hold items={back.Hold.Count} taken={back.TakenPickups.Count} stations={back.Stations.Count}");
             }),
             (t += 0.1f, () =>
             {
@@ -545,6 +584,7 @@ public partial class Main
 
     private void CaptureMarkCreatures() => GD.Print("[capture] --- creatures section ---");
     private void CaptureMarkBiomes() => GD.Print("[capture] --- biomes section ---");
+    private void CaptureMarkModules() => GD.Print("[capture] --- modules section ---");
     private void CaptureMarkHarpoon() => GD.Print("[capture] --- harpoon section ---");
     private void CaptureMarkTest() => GD.Print("[capture] --- test section ---");
     private float _captureHeading0;
@@ -581,7 +621,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

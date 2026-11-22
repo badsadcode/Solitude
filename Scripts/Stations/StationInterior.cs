@@ -39,6 +39,8 @@ public partial class StationInterior : Node3D
     public Action<string> Message;
     public Action<StationLogs.Log> ReadLog;
     public Action<StationSite> MapFragment;
+    /// <summary>A blueprint datapad was taken (core = the station core's guaranteed one).</summary>
+    public Action<bool> Blueprint;
     public Action ReturnToSub;
     public Action<string, Vector3> Sound;          // creature/station sounds at a position
 
@@ -342,14 +344,22 @@ public partial class StationInterior : Node3D
                 Message?.Invoke($"{Weapons.Defs[w].Name} taken. Press {(w == WeaponId.Rifle ? 2 : 3)} to select.");
             });
         }
+        var partRng = new Random(Site.Seed ^ 0x5a17);   // its own stream: older saves keep their loot layout
         int lootCount = 6 + _rng.Next(7);
         for (int i = 0; i < lootCount && s < spots.Count; i++, s++)
         {
             double r = _rng.NextDouble();
             var p = spots[s] + new Vector3((float)_rng.NextDouble() - 0.5f, 0, (float)_rng.NextDouble() - 0.5f);
-            if (r < 0.22) Loot(p, "Station tin", crate, () => Systems.Collect(ItemId.CannedFood));
-            else if (r < 0.34) Loot(p, "Medkit", medbox, () => Systems.Collect(ItemId.Medkit));
-            else if (r < 0.62)
+            if (r < 0.18) Loot(p, "Station tin", crate, () => Systems.Collect(ItemId.CannedFood));
+            else if (r < 0.28) Loot(p, "Medkit", medbox, () => Systems.Collect(ItemId.Medkit));
+            else if (r < 0.34) Loot(p, "Blueprint (engineer's datapad)", datapad, () => Blueprint?.Invoke(false));
+            else if (r < 0.52)
+            {
+                // Components: stripped out of the station's own machinery.
+                var part = Parts[partRng.Next(Parts.Length)];
+                Loot(p, $"Salvage: {Items.Name(part)}", crate, () => Systems.Collect(part));
+            }
+            else if (r < 0.74)
             {
                 WeaponId w = (WeaponId)_rng.Next(3);
                 int n = w == WeaponId.Shotgun ? 6 : w == WeaponId.Rifle ? 30 : 12;
@@ -361,6 +371,15 @@ public partial class StationInterior : Node3D
                 var item = mats[_rng.Next(mats.Length)];
                 Loot(p, Items.Name(item), crate, () => Systems.Collect(item));
             }
+        }
+
+        // Every core keeps a module blueprint in its maintenance memory, and a spare part or two.
+        // (Added after the floor loot so loot indices in older saves still line up.)
+        if (exit.kind != null && Floor(exit.pos + Vector3.Up) is Vector3 core2)
+        {
+            Loot(core2 + new Vector3(-0.9f, 0, 0.9f), "Blueprint (maintenance datapad)", datapad, () => Blueprint?.Invoke(true));
+            var corePart = Parts[partRng.Next(Parts.Length)];
+            Loot(core2 + new Vector3(0, 0, 1.6f), $"Components: {Items.Name(corePart)} x2", crate, () => { Systems.Collect(corePart); Systems.Collect(corePart); });
         }
 
         // Infestation: some stations are empty. Most are not.
@@ -378,6 +397,8 @@ public partial class StationInterior : Node3D
 
         State.Visited = true;
     }
+
+    private static readonly ItemId[] Parts = { ItemId.Servo, ItemId.Valve, ItemId.Coil, ItemId.Optics, ItemId.LogicBoard, ItemId.Impeller };
 
     private void BuildCoreTerminal(Vector3 p)
     {

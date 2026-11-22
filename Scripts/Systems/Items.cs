@@ -17,6 +17,11 @@ public enum ItemId
     CannedFood, Medkit, StationAlloy,
     // Tools
     MultiTool,
+    // Salvaged components: only found aboard stations (modules, milestone 7)
+    Servo, Valve, Coil, Optics, LogicBoard, Impeller,
+    // Fabricated modules (fitted into the rack in engineering; see Modules.cs)
+    ModFrameI, ModFrameII, ModAblative, ModBattery, ModThermal, ModLongSonar, ModFloods,
+    ModHoldRacks, ModBilge, ModSuitTank, ModRebreather, ModReelMotor, ModCapacitor, ModExpander,
 }
 
 public sealed record ItemInfo(string Name, string Description, int Weight, float Food = 0f);
@@ -43,7 +48,19 @@ public static class Items
         [ItemId.MultiTool] = new("Multi-tool", "Arc welder, cutter, pry bar and torch in one battered housing. Needed to weld breaches.", 1),
         [ItemId.StationAlloy] = new("Station alloy", "Pressure-rated plate salvaged from a station. Nothing you can press from nodules is this strong.", 2),
         [ItemId.Medkit] = new("Medkit", "Gauze, sealant spray, something in an autoinjector. Press H to use.", 1),
+        [ItemId.Servo] = new("Servo motor", "Station-grade actuator. Still twitches when you touch the contacts.", 1),
+        [ItemId.Valve] = new("Pressure valve", "Rated for 2000 m. Somebody scratched a tally of days into the housing.", 1),
+        [ItemId.Coil] = new("Induction coil", "Copper wound so tight it sings when power runs through it.", 1),
+        [ItemId.Optics] = new("Sealed optic", "A pressure-proof lens. Something moves in the reflection that isn't behind you.", 1),
+        [ItemId.LogicBoard] = new("Logic board", "Station controller. The firmware keeps a log you probably shouldn't read.", 1),
+        [ItemId.Impeller] = new("Pump impeller", "Titanium vanes worn smooth. Hair tangled round the hub.", 1),
     };
+
+    /// <summary>Module items take their names from the module table.</summary>
+    static Items()
+    {
+        foreach (var m in Modules.All) Info[m.Item] = new($"{m.Name} (module)", m.Effect, 2);
+    }
 
     public static string Name(ItemId id) => Info[id].Name;
 }

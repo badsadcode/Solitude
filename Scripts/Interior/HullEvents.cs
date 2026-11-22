@@ -370,7 +370,7 @@ public partial class HullEvents : Node3D
         // A small breach they outpace; a big one they can't.
         if (!Systems.Emergency)
         {
-            float pump = 0.09f * dt, used = 0f;
+            float pump = PumpRate * dt, used = 0f;
             for (int pass = 0; pass < 5 && pump > 1e-6f; pass++)
             {
                 int wettest = -1;
@@ -587,9 +587,12 @@ public partial class HullEvents : Node3D
 
     // ------------------------------------------------------------------ triggers
 
+    /// <summary>Modules: ablative skin makes breaches rarer; bilge pumps drain faster (m²/s).</summary>
+    public float BreachScale = 1f, PumpRate = 0.09f;
+
     public void OnImpact(float strength)
     {
-        if (strength > 1.4f && _rng.NextDouble() < (strength - 1.2f) * 0.45f)
+        if (strength > 1.4f && _rng.NextDouble() < (strength - 1.2f) * 0.45f * BreachScale)
             OpenBreach(_rng.NextDouble() < 0.5 ? 0 : -1, Mathf.Clamp(strength * 0.35f, 0.4f, 1f));
         else if (strength > 0.8f && _rng.NextDouble() < 0.5) Vent(_steamSpots[_rng.Next(_steamSpots.Count)]);
     }

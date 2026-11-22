@@ -28,6 +28,8 @@ public partial class ShipSystems : Node
     public float Power { get; private set; } = 100f;
     /// <summary>Battery bank size relative to stock (the Battery upgrade makes every drain last longer).</summary>
     public float BatteryCapacity = 1f;
+    /// <summary>Thermal siphon module: vent charging range (m) and rate multiplier.</summary>
+    public float VentRange = 40f, VentRate = 1f;
     public float Food { get; private set; } = 80f;
     public bool IntakeOn { get; private set; }
     public bool ArmActive;                 // set by the arm while deployed
@@ -131,10 +133,10 @@ public partial class ShipSystems : Node
         if (Terrain != null && Mathf.Abs(Sub.ForwardSpeed) < 1.2f)
         {
             float d = Terrain.NearestVentDistance(Sub.GlobalPosition);
-            if (d < 40f)
+            if (d < VentRange)
             {
                 Thermal = true;
-                Power = Mathf.Min(100f, Power + (0.35f * (1f - d / 40f) + 0.05f) * dt);
+                Power = Mathf.Min(100f, Power + (0.35f * (1f - d / VentRange) + 0.05f) * VentRate * dt);
             }
         }
 
