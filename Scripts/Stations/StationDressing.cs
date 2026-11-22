@@ -216,12 +216,13 @@ public partial class StationInterior
     }
 
     /// <summary>Dev: a station-local spot 2.4 m in front of the first marker of this kind (and prop class), facing it.</summary>
-    public Transform3D? ViewOf(string kind, string cls)
+    public Transform3D? ViewOf(string kind, string cls, bool brokenOnly = false)
     {
         for (int i = 0; i < _markers.Count; i++)
         {
             var (pos, k, extras) = _markers[i];
             if (k != kind || (cls != null && Field(extras, "class").AsString() != cls) || HasTag(extras, "blockout")) continue;
+            if (brokenOnly && !HasTag(extras, "broken")) continue;
             Vector3 fwd = _markerBasis[i].Z; fwd.Y = 0; fwd = fwd.LengthSquared() > 0.01f ? fwd.Normalized() : Vector3.Back;
             Vector3 eye = pos + fwd * 2.4f;
             if (Floor(eye + Vector3.Up * 1.5f, 4f) is Vector3 f) eye = f;

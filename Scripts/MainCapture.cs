@@ -108,11 +108,12 @@ public partial class Main
             if (_stairsView != null)
             {
                 var parts = _stairsView.Split(':');
-                var v = _station.ViewOf(parts[0], parts.Length > 1 ? parts[1] : null);
+                var v = _station.ViewOf(parts[0], parts.Length > 1 ? parts[1] : null, parts.Length > 2 && parts[2] == "broken");   // view:prop:locker:broken
                 if (v is Transform3D vt) _player.GlobalTransform = _station.GlobalTransform * vt;
                 else GD.Print($"[stairs] no marker for {_stairsView}");
             }
             _player.SetLook(0f, OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--stairs-shot=")) ? 0.05f : -0.3f);
+            if (OS.GetCmdlineUserArgs().Any(x => x == "--stairs-torch")) _player.Flashlight.Visible = true;
             if (!_stairsAirlock || _stairsWalkIn) Input.ActionPress(GameInput.Forward);
             GD.Print($"[stairs] start local {local} layout {_station.Site.Layout}");
         }));

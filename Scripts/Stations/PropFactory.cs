@@ -38,7 +38,16 @@ public static class PropFactory
         {
             string path = $"res://assets/props/{cls}_{variant % count}";
             if (broken && ResourceLoader.Exists(path + "_broken.glb")) path += "_broken";
-            return GD.Load<PackedScene>(path + ".glb").Instantiate<Node3D>();
+            var prop = GD.Load<PackedScene>(path + ".glb").Instantiate<Node3D>();
+            // A single-object prop whose object wasn't at the scene origin in Blender (location not
+            // cleared before export) would stand off its marker, often inside a wall. Put it back on
+            // the spot sideways and front-to-back; its height is kept (floor/ceiling props rely on it).
+            if (prop.GetChildCount() == 1 && prop.GetChild(0) is Node3D only && (Mathf.Abs(only.Position.X) > 0.01f || Mathf.Abs(only.Position.Z) > 0.01f))
+            {
+                GD.Print($"[props] {path}.glb: object was off the origin by ({only.Position.X:0.00}, {only.Position.Z:0.00}) m; recentred");
+                only.Position = new Vector3(0f, only.Position.Y, 0f);
+            }
+            return prop;
         }
         var root = new Node3D { Name = $"prop_{cls}" };
         var mb = new MeshBuilder();
