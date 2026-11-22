@@ -180,7 +180,7 @@ public partial class Main
         _rig.BridgeActive = false;
         _audio.Inside = true;
         _hud.FadeTo(0f, 1.2f);
-        _hud.SetHelp("WASD move · SHIFT run · E use · LMB fire · R reload · 1-3 weapons · F flashlight · H medkit · I hold");
+        _hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · LMB fire · R reload · 1-3 weapons · F flashlight · H medkit · I hold");
         _hud.Message(_station.Powered ? $"{_station.Site.Name}. The lights are on. Nobody answers." : $"{_station.Site.Name}. No power. Only the emergency strips, and your torch (F).", 6f);
     }
 
@@ -203,7 +203,7 @@ public partial class Main
             _rig.MonitorsActive = true;
             _rig.BridgeActive = true;
             _hud.FadeTo(0f, 1.0f);
-            _hud.SetHelp("WASD move · SHIFT run · E use · I hold · ESC release mouse · F11 fullscreen");
+            _hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC release mouse · F11 fullscreen");
         }));
     }
 
@@ -239,7 +239,7 @@ public partial class Main
         if (_noiseTimer <= 0f && speed > 0.5f)
         {
             _noiseTimer = 0.4f;
-            _station?.Noise(_player.GlobalPosition, speed > 3.5f ? 9f : 3f);
+            _station?.Noise(_player.GlobalPosition, _player.Crouching ? 1.5f : speed > 3.5f ? 9f : 3f);
         }
     }
 

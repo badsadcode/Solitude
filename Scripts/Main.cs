@@ -208,11 +208,19 @@ public partial class Main : Node
 			_player.AddShake(s * 0.6f);
 			_damageFlash = Mathf.Min(1f, _damageFlash + s * 0.35f);
 		};
-		_player.Footstep += () => _audio.PlayStep();
+		_player.Footstep += () => { if (!_player.Crouching || GD.Randf() < 0.5f) _audio.PlayStep(); };
+		_player.Jumped += () => _audio.PlayStep();
+		_player.Landed += speed =>
+		{
+			_audio.PlayStep();
+			_audio.PlayStep();
+			if (speed > 5f) _audio.PlayImpact(0.15f);
+			if (_player.InStation) _station?.Noise(_player.GlobalPosition, 6f + speed);
+		};
 
 		Input.MouseMode = Input.MouseModeEnum.Captured;
 		_hud.Intro("S O L I T U D E", $"depth {_sub.Depth:0} m   ·   seed {Seed}   ·   you are alone down here");
-		_hud.SetHelp("WASD move · SHIFT run · E use · I hold · ESC release mouse · F11 fullscreen");
+		_hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC release mouse · F11 fullscreen");
 
 		SetupCapture();
 		SetupDebugStart();
@@ -254,7 +262,7 @@ public partial class Main : Node
 		_hud.ShowArm(false);
 		_arm.Stow();
 		_hud.SetCrosshair(true);
-		_hud.SetHelp("WASD move · SHIFT run · E use · I hold · ESC release mouse · F11 fullscreen");
+		_hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · I hold · ESC release mouse · F11 fullscreen");
 		_rig.MonitorsActive = true;
 		_rig.BridgeActive = true;
 		_audio.Inside = true;

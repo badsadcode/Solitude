@@ -58,7 +58,7 @@ public static class GameInput
         Bind(Interact, Godot.Key.E);
         Bind(Cancel, Godot.Key.Escape, Godot.Key.Tab);
         Bind(Jump, Godot.Key.Space);
-        Bind(Crouch, Godot.Key.Ctrl);
+        Bind(Crouch, Godot.Key.C, Godot.Key.Alt); // never Ctrl (Tom: "control for crouching is a heresy")
 
         Bind(BallastBlow, Godot.Key.Space);
         Bind(BallastFlood, Godot.Key.Ctrl, Godot.Key.C);

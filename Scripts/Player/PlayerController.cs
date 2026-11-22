@@ -33,10 +33,21 @@ public partial class PlayerController : CharacterBody3D
     public float SpeedFactor = 1f;          // starving / wounded slows you down
     private const float StepHeight = 0.55f;
 
-    private const float WalkSpeed = 2.6f, SprintSpeed = 4.2f, Accel = 10f, Gravity = 9.8f, EyeHeight = 1.62f;
+    private const float WalkSpeed = 2.6f, SprintSpeed = 4.2f, CrouchSpeed = 1.3f, Accel = 10f, Gravity = 9.8f, EyeHeight = 1.62f;
+
+    // Jump & crouch (Tom: "smooth, but not too slow"): ~0.8 m hop, a little heavier on the way down,
+    // landing dip proportional to the fall; crouch eases the eyes down over ~0.2 s and really shrinks the body.
+    private const float JumpVelocity = 4.0f, FallGravityScale = 1.3f;
+    private const float StandHeight = 1.75f, CrouchHeight = 1.15f, CrouchEye = 0.98f;
+    public bool Crouching { get; private set; }
+    public event Action Jumped;
+    public event Action<float> Landed;   // impact speed (m/s)
 
     private Node3D _tilt, _yaw, _pitch;
-    private float _bob, _stepDist, _shake, _time, _bobWeight, _stepOffset;
+    private CollisionShape3D _bodyShape;
+    private CapsuleShape3D _capsule;
+    private float _bob, _stepDist, _shake, _time, _bobWeight, _stepOffset, _crouch01, _landOffset;
+    private bool _wasOnFloor = true;
     private Vector3 _camBase;
 
     public override void _Ready()
@@ -45,11 +56,9 @@ public partial class PlayerController : CharacterBody3D
         CollisionMask = Layers.Interior;
         FloorMaxAngle = Mathf.DegToRad(50f);
 
-        AddChild(new CollisionShape3D
-        {
-            Shape = new CapsuleShape3D { Radius = 0.3f, Height = 1.75f },
-            Position = new Vector3(0, 0.875f, 0),
-        });
+        _capsule = new CapsuleShape3D { Radius = 0.3f, Height = StandHeight };
+        _bodyShape = new CollisionShape3D { Shape = _capsule, Position = new Vector3(0, StandHeight / 2f, 0) };
+        AddChild(_bodyShape);
 
         _tilt = new Node3D { Name = "Tilt", Position = new Vector3(0, EyeHeight, 0) };
         _yaw = new Node3D { Name = "Yaw" };
@@ -86,6 +95,17 @@ public partial class PlayerController : CharacterBody3D
 
     public void AddShake(float amount) => _shake = Mathf.Min(_shake + amount, 1.2f);
 
+    private void SetCrouch(bool on)
+    {
+        Crouching = on;
+        float h = on ? CrouchHeight : StandHeight;
+        _capsule.Height = h;
+        _bodyShape.Position = new Vector3(0, h / 2f, 0);
+    }
+
+    /// <summary>Is there headroom to stand up from a crouch?</summary>
+    private bool CanStand() => !TestMove(GlobalTransform, Vector3.Up * (StandHeight - CrouchHeight + 0.02f));
+
     public void Damage(float amount)
     {
         if (Dead) return;
@@ -105,8 +125,20 @@ public partial class PlayerController : CharacterBody3D
         float dt = (float)delta;
         Vector3 v = Velocity;
 
-        if (!IsOnFloor()) v.Y -= Gravity * dt;
+        // Heavier on the way down than on the way up: a hop, not a moon jump.
+        if (!IsOnFloor()) v.Y -= Gravity * (v.Y > 0f ? 1f : FallGravityScale) * dt;
         else v.Y = Mathf.Max(v.Y, -0.5f);
+
+        // Crouch (hold): the body shrinks at once (from the feet up); the eyes follow smoothly in _Process.
+        bool wantCrouch = InputEnabled && Input.IsActionPressed(GameInput.Crouch);
+        if (wantCrouch && !Crouching) SetCrouch(true);
+        else if (!wantCrouch && Crouching && CanStand()) SetCrouch(false);
+
+        if (InputEnabled && IsOnFloor() && !Crouching && Input.IsActionJustPressed(GameInput.Jump))
+        {
+            v.Y = JumpVelocity;
+            Jumped?.Invoke();
+        }
 
         Vector3 wish = Vector3.Zero;
         bool sprint = false;
@@ -120,7 +152,7 @@ public partial class PlayerController : CharacterBody3D
             if (wish.LengthSquared() > 1f) wish = wish.Normalized();
             sprint = Input.IsActionPressed(GameInput.Sprint);
         }
-        float speed = (sprint ? SprintSpeed : WalkSpeed) * SpeedFactor;
+        float speed = (Crouching ? CrouchSpeed : sprint ? SprintSpeed : WalkSpeed) * SpeedFactor;
         Vector3 hv = new(v.X, 0, v.Z);
         hv = hv.Lerp(wish * speed, Mathf.Clamp(Accel * dt, 0f, 1f));
 
@@ -134,7 +166,17 @@ public partial class PlayerController : CharacterBody3D
         Velocity = v;
         float rise = Stepper.TryStepUp(this, dt, StepHeight);
         _stepOffset -= rise; // body pops up the step; the camera eases after it
+        float fallSpeed = -Velocity.Y;
         MoveAndSlide();
+
+        // Landing: a dip in the view proportional to the fall, eased back in _Process.
+        bool onFloor = IsOnFloor();
+        if (onFloor && !_wasOnFloor && fallSpeed > 1.5f)
+        {
+            _landOffset = -Mathf.Min(fallSpeed * 0.022f, 0.14f);
+            Landed?.Invoke(fallSpeed);
+        }
+        _wasOnFloor = onFloor;
 
         // Footsteps by distance travelled.
         float moved = new Vector2(Velocity.X, Velocity.Z).Length() * dt;
@@ -206,6 +248,14 @@ public partial class PlayerController : CharacterBody3D
         // Stair steps: the eyes catch up with the body.
         _stepOffset = Mathf.Lerp(_stepOffset, 0f, Mathf.Clamp(14f * dt, 0f, 1f));
 
-        Camera.Position = _camBase + shake + bob + new Vector3(0, _stepOffset, 0);
+        // Crouch: ease the eye height (settles in ~0.2 s; smoothstep so it starts and ends gently).
+        _crouch01 = Mathf.MoveToward(_crouch01, Crouching ? 1f : 0f, dt * 5f);
+        float c = _crouch01 * _crouch01 * (3f - 2f * _crouch01);
+        _tilt.Position = new Vector3(0, Mathf.Lerp(EyeHeight, CrouchEye, c), 0);
+
+        // Landing dip springs back.
+        _landOffset = Mathf.Lerp(_landOffset, 0f, Mathf.Clamp(9f * dt, 0f, 1f));
+
+        Camera.Position = _camBase + shake + bob * (1f - c * 0.4f) + new Vector3(0, _stepOffset + _landOffset, 0);
     }
 }
