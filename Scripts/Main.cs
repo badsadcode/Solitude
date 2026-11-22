@@ -214,6 +214,7 @@ public partial class Main : Node
 		_hud.SetHelp("WASD move · SHIFT run · E use · I hold · ESC release mouse · F11 fullscreen");
 
 		SetupCapture();
+		SetupDebugStart();
 	}
 
 	private static int? ParseSeed()

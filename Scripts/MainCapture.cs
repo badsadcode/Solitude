@@ -22,6 +22,43 @@ public partial class Main
     private Solitude.World.TerrainStreamer.Pickup _capturePk;
     private float _docSide = 1f;
 
+    /// <summary>
+    /// Dev shortcut: `-- --start=dive` (suited up, outside the boat) or `-- --start=station`
+    /// (docked at the starter station and aboard). Skips the walk to the thing you're testing.
+    /// </summary>
+    private void SetupDebugStart()
+    {
+        string start = null;
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--start=")) start = arg.Substring(8);
+        if (start == null) return;
+
+        var tw = CreateTween();
+        tw.TweenInterval(1.0);
+        tw.TweenCallback(Callable.From(() =>
+        {
+            _sub.TelegraphIndex = 2; _sub.ApplyTelegraph();
+            _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+            if (start == "dive")
+            {
+                _suitOn = true;
+                _player.SpeedFactor = 0.7f;
+                _player.Transform = new Transform3D(Basis.Identity, SubHatchSpot);
+                TryDiveFromHatch();
+            }
+            else if (start == "station")
+            {
+                var berth = _stations.Directory.Starter.DockPose;
+                _sub.GlobalTransform = new Transform3D(berth.Basis, berth.Origin + berth.Basis.Z * 5f);
+                var t2 = CreateTween();
+                t2.TweenInterval(0.5);
+                t2.TweenCallback(Callable.From(() => _stations.TryDock(null)));
+                t2.TweenInterval(5.5);
+                t2.TweenCallback(Callable.From(() => { _player.Transform = new Transform3D(Basis.Identity, SubHatchSpot); OnHatch(); }));
+            }
+        }));
+    }
+
     private void SetupCapture()
     {
         foreach (var arg in OS.GetCmdlineUserArgs())
