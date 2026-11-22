@@ -211,6 +211,15 @@ public partial class Main : Node
 		SetupListener();
 		SetupHydrophone();
 		foreach (var arg in OS.GetCmdlineUserArgs()) if (arg == "--station-sweep") CallDeferred(MethodName.StationSweep);
+		{
+			string mPath = null, mOut = null;
+			foreach (var arg in OS.GetCmdlineUserArgs())
+			{
+				if (arg.StartsWith("--model-shot=")) mPath = arg.Substring(13);
+				if (arg.StartsWith("--model-out=")) mOut = arg.Substring(12);
+			}
+			if (mPath != null) { var tw = CreateTween(); tw.TweenInterval(1.5); tw.TweenCallback(Callable.From(() => ModelShot(mPath, mOut ?? "user://model_shot"))); }
+		}
 		ApplyModules();
 
 		_sub.Impact += s =>

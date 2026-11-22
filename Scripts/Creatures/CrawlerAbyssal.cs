@@ -23,6 +23,7 @@ public partial class Crawler
 
     private const string AbyssalScene = "res://assets/Abyssal_Crawler.glb";
     private const float AbyssalScale = 1.45f;              // the model is ~0.95 m across; this makes it ~1.4 m
+    private static readonly Color BaseTint = new(1.35f, 1.3f, 1.35f);   // brightens Tom's dark texture a little
     private Skeleton3D _skel;
     private Node3D _abyssRoot;
     private int _bodyBone = -1;
@@ -52,12 +53,19 @@ public partial class Crawler
                 {
                     _mat.SetShaderParameter("use_emission_tex", true);
                     _mat.SetShaderParameter("emission_tex", src.EmissionTexture);
-                    _mat.SetShaderParameter("emission_tex_energy", 4f);
+                    _mat.SetShaderParameter("emission_tex_energy", 2.2f);
                 }
             }
             mi.MaterialOverride = _mat;
         }
         _mat.SetShaderParameter("eye_energy", 0f);
+        // Tom's texture is dark purple; the creature shader's wet sheen (made for the big swimmers)
+        // turned it into glossy blue smears under the stations' white lights. Matte, a little
+        // brighter, and a softer glow so the eyes are eyes rather than blobs.
+        _mat.SetShaderParameter("wet_spec", 0.12f);
+        _mat.SetShaderParameter("roughness_v", 0.85f);
+        _mat.SetShaderParameter("emission_tex_energy", 2.2f);
+        _mat.SetShaderParameter("tint", BaseTint);
 
         foreach (var s in Find<Skeleton3D>(model)) { _skel = s; break; }
         if (_skel == null) return;
@@ -103,7 +111,7 @@ public partial class Crawler
     {
         if (_skel == null) return;
         _hurtFlash = Mathf.Max(0f, _hurtFlash - dt);
-        _mat.SetShaderParameter("tint", _hurtFlash > 0f ? new Color(2f, 0.7f, 0.6f) : Colors.White);
+        _mat.SetShaderParameter("tint", _hurtFlash > 0f ? new Color(2.4f, 0.9f, 0.8f) : BaseTint);
 
         if (Current == State.Dead)
         {
