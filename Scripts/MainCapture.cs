@@ -829,6 +829,8 @@ public partial class Main
                 _capPinger = pw;
                 EnterHelm(); _view = HelmView.Bridge; ApplyHelmView();
             }),
+            (t += 0.5f, () => { _hud.Message("COMMS: a man's voice, tired, calm: \"Still here. Heading zero zero zero. Depth five six eight metres. We're fine. Someone will come down the lane.\"", 8f, immediate: true); }),
+            (t += 1.0f, () => Shot("45h_helm_subtitle")),
             (t += 5f, () => GD.Print($"[capture] pinger heard: {_wrecksHeard.Contains(_capPinger.Id)}  helm:{WreckHelmText().Replace("\n", " ")}")),
             (t += 8f, () => { Shot("45a_pinger_heard"); GD.Print($"[capture] voice: lines available {VoiceLines.Any}, playing {_voice?.Playing} ({(_voice?.Stream as Resource)?.ResourcePath}), queued {_voiceQueue.Count}"); }),
             (t += 0.1f, () => { _voiceQueue.Clear(); _voice?.Stop(); bool ok = PlayWrongLoop(true); GD.Print($"[capture] wrong loop queued: {ok}, {_voiceQueue.Count} clips"); }),

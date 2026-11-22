@@ -61,12 +61,17 @@ public partial class Hud : CanvasLayer
         _prompt.Position += new Vector2(0, -150);
         _root.AddChild(_prompt);
 
+        // Messages and voice subtitles: a wrapped line on a dark backing box. Bottom centre on foot;
+        // top centre at the helm, where the instrument columns fill the bottom (PlaceMessage).
         _message = MakeLabel(Amber, 15);
-        _message.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         _message.HorizontalAlignment = HorizontalAlignment.Center;
-        _message.GrowHorizontal = Control.GrowDirection.Both;
-        _message.Position += new Vector2(0, -110);
+        _message.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _message.AddThemeStyleboxOverride("normal", new StyleBoxFlat
+        {
+            BgColor = new Color(0f, 0f, 0f, 0.6f), ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 5, ContentMarginBottom = 5,
+        });
         _root.AddChild(_message);
+        PlaceMessage(top: false);
 
         _helmGroup = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
         _helmGroup.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -127,6 +132,28 @@ public partial class Hud : CanvasLayer
         _subtitle.GrowHorizontal = Control.GrowDirection.Both;
         _subtitle.Position += new Vector2(0, 30);
         _root.AddChild(_subtitle);
+    }
+
+    private bool _messageTop, _messageVisibleAllowed = true;
+
+    private void PlaceMessage(bool top)
+    {
+        _messageTop = top;
+        const float half = 425f;   // clear of the yoke gauge and the proximity lamps at the helm
+        if (top)
+        {
+            _message.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+            _message.GrowVertical = Control.GrowDirection.End;
+            _message.OffsetTop = 92f; _message.OffsetBottom = 92f;
+        }
+        else
+        {
+            _message.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
+            _message.GrowVertical = Control.GrowDirection.Begin;
+            _message.OffsetTop = -96f; _message.OffsetBottom = -96f;
+        }
+        _message.OffsetLeft = -half; _message.OffsetRight = half;
+        _message.GrowHorizontal = Control.GrowDirection.Both;
     }
 
     private static Label MakeLabel(Color c, int size)
@@ -425,7 +452,8 @@ public partial class Hud : CanvasLayer
         _help.Visible = on;
         _prompt.Visible = on;
         _warning.Visible = on;
-        _message.Visible = on;
+        _messageVisibleAllowed = on;
+        _message.Visible = on && _messageTime > 0f;
         _crosshair.Visible = on;
     }
 
@@ -583,6 +611,9 @@ public partial class Hud : CanvasLayer
             _messageShown += dt;
             if (_messageTime < 1f) _message.Modulate = new Color(1, 1, 1, Mathf.Max(0f, _messageTime));
         }
+        bool wantTop = _helmGroup.Visible;
+        if (wantTop != _messageTop) PlaceMessage(wantTop);
+        _message.Visible = _messageTime > 0f && _message.Text.Length > 0 && _messageVisibleAllowed;
         if (_messageTime <= 0.4f && _messageQueue.Count > 0)
         {
             var (text, dur) = _messageQueue[0];
