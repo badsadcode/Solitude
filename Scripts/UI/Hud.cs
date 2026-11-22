@@ -387,7 +387,7 @@ public partial class Hud : CanvasLayer
         }
 
         var foot = MakeLabel(new Color(0.4f, 0.48f, 0.45f), 12);
-        foot.Text = $"BAD IDEAS WORKS   ·   seed {seed}";
+        foot.Text = $"BAD IDEAS WORKS   ·   v{ProjectSettings.GetSetting("application/config/version", "dev")}   ·   seed {seed}";
         foot.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         foot.GrowVertical = Control.GrowDirection.Begin;
         foot.Position += new Vector2(60, -28);
