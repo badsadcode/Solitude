@@ -17,12 +17,14 @@ public static class VoiceLines
     private static Dictionary<string, Line> _lines;
     private static List<string> _subNames;
     private static int _capsules, _drones;
+    private static List<(string name, string role)> _crew;
 
     private static void Load()
     {
         if (_lines != null) return;
         _lines = new();
         _subNames = new();
+        _crew = new();
         const string path = "res://assets/audio/voice/voice_lines.json";
         if (!Godot.FileAccess.FileExists(path)) return;
         using var f = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Read);
@@ -33,6 +35,8 @@ public static class VoiceLines
             foreach (var n in w.GetProperty("supply_subs").EnumerateArray()) _subNames.Add(n.GetString());
             _capsules = w.GetProperty("capsules").GetInt32();
             _drones = w.GetProperty("drones").GetInt32();
+            if (w.TryGetProperty("crew", out var crew))
+                foreach (var c in crew.EnumerateArray()) _crew.Add((c.GetProperty("name").GetString(), c.GetProperty("role").GetString()));
         }
         foreach (var p in root.GetProperty("lines").EnumerateObject())
             _lines[p.Name] = new Line(p.Name, p.Value.GetProperty("caption").GetString(), p.Value.GetProperty("file").GetString(),
@@ -44,4 +48,6 @@ public static class VoiceLines
     public static IReadOnlyList<string> SubNames { get { Load(); return _subNames; } }
     public static int Capsules { get { Load(); return _capsules; } }
     public static int Drones { get { Load(); return _drones; } }
+    /// <summary>The voiced station crew (each has entries crew{i}_0..3).</summary>
+    public static IReadOnlyList<(string name, string role)> Crew { get { Load(); return _crew; } }
 }

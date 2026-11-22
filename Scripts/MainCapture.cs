@@ -939,6 +939,26 @@ public partial class Main
             (t += 12f, () => { LogHanna("end"); GD.Print($"[capture] hanna log lines: {_shipLog.Entries.Count(e => e.Text.StartsWith("Hanna"))}"); }),
             (t += 0.5f, () => { ReturnToSub(); }),
             (t += 2f, () => { }),
+            // --- Voiced station logs: the crew
+            (t += 0.1f, CaptureMarkCrew),
+            (t += 6f, () => { _voiceQueue.Clear(); _voice?.Stop(); }),
+            (t += 0.1f, () =>
+            {
+                EnterWalking(); _voiceQueue.Clear(); _voice?.Stop(); _wreckHearT = 9999f; _loopReplayT = 9999f;
+                int stations = 0, voiced = 0; var who = new HashSet<string>(); Solitude.Stations.StationLogs.Log sample = null;
+                foreach (var site in _stations.Directory.Near(_sub.GlobalPosition, 9000f))
+                {
+                    stations++;
+                    foreach (var lg in Solitude.Stations.StationLogs.Build(site.Name, site.Seed, 4))
+                        if (lg.VoiceId != null) { voiced++; who.Add(lg.VoiceId.Split('_')[0]); sample ??= lg; }
+                }
+                GD.Print($"[capture] crew: {voiced} voiced logs across {stations} stations, {who.Count} different people; sample '{sample?.Title}'");
+                _wrecksHeard.UnionWith(System.Linq.Enumerable.Select(_wrecks.Near(_sub.GlobalPosition, 3000f), w => w.Id));   // no new pingers mid-test
+                if (sample != null) ShowLog(sample);
+                GD.Print($"[capture] crew log queued: {_logVoice}, queue {_voiceQueue.Count}, line {VoiceLines.Get(sample?.VoiceId ?? "")?.File}, loads {GD.Load<AudioStream>(VoiceLines.Get(sample?.VoiceId ?? "")?.File ?? "res://x") != null}");
+            }),
+            (t += 2.5f, () => { Shot("48a_voiced_log"); GD.Print($"[capture] crew log playing: {_voice?.Playing} ({(_voice?.Stream as Resource)?.ResourcePath})"); CloseLog(); }),
+            (t += 0.3f, () => GD.Print($"[capture] after putting it down: playing {_voice?.Playing}")),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -1216,6 +1236,7 @@ public partial class Main
     private void CaptureMarkWrecks() => CaptureSection("wrecks");
     private void CaptureMarkWear() => CaptureSection("wear");
     private void CaptureMarkHanna() => CaptureSection("hanna");
+    private void CaptureMarkCrew() => CaptureSection("crew");
     private void LogHanna(string what) => GD.Print($"[capture] hanna {what}: state {_hanna}, station {HannaSite?.Name ?? "-"}, voice busy {VoiceBusy}, queued {_voiceQueue.Count}, transcript {_hannaTranscript.Count}");
     private List<Solitude.Systems.WreckSite> _capWrecks = new();
     private Solitude.Systems.WreckSite _capPinger;
@@ -1299,7 +1320,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), "hanna" => nameof(CaptureMarkHanna), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), "hanna" => nameof(CaptureMarkHanna), "crew" => nameof(CaptureMarkCrew), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

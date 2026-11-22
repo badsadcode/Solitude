@@ -41,7 +41,8 @@ public static class StationLogs
         },
     };
 
-    public sealed record Log(string Title, string Body);
+    /// <summary>VoiceId: a voiced crew entry (tools/voice), played while it's read; null = text only.</summary>
+    public sealed record Log(string Title, string Body, string VoiceId = null);
 
     /// <summary>Build the station's logs, ordered early → late. count = how many are placed.</summary>
     public static List<Log> Build(string station, int seed, int count)
@@ -62,6 +63,22 @@ public static class StationLogs
             day += 2 + rng.Next(9);
             string body = pool[rng.Next(pool.Length)].Replace("{d}", day.ToString()).Replace("{b}", other);
             logs.Add(new Log($"{station} — {role} {author}", body));
+        }
+
+        // The voiced crew: eight people whose logs are scattered across many stations, so the same
+        // voice turns up in different places and their story comes together out of order. Each
+        // station swaps one or two of its ordinary logs for theirs.
+        var cast = Solitude.Systems.VoiceLines.Crew;
+        if (cast.Count > 0 && logs.Count > 1)
+        {
+            int voiced = rng.NextDouble() < 0.6 ? 1 : 2;
+            for (int v = 0; v < voiced && v < logs.Count - 1; v++)
+            {
+                int c = rng.Next(cast.Count), e = rng.Next(4);
+                if (Solitude.Systems.VoiceLines.Get($"crew{c}_{e}") is not { } line) continue;
+                int at = rng.Next(logs.Count);
+                logs[at] = new Log($"{station} — {cast[c].role} {cast[c].name}, entry {e + 1}", line.Caption, line.Id);
+            }
         }
         return logs;
     }

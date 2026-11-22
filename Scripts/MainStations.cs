@@ -346,6 +346,8 @@ public partial class Main
     private void ShowLog(StationLogs.Log log)
     {
         _reading = log;
+        // A voiced crew entry plays in their own voice while you read it (the text is on screen).
+        if (log.VoiceId != null) { _voiceQueue.Clear(); _voice?.Stop(); _logVoice = QueueVoice(log.VoiceId, null, 0.2f); }
         if (_shipLog.AddNote(log.Title, log.Body, _station?.Site.Name ?? "unknown station"))
             Log($"Note found on {_station?.Site.Name ?? "a station"}: \"{log.Title}\". Copied to the journal.");
         _mode = Mode.Reading;
@@ -361,9 +363,12 @@ public partial class Main
         if (Input.IsActionJustPressed(GameInput.Cancel) || Input.IsActionJustPressed(GameInput.Interact)) CloseLog();
     }
 
+    private bool _logVoice;
+
     private void CloseLog()
     {
         if (_mode != Mode.Reading) return;
+        if (_logVoice) { _logVoice = false; _voiceQueue.Clear(); _voice?.Stop(); }   // put it down, it stops
         _hud.HidePanel();
         _mode = Mode.Walking;
         _player.InputEnabled = true;

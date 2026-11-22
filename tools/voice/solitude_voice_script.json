@@ -13,7 +13,41 @@
       "GREY HERON"
     ],
     "capsules": 4,
-    "drones": 2
+    "drones": 2,
+    "crew": [
+      {
+        "name": "Marta Ivers",
+        "role": "Medic"
+      },
+      {
+        "name": "Steven Okafor",
+        "role": "Systems tech"
+      },
+      {
+        "name": "Mikey Duarte",
+        "role": "Diver"
+      },
+      {
+        "name": "Irena Brandt",
+        "role": "Station chief"
+      },
+      {
+        "name": "Wojtek Kowal",
+        "role": "Maintenance"
+      },
+      {
+        "name": "Piotr Lindqvist",
+        "role": "Geochemist"
+      },
+      {
+        "name": "Ivan Moreau",
+        "role": "Sonar operator"
+      },
+      {
+        "name": "Magda Sato",
+        "role": "Cook"
+      }
+    ]
   },
   "lines": [
     {
@@ -521,6 +555,198 @@
       "voice": "hanna",
       "seed": 17,
       "text": "[chuckle] Hello, boat."
+    },
+    {
+      "id": "crew0_0",
+      "voice": "martha",
+      "seed": 71,
+      "text": "Medical log. Three crew with the same headache this week, all on the night rotation. I've told them to drink more water. I've told myself the same."
+    },
+    {
+      "id": "crew0_1",
+      "voice": "martha",
+      "seed": 71,
+      "text": "Medical log. Kofi says he can hear counting when the pumps cycle. So can Ines. So, if I'm honest, can I. [sigh] I've stopped writing it down as a symptom."
+    },
+    {
+      "id": "crew0_2",
+      "voice": "martha",
+      "seed": 71,
+      "text": "Medical log. Transferred to the relay station. They have the same headaches here. They've had them longer. Nobody here thinks it's strange any more."
+    },
+    {
+      "id": "crew0_3",
+      "voice": "martha",
+      "seed": 71,
+      "text": "[whispering] Medical log. If you're reading this, check your own pulse. Count it. Now count it again. Does it match? Mine doesn't. It matches something else."
+    },
+    {
+      "id": "crew1_0",
+      "voice": "steven",
+      "seed": 73,
+      "text": "Systems log. Pump three is knocking again. I swapped the bearings on Tuesday. The bearings are fine. Something is knocking back."
+    },
+    {
+      "id": "crew1_1",
+      "voice": "steven",
+      "seed": 73,
+      "text": "Systems log. Rerouted power around the east ring. The lights flicker in a pattern now. Three, then three. I've checked the breakers twice."
+    },
+    {
+      "id": "crew1_2",
+      "voice": "steven",
+      "seed": 73,
+      "text": "Systems log. I turned the whole station dark for a minute to find the fault. The pattern kept going. On the outside of the hull."
+    },
+    {
+      "id": "crew1_3",
+      "voice": "steven",
+      "seed": 73,
+      "text": "Systems log. [fear] I'm not fixing it any more. I'm going to the capsule. If the lights start counting where you are, don't look for the fault."
+    },
+    {
+      "id": "crew2_0",
+      "voice": "mikey",
+      "seed": 79,
+      "text": "Dive log. Cleared the intake grilles. Something had been nesting in them. Not fish. Too neat."
+    },
+    {
+      "id": "crew2_1",
+      "voice": "mikey",
+      "seed": 79,
+      "text": "Dive log. Visibility two metres. Something big went past the lamp, close enough to feel the water move. I didn't see an end to it."
+    },
+    {
+      "id": "crew2_2",
+      "voice": "mikey",
+      "seed": 79,
+      "text": "Dive log. I've started switching the lamp off when I'm outside. It's easier to work in the dark than to know what's looking at the light."
+    },
+    {
+      "id": "crew2_3",
+      "voice": "mikey",
+      "seed": 79,
+      "text": "Dive log. Last one. [sigh] The tether's frayed and I'm too tired to splice it. If you find my suit, the bag's still full. Take it. I don't need it."
+    },
+    {
+      "id": "crew3_0",
+      "voice": "irena",
+      "seed": 83,
+      "text": "Station chief's log. Resupply is late again. Head office says weather. There is no weather down here. There's just head office."
+    },
+    {
+      "id": "crew3_1",
+      "voice": "irena",
+      "seed": 83,
+      "text": "Station chief's log. Somebody has been writing numbers on the mess hall wall. Very small, very neat, all the way round. I would like whoever it is to stop. I would like it in writing."
+    },
+    {
+      "id": "crew3_2",
+      "voice": "irena",
+      "seed": 83,
+      "text": "Station chief's log. Half the crew want to evacuate. The other half want to stay and listen. I've told them both they're idiots. [clear throat] Morale is excellent."
+    },
+    {
+      "id": "crew3_3",
+      "voice": "irena",
+      "seed": 83,
+      "text": "Station chief's log. Everyone's gone to the capsules. I'm staying. Someone has to file the report. Someone has to tell head office that I was right."
+    },
+    {
+      "id": "crew4_0",
+      "voice": "woytek",
+      "seed": 89,
+      "text": "Maintenance. Welded the north seam again. She weeps like an old woman, this station. My daughter would laugh at my welds. Hanna always said I weld like a poet. Badly."
+    },
+    {
+      "id": "crew4_1",
+      "voice": "woytek",
+      "seed": 89,
+      "text": "Maintenance. Hanna called on the relay. She's on one of the deep stations now, very proud. Nadia's back on the supply runs. I told them the deep is no place for people. They told me I'm old."
+    },
+    {
+      "id": "crew4_2",
+      "voice": "woytek",
+      "seed": 89,
+      "text": "Maintenance. The relay's gone quiet. No call from Hanna for nine days. She's stubborn. Stubborn people survive. That's what I tell myself while I work."
+    },
+    {
+      "id": "crew4_3",
+      "voice": "woytek",
+      "seed": 89,
+      "text": "Maintenance. If anyone passes Hanna's station, tell her her father says the seams are holding. Tell her I'm proud of her. [sniff] Tell her to come up."
+    },
+    {
+      "id": "crew5_0",
+      "voice": "narrator_1",
+      "seed": 97,
+      "text": "Geochemistry. The vent water carries a pulse. Not chemical, mechanical. Regular as a clock. Something under the seabed is moving water on purpose."
+    },
+    {
+      "id": "crew5_1",
+      "voice": "narrator_1",
+      "seed": 97,
+      "text": "Geochemistry. I ran the numbers on the pulse interval. It's slowing. Not stopping. Slowing down, like something settling in to listen."
+    },
+    {
+      "id": "crew5_2",
+      "voice": "narrator_1",
+      "seed": 97,
+      "text": "Geochemistry. I lowered a hydrophone into the vent and played the pulse back to it. It stopped. Then it played my recording back to me. Note for note."
+    },
+    {
+      "id": "crew5_3",
+      "voice": "narrator_1",
+      "seed": 97,
+      "text": "Geochemistry. I know where it comes from now. Down. Always down. I'm taking the survey sled to go and look. Don't wait up."
+    },
+    {
+      "id": "crew6_0",
+      "voice": "ivan",
+      "seed": 101,
+      "text": "Sonar watch. Large contact at four hundred metres. Logged it as a fault. It has moved twice since I logged it."
+    },
+    {
+      "id": "crew6_1",
+      "voice": "ivan",
+      "seed": 101,
+      "text": "Sonar watch. The large contact is still there. Every time I ping, it comes a little closer. So I've stopped pinging. [sigh] Now I can't see where it is."
+    },
+    {
+      "id": "crew6_2",
+      "voice": "ivan",
+      "seed": 101,
+      "text": "Sonar watch. Something answered my ping today. An echo from nothing. Same strength, same pitch. Just... late."
+    },
+    {
+      "id": "crew6_3",
+      "voice": "ivan",
+      "seed": 101,
+      "text": "Sonar watch. Final watch. I'm leaving the sonar running when I go. If anything out there is lonely, at least it will have something to talk to."
+    },
+    {
+      "id": "crew7_0",
+      "voice": "magda_world_weary",
+      "seed": 103,
+      "text": "Galley log. Made soup out of the vent clams. Bram had three bowls. Bram glows a little now. Nobody's complaining."
+    },
+    {
+      "id": "crew7_1",
+      "voice": "magda_world_weary",
+      "seed": 103,
+      "text": "Galley log. We're down to the last of the real coffee. I've hidden it. I'll bring it out for a special occasion. I'll know it when I see it."
+    },
+    {
+      "id": "crew7_2",
+      "voice": "magda_world_weary",
+      "seed": 103,
+      "text": "Galley log. Someone keeps setting an extra place at the table. Nobody admits to it. I've started leaving a bowl out. The bowl is always empty in the morning."
+    },
+    {
+      "id": "crew7_3",
+      "voice": "magda_world_weary",
+      "seed": 103,
+      "text": "Galley log. Special occasion. I made the coffee. [sniff] Everyone's gone, but I made the coffee. If you're reading this, there's a cup left in the pot. It's for you."
     }
   ]
 }
