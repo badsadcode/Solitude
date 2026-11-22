@@ -124,6 +124,16 @@ public partial class Main
             {
                 var l = _station.ToLocal(_player.GlobalPosition);
                 GD.Print($"[stairs] t={k * 0.5f:0.0} local=({l.X:0.00}, {l.Y:0.00}, {l.Z:0.00}) onFloor={_player.IsOnFloor()} onWall={_player.IsOnWall()} step={Solitude.Core.Stepper.Why}");
+                foreach (var arg in OS.GetCmdlineUserArgs())
+                {
+                    if (k == 1 && arg.StartsWith("--stairs-crawler="))
+                    {
+                        Vector3 ahead = -_player.GlobalBasis.Z; ahead.Y = 0;
+                        _station.DebugSpawnCrawler(_player.GlobalPosition + ahead.Normalized() * 5f + Vector3.Up * 0.3f, arg.EndsWith("abyssal")); _player.RotateY(0.55f); _player.SetLook(0f, -0.25f);
+                        Input.ActionRelease(GameInput.Forward);
+                    }
+                    if (arg.StartsWith("--stairs-shots=")) GetViewport().GetTexture().GetImage().SavePng($"{arg.Substring(15)}_{k:00}.png");
+                }
                 if (k == 2 && OS.GetCmdlineUserArgs().Any(x => x == "--stairs-restore")) { _systems.Hold.Add(ItemId.PowerCell); _station.DebugUseJunction(); }
                 if (k == 12)
                     foreach (var arg in OS.GetCmdlineUserArgs())

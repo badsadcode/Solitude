@@ -447,7 +447,10 @@ public partial class StationInterior : Node3D
         {
             var (cp, nest) = NextSpot(nestMarks, ref nestI);
             if (!nest && cp.DistanceTo(startPos) < 12f) continue;
-            var c = new Crawler { Player = Player, Index = i, Position = cp + Vector3.Up * 0.3f, Rotation = new Vector3(0, (float)_rng.NextDouble() * Mathf.Tau, 0) };
+            // Two species: Tom's abyssal crawler rules the true deep-sea pods; Sage's procedural one
+            // still haunts the older stations. A stream of its own picks which, per crawler.
+            bool abyssal = new Random(Site.Seed ^ (i * 7919)).NextDouble() < (Site.Layout.StartsWith("pod_") ? 0.7 : 0.3);
+            var c = new Crawler { Abyssal = abyssal, Player = Player, Index = i, Position = cp + Vector3.Up * 0.3f, Rotation = new Vector3(0, (float)_rng.NextDouble() * Mathf.Tau, 0) };
             c.Sound = (kind, pos) => Sound?.Invoke(kind, pos);
             c.Killed = k => State.Killed.Add(k.Index);
             AddChild(c);

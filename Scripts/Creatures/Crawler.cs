@@ -48,11 +48,15 @@ public partial class Crawler : CharacterBody3D, IDamageable
         _agent = new NavigationAgent3D { PathDesiredDistance = 0.6f, TargetDesiredDistance = 1.2f, Radius = 0.45f, Height = 0.9f, AvoidanceEnabled = false };
         AddChild(_agent);
 
-        _mat = (ShaderMaterial)Art.Flora.Duplicate();
-        _mat.SetShaderParameter("sway", 0f);
-        _mat.SetShaderParameter("emission_color", new Color(0.85f, 1f, 0.9f));
-        _mat.SetShaderParameter("emission_energy", 5f);
-        BuildBody();
+        if (Abyssal) BuildAbyssal();
+        else
+        {
+            _mat = (ShaderMaterial)Art.Flora.Duplicate();
+            _mat.SetShaderParameter("sway", 0f);
+            _mat.SetShaderParameter("emission_color", new Color(0.85f, 1f, 0.9f));
+            _mat.SetShaderParameter("emission_energy", 5f);
+            BuildBody();
+        }
         _chitterTimer = 2f + (float)_rng.NextDouble() * 6f;
     }
 
@@ -261,6 +265,7 @@ public partial class Crawler : CharacterBody3D, IDamageable
 
     private void Animate(float dt, float speed)
     {
+        if (Abyssal) { AnimateAbyssal(dt, speed); return; }
         if (Current == State.Dead)
         {
             // Legs curl in, body drops and rolls a little.

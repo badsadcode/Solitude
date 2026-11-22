@@ -78,6 +78,16 @@ public partial class StationInterior
     /// <summary>Dev: `--station-dark` makes every station unpowered (to test restoring it).</summary>
     public static bool ForceDark;
 
+    /// <summary>Dev / capture: a crawler of the chosen species at a global point.</summary>
+    public void DebugSpawnCrawler(Vector3 globalPos, bool abyssal)
+    {
+        var c = new Solitude.Creatures.Crawler { Abyssal = abyssal, Player = Player, Index = 900 + Crawlers.Count };
+        AddChild(c);
+        c.GlobalPosition = globalPos;
+        c.Sound = (kind, pos) => Sound?.Invoke(kind, pos);
+        Crawlers.Add(c);
+    }
+
     /// <summary>Dev / capture: use the first junction.</summary>
     public void DebugUseJunction() { if (_junctions.Count > 0) _junctions[0].use.OnUse?.Invoke(); }
 
