@@ -21,6 +21,8 @@ public partial class Main
     private Camera3D _docCam;
     private Solitude.World.TerrainStreamer.Pickup _capturePk;
     private float _docSide = 1f;
+    private Node3D _docTarget;
+    private float _docScale = 1f;
 
     /// <summary>
     /// Dev shortcut: `-- --start=dive` (suited up, outside the boat) or `-- --start=station`
@@ -270,6 +272,34 @@ public partial class Main
             (t += 10.0f, () => Shot("10_chase_turning")),
             (t += 0.1f, () => { _sub.LightsOn = false; }),
             (t += 1.0f, () => Shot("11_lights_off")),
+            // --- Tom's new creatures: Crystal Rays and the Fangwyrm
+            (t += 0.1f, () => { _sub.LightsOn = true; EnterWalking(); EnterHelm(); _view = HelmView.Chase; ApplyHelmView(); _creatures.SummonRays(); }),
+            (t += 4.0f, () =>
+            {
+                _docTarget = _creatures.Rays.Count > 0 ? _creatures.Rays[0] : null;
+                _docScale = 0.6f; _docSide = 1f;
+                _docCam = new Camera3D { Fov = 60f, Far = 200f };
+                _docCam.AddChild(new SpotLight3D { SpotRange = 60f, SpotAngle = 35f, LightEnergy = 4f });
+                _game.AddChild(_docCam); _docCam.MakeCurrent();
+                GD.Print($"[capture] rays: {_creatures.Rays.Count}");
+            }),
+            (t += 0.8f, () => Shot("19a_ray_side")),
+            (t += 0.9f, () => Shot("19b_ray_side_later")),
+            (t += 0.1f, () => _docSide = 2f),
+            (t += 0.8f, () => Shot("19c_ray_top")),
+            (t += 0.1f, () => _docSide = -1f),
+            (t += 0.8f, () => Shot("19d_ray_front")),
+            (t += 0.1f, () =>
+            {
+                _creatures.SummonWyrm(); _docTarget = _creatures.Wyrm; _docScale = 1.1f; _docSide = 1f;
+                foreach (var c in _docCam.GetChildren()) if (c is SpotLight3D sl) { sl.LightEnergy = 9f; sl.SpotRange = 80f; sl.SpotAngle = 45f; }
+            }),
+            (t += 1.0f, () => Shot("19e_wyrm_side")),
+            (t += 1.2f, () => Shot("19f_wyrm_side_later")),
+            (t += 0.1f, () => _docSide = -1f),
+            (t += 0.8f, () => Shot("19g_wyrm_front")),
+            (t += 0.1f, () => { _docCam.QueueFree(); _docCam = null; _docTarget = null; _view = HelmView.BowCamera; ApplyHelmView(); }),
+            (t += 3.0f, () => { Shot("19h_wyrm_from_bow"); GD.Print($"[capture] wyrm distance to boat {_creatures.Wyrm?.DistanceToFocus:0} m"); }),
             (t += 0.5f, () => { _audio.SaveDebugRecording(_captureDir); GetTree().Quit(); }),
         };
     }
@@ -321,9 +351,10 @@ public partial class Main
         if (_docCam != null)
         {
             // side (1), head-on (-1) or top-down (2) view of the ravager, lit by the camera's lamp.
-            Transform3D rt = _ravager.GlobalTransform;
+            Transform3D rt = (_docTarget ?? _ravager).GlobalTransform;
             Vector3 f = -rt.Basis.Z, r = rt.Basis.X;
-            Vector3 offset = _docSide switch { -1f => f * 22f + Vector3.Up * 3f, 2f => Vector3.Up * 26f + f * 2f, _ => r * 24f + Vector3.Up * 4f };
+            float k = _docScale; // 1 = sized for the 15 m ravager
+            Vector3 offset = _docSide switch { -1f => f * 22f * k + Vector3.Up * 3f * k, 2f => Vector3.Up * 26f * k + f * 2f * k, _ => r * 24f * k + Vector3.Up * 4f * k };
             _docCam.GlobalPosition = rt.Origin + offset;
             _docCam.LookAt(rt.Origin, _docSide == 2f ? f : Vector3.Up);
         }

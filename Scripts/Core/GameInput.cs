@@ -41,6 +41,8 @@ public static class GameInput
 
     // Debug
     public const string SummonCreature = "debug_summon_creature";
+    public const string SummonRays = "debug_summon_rays";
+    public const string SummonWyrm = "debug_summon_wyrm";
 
     // Monitor station
     public const string Fullscreen = "feed_fullscreen";
@@ -69,6 +71,8 @@ public static class GameInput
         Bind(Ping, Godot.Key.P);
         Bind(SonarRange, Godot.Key.Q);
         Bind(SummonCreature, Godot.Key.F9);
+        Bind(SummonRays, Godot.Key.F8);
+        Bind(SummonWyrm, Godot.Key.F10);
         Bind(Inventory, Godot.Key.I);
         Bind(IntakeToggle, Godot.Key.G);
         Bind(Dock, Godot.Key.K);

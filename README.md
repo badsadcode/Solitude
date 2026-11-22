@@ -16,6 +16,17 @@ A [Bad Ideas Works](https://github.com/badsadcode) production.
 - Pick things up by hand (six-slot sample bag, stowed in the hold when you get back).
 - The ravager likes divers. The first passes only look.
 
+### Creatures (models by Tom, animated procedurally on their bones)
+
+| Creature | Where | Temperament |
+|---|---|---|
+| **Ravager** (15 m) | everywhere, out at the edge of your lights | circles the boat, crosses the bow, stalks divers |
+| **Abyssal Crystal Ray** (9 m span) | groups over the glowing meadows | harmless; curious about your lights, circles, drifts off |
+| **Abyssal Fangwyrm** (40 m) | only once you've lingered below ~520 m | apex: circles far out, long passes, may drag itself along your hull |
+
+New creatures plug in through `Scripts/Creatures/CreatureProfile.cs`: name the bones that wave, flap
+or open, give a size and a temperament. Debug: **F8** rays, **F9** ravager pass, **F10** Fangwyrm pass.
+
 ## Milestone 4: deep-sea stations
 
 - **Stations** scattered across the seabed, each with a **distress beacon** you can hear (and see on

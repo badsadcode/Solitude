@@ -136,7 +136,8 @@ public partial class Main
 
         // Panic: low air, or something enormous close by.
         float air = Mathf.Clamp((35f - _diver.Oxygen) / 35f, 0f, 1f);
-        float near = Mathf.Clamp((40f - _ravager.DistanceToDiver) / 30f, 0f, 1f);
+        float near = Mathf.Max(Mathf.Clamp((40f - _ravager.DistanceToDiver) / 30f, 0f, 1f),
+                               Mathf.Clamp((90f - _creatures.ApexDistance) / 60f, 0f, 1f)); // the wyrm is felt from further away
         float panic = Mathf.Max(air, near);
         _audio.Heartbeat = panic;
         _audio.Exertion = _diver.Exertion;

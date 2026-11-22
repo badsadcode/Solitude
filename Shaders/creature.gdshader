@@ -21,6 +21,10 @@ uniform vec3 eye_l = vec3(-0.057, 0.044, 0.368);
 uniform vec3 eye_r = vec3(0.054, 0.043, 0.370);
 uniform float eye_radius = 0.035;
 uniform float teeth_glow = 0.0;
+// Models that ship a real emission map (Fangwyrm, Crystal Ray) use it instead of the derived eyes.
+uniform bool use_emission_tex = false;
+uniform sampler2D emission_tex : source_color, filter_nearest, hint_default_black;
+uniform float emission_tex_energy = 3.0;
 
 varying vec3 model_pos;
 
@@ -47,4 +51,7 @@ void fragment() {
 	float near_eye = 1.0 - smoothstep(eye_radius * 0.6, eye_radius, min(distance(model_pos, eye_l), distance(model_pos, eye_r)));
 	float glow = m * mix(teeth_glow, 1.0, near_eye);
 	EMISSION = eye_color.rgb * glow * eye_energy * pulse * eye_open;
+	if (use_emission_tex) {
+		EMISSION = texture(emission_tex, UV).rgb * emission_tex_energy * pulse * eye_open;
+	}
 }

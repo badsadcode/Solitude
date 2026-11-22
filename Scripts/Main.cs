@@ -200,6 +200,7 @@ public partial class Main : Node
 		// ---- stations (milestone 4)
 		SetupStations(spawn);
 		SetupDiving();
+		SetupCreatures();
 
 		_sub.Impact += s =>
 		{
@@ -606,6 +607,7 @@ public partial class Main : Node
 		UpdateAudioAndPost(dt);
 		UpdateWarnings(dt);
 		UpdateHatchBeacon(dt);
+		UpdateCreatureDebugKeys();
 		UpdateCapture(dt);
 	}
 

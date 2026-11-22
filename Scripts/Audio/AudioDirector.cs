@@ -141,6 +141,7 @@ public partial class AudioDirector : Node
     public void PlayStep() => Add(new StepVoice(Rate, _mainRng));
     public void PlayBlip(float freq = 880f, float dur = 0.06f, float gain = 0.6f) => Add(new BlipVoice(Rate, _mainRng, freq, dur, gain));
     public void PlayCall() => Add(new CallVoice(Rate, _mainRng));
+    public void PlayGroan(float intensity) => Add(new GroanVoice(Rate, _mainRng, intensity));
     /// <summary>One-shot effect (see SfxVoice) with stereo pan -1..1 and gain 0..1.</summary>
     public void PlayAt(string kind, float pan, float gain) { if (gain > 0.01f) Add(new SfxVoice(Rate, _mainRng, kind, pan, gain)); }
     public void PlayPing() => Add(new PingVoice(Rate, _mainRng, echo: false));
