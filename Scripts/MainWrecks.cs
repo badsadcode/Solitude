@@ -136,6 +136,7 @@ public partial class Main
         _hud.Message($"RECORDER: {w.Name}. Its last entries are in your journal (J). {(w.Pinger ? "Its pinger goes quiet." : "")}", 7f);
         _audio.PlayBlip(600f, 0.2f, 0.4f);
         PlayRecorder(w);
+        HannaHeardRecorder(w);
         return true;
     }
 

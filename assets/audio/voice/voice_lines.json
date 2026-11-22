@@ -351,6 +351,81 @@
    "caption": "Nine.",
    "file": "res://assets/audio/voice/digit_9.wav",
    "seconds": 0.67
+  },
+  "hanna_contact1": {
+   "caption": "Is that... is that a boat? I can hear an engine through the floor. If someone's there, ping twice. Please. Twice.",
+   "file": "res://assets/audio/voice/hanna_contact1.wav",
+   "seconds": 9.453
+  },
+  "hanna_contact2": {
+   "caption": "It's me again. I heard you go past. If you can hear me, ping twice. I won't ask a third time. I will, actually.",
+   "file": "res://assets/audio/voice/hanna_contact2.wav",
+   "seconds": 9.657
+  },
+  "hanna_reply1": {
+   "caption": "Two. That was two. Okay. Okay. My name's Hanna. Hanna Kowal. I'm an engineer, on a station not far from you. I'm sending you its beacon now.",
+   "file": "res://assets/audio/voice/hanna_reply1.wav",
+   "seconds": 16.036
+  },
+  "hanna_reply2": {
+   "caption": "I need air. My scrubber's dying. Two lattice crystals and a power cell, if you can spare them. There's a supply lock by the airlock. Use that. Don't come any further in.",
+   "file": "res://assets/audio/voice/hanna_reply2.wav",
+   "seconds": 12.818
+  },
+  "hanna_intercom": {
+   "caption": "That's you? That's really you. Put it in the lock. Don't open the inner door. Please. It isn't safe in here.",
+   "file": "res://assets/audio/voice/hanna_intercom.wav",
+   "seconds": 9.384
+  },
+  "hanna_thanks": {
+   "caption": "Oh, that's air. That's real air. Thank you, boat. I don't know your name. I'm going to call you boat.",
+   "file": "res://assets/audio/voice/hanna_thanks.wav",
+   "seconds": 8.744
+  },
+  "hanna_core": {
+   "caption": "Listen. I've been listening to the counting for months. Check your holo table. There's a station out there with its core still running. They didn't all go quiet.",
+   "file": "res://assets/audio/voice/hanna_core.wav",
+   "seconds": 8.604
+  },
+  "hanna_sister": {
+   "caption": "Can I ask you something? My sister was on a supply boat. The Haldane. It never came. I've put its last position on your beacons. If you ever get there, I'd like to know.",
+   "file": "res://assets/audio/voice/hanna_sister.wav",
+   "seconds": 13.969
+  },
+  "hanna_haldane": {
+   "caption": "Nadia was hurt? She never said she was hurt. She always... Thank you. I needed to know. I needed to stop waiting.",
+   "file": "res://assets/audio/voice/hanna_haldane.wav",
+   "seconds": 11.086
+  },
+  "hanna_ascent": {
+   "caption": "There's an ascent capsule here. Old, but it holds pressure. It needs a full cell to make the surface. One more power cell, boat. Then I can go up.",
+   "file": "res://assets/audio/voice/hanna_ascent.wav",
+   "seconds": 12.841
+  },
+  "hanna_goodbye": {
+   "caption": "It's charging. It's actually charging. If the surface is still there, I'll tell them about you. A boat that pings twice. Goodbye, boat.",
+   "file": "res://assets/audio/voice/hanna_goodbye.wav",
+   "seconds": 12.645
+  },
+  "hanna_fading1": {
+   "caption": "Boat? It's getting thin in here. If you're coming, come soon.",
+   "file": "res://assets/audio/voice/hanna_fading1.wav",
+   "seconds": 4.898
+  },
+  "hanna_fading2": {
+   "caption": "I've started counting. It helps. One. Two. Three.",
+   "file": "res://assets/audio/voice/hanna_fading2.wav",
+   "seconds": 5.137
+  },
+  "hanna_last": {
+   "caption": "Still here.",
+   "file": "res://assets/audio/voice/hanna_last.wav",
+   "seconds": 1.653
+  },
+  "hanna_hello": {
+   "caption": "Hello, boat.",
+   "file": "res://assets/audio/voice/hanna_hello.wav",
+   "seconds": 2.394
   }
  }
 }

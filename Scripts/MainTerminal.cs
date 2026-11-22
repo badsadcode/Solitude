@@ -247,6 +247,8 @@ public partial class Main
             l.Add(new Line($"    Hull rated to {_sub.TestDepth:0} m, crush depth {_sub.CrushDepth:0} m.", _sub.CrushDepth < -_gen.OriginFloor ? 3 : 2));
         }
 
+        l.AddRange(HannaGoalLines());   // a person comes before the inventory
+
         l.Add(new Line(""));
         l.Add(new Line("STATIONS", 1));
         var known = _stations.Directory.Generated.Where(s => s.Known).ToList();

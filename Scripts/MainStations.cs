@@ -189,6 +189,7 @@ public partial class Main
         _hud.FadeTo(0f, 1.2f);
         _hud.SetHelp("WASD move · SHIFT run · SPACE jump · C/ALT crouch · E use · LMB fire · R reload · 1-3 weapons · F flashlight · H medkit · I hold");
         _hud.Message(_station.Powered ? $"{_station.Site.Name}. The lights are on. Nobody answers." : $"{_station.Site.Name}. No power. Only the emergency strips, and your torch (F).", 6f);
+        HannaStationEntered();
     }
 
     private void ReturnToSub()

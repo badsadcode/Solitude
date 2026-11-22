@@ -40,6 +40,8 @@ public sealed class SaveData
     public List<long> WrecksHeard = new(), WrecksVisited = new();
     /// <summary>The boat as a body: each part's condition (missing = new).</summary>
     public Dictionary<string, float> Wear = new();
+    /// <summary>Hanna (someone alive out there): her story's state.</summary>
+    public Dictionary<string, string> Hanna = new();
 }
 
 public sealed class StationSave
@@ -108,6 +110,7 @@ public partial class Main
                 _weapons.Give(WeaponId.Shotgun, 6);
                 _sub.SetHull(63f);
                 _shipLog.Clock = 1234.5f;
+                _hanna = Hanna.Sister; _hannaStation = _stations.Directory.Starter.Id; _hannaTranscript.Add("Test line, with a comma.");
                 Log("Save test: a line in the ship's log | with a bar.");
                 _shipLog.AddNote("Save test note", "Body line one.\nLine two | with a bar.", "TEST STATION");
                 _sub.GlobalPosition += new Vector3(120f, 15f, -80f);
@@ -138,6 +141,7 @@ public partial class Main
                 Check(_shipLog.Entries.Exists(x => x.Text == "Save test: a line in the ship's log | with a bar."), "ship's log line");
                 Check(_shipLog.Notes.Exists(n => n.Title == "Save test note" && n.Body == "Body line one.\nLine two | with a bar." && n.Where == "TEST STATION"), "journal note");
                 Check(_shipLog.Clock >= 1234f, $"dive clock {_shipLog.Clock}");
+                Check(_hanna == Hanna.Sister && _hannaStation == _stations.Directory.Starter.Id && _hannaTranscript.Contains("Test line, with a comma."), $"hanna {_hanna}");
                 Check(_stations.States.TryGetValue(_stations.Directory.Starter.Id, out var sst) && sst.PowerRestored, "starter station power restored");
                 Check(_coreSites.Contains(-42), "data core");
                 Check(_weapons.Owned.Contains(WeaponId.Shotgun), "shotgun");
@@ -201,6 +205,7 @@ public partial class Main
         d.Lab = _lab.Save();
         d.WrecksHeard = _wrecksHeard.ToList(); d.WrecksVisited = _wrecksVisited.ToList();
         d.Wear = _wear.Save();
+        d.Hanna = SaveHanna();
         foreach (var s in _stations.Directory.Generated) if (s.Known) d.KnownStations.Add(s.Id);
         foreach (var (id, st) in _stations.States)
             d.Stations.Add(new StationSave
@@ -219,6 +224,7 @@ public partial class Main
         foreach (var id in d.WrecksHeard ?? new List<long>()) _wrecksHeard.Add(id);
         foreach (var id in d.WrecksVisited ?? new List<long>()) _wrecksVisited.Add(id);
         _wear.Load(d.Wear);
+        LoadHanna(d.Hanna);
         ApplyDiscoveries();
         foreach (var m in d.Modules) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Fitted.Add(id);
         foreach (var m in d.Blueprints) if (Enum.TryParse<ModuleId>(m, out var id)) _modules.Known.Add(id);

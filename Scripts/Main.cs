@@ -737,6 +737,7 @@ public partial class Main : Node
 		UpdateWrecks(dt);
 		UpdateWear(dt);
 		UpdateVoice(dt);
+		UpdateHanna(dt);
 		UpdateTerminalWorld(dt);
 		UpdateProximity(dt);
 		if (_mode != Mode.Monitors) _camServo = Mathf.MoveToward(_camServo, 0f, dt * 6f);

@@ -51,6 +51,14 @@ public sealed class ShipLog
         return true;
     }
 
+    /// <summary>Add a note, or replace the body of the one with the same title and place (a running transcript).</summary>
+    public void UpsertNote(string title, string body, string where)
+    {
+        foreach (var n in Notes) if (n.Title == title && n.Where == where) { n.Body = body; Changed?.Invoke(); return; }
+        Notes.Add(new Note { Title = title, Body = body, Where = where, T = Clock });
+        Changed?.Invoke();
+    }
+
     /// <summary>Dive clock as hh:mm:ss.</summary>
     public static string Stamp(float t)
     {

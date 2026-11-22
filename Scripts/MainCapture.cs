@@ -901,6 +901,44 @@ public partial class Main
             (t += 0.5f, () => { Shot("46e_boat_page"); _logScreen.SetTab(0); }),
             (t += 0.4f, () => { Shot("46f_log_page"); CloseTerminal(); }),
             (t += 0.5f, () => { }),
+            // --- Someone alive out there (Hanna), on fast timers
+            (t += 0.1f, CaptureMarkHanna),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                _stations.StateOf(_stations.Directory.Starter).Visited = true;
+                var sp = _sub.GlobalPosition;
+                _sub.GlobalPosition = new Vector3(sp.X, Mathf.Min(sp.Y, _gen.Height(sp.X, sp.Z) + 30f), sp.Z);
+                _hannaT = 0.5f;
+                _voiceQueue.Clear(); _voice?.Stop(); _wreckHearT = 9999f; _loopReplayT = 9999f;   // a quiet radio for this test
+                LogHanna("start");
+            }),
+            (t += 2f, () => LogHanna("after first call")),
+            (t += 9f, () => { _systems.UsePower(-50f); TryPing(); }),
+            (t += 4.6f, () => { TryPing(); }),
+            (t += 4f, () => { LogHanna("after two pings"); }),
+            (t += 25f, () => { LogHanna("her lines played"); EnterTerminal(); }),
+            (t += 1f, () => _logScreen.SetTab(2)),
+            (t += 0.5f, () => { Shot("47a_goals_hanna"); _logScreen.SetTab(1); }),
+            (t += 0.5f, () => { Shot("47b_notes_hanna"); CloseTerminal(); }),
+            (t += 0.3f, () =>
+            {
+                // Dock at her station and step through to the supply lock.
+                var site = HannaSite;
+                _stations.ForceDock(site);
+                _player.Position = new Vector3(-0.9f, 0.05f, 12.4f);
+                OnHatch();
+            }),
+            (t += 5f, () => { LogHanna("in her station"); var it = _station?.GetNodeOrNull("SupplyLock"); GD.Print($"[capture] supply lock present: {it != null}"); }),
+            (t += 0.1f, () => { if (_station?.GetNodeOrNull<Node3D>("SupplyLock") is { } lk) { _player.LookAt(lk.GlobalPosition, Vector3.Up); } }),
+            (t += 6f, () => { Shot("47c_supply_lock"); GD.Print($"[capture] focused: {_player.Focused?.Prompt ?? "nothing"}"); }),
+            (t += 0.1f, () => { UseSupplyLock(); _systems.Hold.Add(ItemId.Crystal, 2); _systems.Hold.Add(ItemId.PowerCell); UseSupplyLock(); LogHanna("delivered"); }),
+            (t += 16f, () => { UseSupplyLock(); LogHanna("gift"); _hannaT = 0.1f; }),
+            (t += 14f, () => { LogHanna("sister asked"); _hannaT = 0.1f; }),
+            (t += 16f, () => { LogHanna("ascent asked"); _systems.Hold.Add(ItemId.PowerCell); UseSupplyLock(); }),
+            (t += 12f, () => { LogHanna("end"); GD.Print($"[capture] hanna log lines: {_shipLog.Entries.Count(e => e.Text.StartsWith("Hanna"))}"); }),
+            (t += 0.5f, () => { ReturnToSub(); }),
+            (t += 2f, () => { }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -1177,6 +1215,8 @@ public partial class Main
     private void CaptureMarkLab() => CaptureSection("lab");
     private void CaptureMarkWrecks() => CaptureSection("wrecks");
     private void CaptureMarkWear() => CaptureSection("wear");
+    private void CaptureMarkHanna() => CaptureSection("hanna");
+    private void LogHanna(string what) => GD.Print($"[capture] hanna {what}: state {_hanna}, station {HannaSite?.Name ?? "-"}, voice busy {VoiceBusy}, queued {_voiceQueue.Count}, transcript {_hannaTranscript.Count}");
     private List<Solitude.Systems.WreckSite> _capWrecks = new();
     private Solitude.Systems.WreckSite _capPinger;
     private float Flatness(Vector3 p) => Mathf.Abs(_gen.Height(p.X + 20f, p.Z) - _gen.Height(p.X - 20f, p.Z)) + Mathf.Abs(_gen.Height(p.X, p.Z + 20f) - _gen.Height(p.X, p.Z - 20f));
@@ -1259,7 +1299,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), "hanna" => nameof(CaptureMarkHanna), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

@@ -27,6 +27,7 @@ public partial class Main
     {
         SetupWrecks();
         SetupWear();
+        SetupHanna();
         // The holo table marks distress calls you've heard, too.
         var beacons = _interior.Holo.Beacons;
         _interior.Holo.Beacons = () =>
