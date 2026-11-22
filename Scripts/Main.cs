@@ -26,7 +26,7 @@ namespace Solitude;
 /// </summary>
 public partial class Main : Node
 {
-	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel }
+	private enum Mode { Walking, Helm, Monitors, Sonar, Holo, Arm, Panel, Reading }
 	private enum HelmView { Bridge, BowCamera, Chase }
 
 	[Export] public int PixelScale = 3;
@@ -53,6 +53,7 @@ public partial class Main : Node
 	private string _panelKind;
 	private int _panelVersion = -1;
 	private bool _holdVisible;
+	private Vector3 _spawnPoint;
 	private SubViewport _sonarScope;
 	private float _holoYaw = 0.6f, _holoPitch = 0.75f;
 
@@ -95,6 +96,7 @@ public partial class Main : Node
 		Props.Init();
 		_gen = new TerrainGenerator(Seed);
 		Vector3 spawn = FindSpawn();
+		_spawnPoint = spawn;
 
 		_ocean = new Ocean { Name = "Ocean" };
 		_game.AddChild(_ocean);
@@ -149,6 +151,7 @@ public partial class Main : Node
 			OnHolo = EnterHolo,
 			OnArm = EnterArm,
 			OnPanel = EnterPanel,
+			OnHatch = OnHatch,
 			OnMessage = msg => { _hud.Message(msg); _audio.PlayBlip(330f, 0.12f); },
 		};
 		_game.AddChild(_interior);
@@ -192,6 +195,9 @@ public partial class Main : Node
 			OnClaw = s => { _audio.PlayImpact(s * 0.35f); _audio.PlayBlip(140f, 0.06f, 0.6f); },
 		};
 		_sub.AddChild(_arm);
+
+		// ---- stations (milestone 4)
+		SetupStations(spawn);
 
 		_sub.Impact += s =>
 		{
@@ -260,7 +266,7 @@ public partial class Main : Node
 		_hud.SetCrosshair(false);
 		_hud.SetPrompt("");
 		_hud.ShowHelm(true);
-		_hud.SetHelp("W/S throttle · A/D + mouse rudder · R/F + mouse planes · SPACE blow / C flood ballast · P ping · G intake · X centre · L floods · V view · E leave");
+		_hud.SetHelp("W/S throttle · A/D + mouse rudder · R/F + mouse planes · SPACE/C ballast · P ping · G intake · K dock · X centre · L floods · V view · E leave");
 		_audio.PlayBlip(660f, 0.08f);
 		_view = HelmView.Bridge;
 		MoveStationCam(_interior.GlobalTransform * _interior.HelmView * new Transform3D(new Basis(Vector3.Right, -0.06f), Vector3.Zero));
@@ -493,7 +499,7 @@ public partial class Main : Node
 	{
 		if (e is InputEventMouseMotion mm && Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
-			if (_mode == Mode.Walking) _player.Look(mm.Relative);
+			if (_mode == Mode.Walking) { _player.Look(mm.Relative); _weapons.AddSway(mm.Relative); }
 			else if (_mode == Mode.Helm)
 			{
 				_sub.Rudder = Mathf.Clamp(_sub.Rudder + mm.Relative.X * 0.0025f, -1f, 1f);
@@ -515,6 +521,10 @@ public partial class Main : Node
 			if (aw.ButtonIndex == MouseButton.WheelUp) _arm.Steer(0, 0, 0.25f);
 			else if (aw.ButtonIndex == MouseButton.WheelDown) _arm.Steer(0, 0, -0.25f);
 			else if (aw.ButtonIndex == MouseButton.Left && !_arm.Grab()) { }
+		}
+		else if (e is InputEventKey wk && wk.Pressed && !wk.Echo && _mode == Mode.Walking && _player.InStation && wk.PhysicalKeycode >= Key.Key1 && wk.PhysicalKeycode <= Key.Key3)
+		{
+			SelectWeaponKey((int)(wk.PhysicalKeycode - Key.Key1));
 		}
 		else if (e is InputEventKey pk && pk.Pressed && !pk.Echo && _mode == Mode.Panel)
 		{
@@ -575,13 +585,14 @@ public partial class Main : Node
 
 		switch (_mode)
 		{
-			case Mode.Walking: UpdateWalking(); break;
+			case Mode.Walking: UpdateWalking(); UpdateAboard(dt); break;
 			case Mode.Helm: UpdateHelm(dt); break;
 			case Mode.Monitors: UpdateMonitors(); break;
 			case Mode.Sonar: UpdateSonar(); break;
 			case Mode.Holo: UpdateHolo(); break;
 			case Mode.Arm: UpdateArm(dt); break;
 			case Mode.Panel: UpdatePanel(); break;
+			case Mode.Reading: UpdateReading(); break;
 		}
 		UpdateVitals();
 
@@ -649,6 +660,7 @@ public partial class Main : Node
 		_sub.BallastInput = Input.IsActionPressed(GameInput.BallastBlow) ? 1f : Input.IsActionPressed(GameInput.BallastFlood) ? -1f : 0f;
 
 		if (Input.IsActionJustPressed(GameInput.Ping)) TryPing();
+		HelmDocking();
 		if (Input.IsActionJustPressed(GameInput.IntakeToggle)) _systems.ToggleIntake();
 		if (Input.IsActionJustPressed(GameInput.CenterControls)) { _sub.Rudder = 0f; _sub.Planes = 0f; _audio.PlayBlip(400f, 0.05f); }
 		if (Input.IsActionJustPressed(GameInput.Lights)) { _sub.LightsOn = !_sub.LightsOn; _audio.PlayBlip(220f, 0.04f, 0.8f); }
@@ -661,6 +673,7 @@ public partial class Main : Node
 
 		float alt = _sub.GlobalPosition.Y - _gen.Height(_sub.GlobalPosition.X, _sub.GlobalPosition.Z);
 		string view = _view switch { HelmView.Bridge => "BRIDGE [V]", HelmView.BowCamera => "CAM 1 BOW [V]", _ => "EXTERNAL [V]" };
+		view += DockingText();
 		view += _sonar.RechargeLeft > 0 ? $"\nSONAR    CHARGING {_sonar.RechargeLeft:0.0}s" : "\nSONAR    READY [P]";
 		_hud.UpdateHelm(_sub, alt, view);
 	}
@@ -715,7 +728,7 @@ public partial class Main : Node
 	private void UpdateVitals()
 	{
 		string pwr = _systems.Emergency ? "PWR EMERGENCY" : $"PWR {_systems.Power:0}%";
-		_hud.SetVitals($"{pwr}{(_systems.Thermal ? " +THERMAL" : "")}    HULL {_sub.Hull:0}%    FOOD {_systems.Food:0}%    HOLD {_systems.Hold.Weight}/{_systems.Hold.Capacity}{(_systems.IntakeOn ? "    INTAKE" : "")}");
+		_hud.SetVitals($"{pwr}{(_systems.Thermal ? " +THERMAL" : "")}    HULL {_sub.Hull:0}%    FOOD {_systems.Food:0}%    HOLD {_systems.Hold.Weight}/{_systems.Hold.Capacity}{(_systems.IntakeOn ? "    INTAKE" : "")}{StationVitals()}");
 		if (_mode == Mode.Walking && Input.IsActionJustPressed(GameInput.Inventory)) _holdVisible = !_holdVisible;
 		if (_holdVisible && _mode == Mode.Walking)
 		{

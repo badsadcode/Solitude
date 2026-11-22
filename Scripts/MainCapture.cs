@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Solitude.Core;
+using Solitude.Interior;
 using Solitude.Sub;
 using Solitude.Systems;
 
@@ -95,6 +97,88 @@ public partial class Main
             (t += 1.0f, () => Shot("14c_arm_grabbed")),
             (t += 5.0f, () => { Shot("14d_arm_redeployed"); GD.Print($"[capture] hold weight {_systems.Hold.Weight}, power {_systems.Power:0.0}"); }),
             (t += 0.1f, () => EnterWalking()),
+            // --- Milestone 4: approach, dock, board, fight, loot, read, return
+            (t += 0.1f, () =>
+            {
+                var site = _stations.Directory.Starter;
+                var berth = site.DockPose;
+                _sub.GlobalTransform = new Transform3D(berth.Basis, berth.Origin + berth.Basis.Z * 45f);
+                _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+                _sub.TelegraphIndex = 3; _sub.ApplyTelegraph();
+                GD.Print($"[capture] starter station: {site.Name} layout={site.Layout} at {site.Position} dist from spawn {site.Position.DistanceTo(_spawnPoint):0}");
+                EnterHelm(); _view = HelmView.Chase; ApplyHelmView();
+            }),
+            (t += 5.0f, () => { Shot("15a_approach_chase"); GD.Print($"[capture] docking: dist={_stations.DockDistance:0.0} lat={_stations.DockLateral:0.0} vert={_stations.DockVertical:0.0} hdg={_stations.DockHeadingError:0} capture={_stations.InCaptureZone}"); }),
+            (t += 0.1f, () => { _view = HelmView.BowCamera; ApplyHelmView(); }),
+            (t += 1.0f, () => Shot("15b_approach_bow")),
+            (t += 0.1f, () =>
+            {
+                var berth = _stations.Directory.Starter.DockPose;
+                _sub.GlobalTransform = new Transform3D(berth.Basis, berth.Origin + berth.Basis.Z * 6f + berth.Basis.X * 1.2f);
+                _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+                _sub.TelegraphIndex = 2; _sub.ApplyTelegraph();
+            }),
+            (t += 0.6f, () => GD.Print($"[capture] capture zone={_stations.InCaptureZone} dock={_stations.TryDock(null)}")),
+            (t += 0.1f, () => { _view = HelmView.Chase; ApplyHelmView(); }),
+            (t += 5.5f, () => { Shot("15c_docked_chase"); GD.Print($"[capture] docked at {_stations.DockedAt?.Name ?? "NOTHING"}"); }),
+            (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(Basis.Identity, SubHatchSpot); OnHatch(); }),
+            (t += 4.5f, () =>
+            {
+                Shot("16a_station_airlock");
+                GD.Print($"[capture] station ready={_station?.Ready} powered={_station?.Powered} crawlers={_station?.Crawlers.Count} inStation={_player.InStation} player={_player.GlobalPosition}");
+            }),
+            (t += 0.1f, () => { _player.Flashlight.Visible = true; _player.SetLook(Mathf.Pi * 0.5f, -0.1f); }),
+            (t += 0.6f, () => Shot("16b_station_look")),
+            (t += 0.1f, () => _player.SetLook(Mathf.Pi, -0.1f)),
+            (t += 0.6f, () => Shot("16c_station_look")),
+            (t += 0.1f, () =>
+            {
+                // Walk the player 10 m from the nearest crawler along its path, then make a noise.
+                var cr = NearestLiveCrawler();
+                if (cr != null)
+                {
+                    Vector3 meet = _station.PointAlongPath(cr.GlobalPosition, _player.GlobalPosition, 10f);
+                    _player.GlobalPosition = meet + Vector3.Up * 0.1f;
+                }
+                _station?.Noise(_player.GlobalPosition, 200f);
+                GD.Print($"[capture] woke {_station?.Crawlers.Count} crawlers; nearest at {NearestCrawlerDistance():0.0} m");
+                GD.Print($"[capture] nav: {_station?.NavDiagnostics(NearestLiveCrawler()?.GlobalPosition ?? Vector3.Zero, _player.GlobalPosition)}");
+            }),
+            (t += 1.2f, () => { Shot("16d_crawler_hunting"); GD.Print($"[capture] after 3 s nearest crawler at {NearestCrawlerDistance():0.0} m: {NearestLiveCrawler()?.Debug}"); }),
+            (t += 0.2f, () => { GD.Print($"[capture] then nearest crawler at {NearestCrawlerDistance():0.0} m: {NearestLiveCrawler()?.Debug}"); Shot("16d2_crawler_arrived"); }),
+            (t += 0.1f, () => FireOnce()),
+            (t += 0.3f, () => { FireOnce(); Shot("16e_firing"); }),
+            (t += 0.3f, () => FireOnce()),
+            (t += 0.3f, () => FireOnce()),
+            (t += 0.3f, () => FireOnce()),
+            (t += 0.3f, () => FireOnce()),
+            (t += 0.3f, () => FireOnce()),
+            (t += 1.2f, () =>
+            {
+                Shot("16f_after_fight");
+                int dead = _station?.Crawlers.FindAll(k => k.Current == Solitude.Creatures.Crawler.State.Dead).Count ?? 0;
+                GD.Print($"[capture] crawlers dead={dead}/{_station?.Crawlers.Count} playerHP={_player.Health:0} mag={_weapons.Mag[_weapons.Current]}/{_weapons.Reserve[_weapons.Current]}");
+            }),
+            (t += 0.1f, () =>
+            {
+                // Pick up everything within 60 m except the airlock; log one.
+                int taken = 0; Interactable logIt = null;
+                foreach (var n in _station.GetChildren())
+                    if (n is Interactable it && it.OnUse != null && !it.Prompt.StartsWith("Airlock") && !it.Prompt.StartsWith("Bulkhead") && !it.Prompt.StartsWith("Hollow"))
+                    {
+                        if (it.Prompt == "Read crew log") { logIt ??= it; continue; }
+                        it.Use(); taken++;
+                    }
+                GD.Print($"[capture] loot taken={taken} hold={_systems.Hold.Weight} weapons={string.Join(",", _weapons.Owned)}");
+                logIt?.Use();
+            }),
+            (t += 0.6f, () => Shot("16g_reading_log")),
+            (t += 0.1f, () => { CloseLog(); ReturnToSub(); }),
+            (t += 2.5f, () => { Shot("17a_back_in_sub"); GD.Print($"[capture] back: inStation={_player.InStation} known stations={CountKnown()}"); }),
+            (t += 0.1f, () => { EnterHelm(); FreeStation(); _stations.Undock(); }),
+            (t += 0.1f, () => { _interior.Holo.ZoomIndex = 2; EnterWalking(); _player.Position = new Vector3(0.2f, 0.05f, -2.0f); EnterHolo(); }),
+            (t += 1.5f, () => Shot("17b_holo_beacons")),
+            (t += 0.1f, () => EnterWalking()),
             (t += 0.1f, () => { EnterWalking(); EnterHelm(); var p = _sub.GlobalPosition; _sub.GlobalPosition = new Vector3(p.X, _gen.Height(p.X, p.Z) + 7f, p.Z); _sub.TelegraphIndex = 4; _sub.ApplyTelegraph(); }),
             (t += 1.5f, () => Shot("07_helm_bridge")),
             (t += 0.1f, () => { _view = HelmView.BowCamera; ApplyHelmView(); _ravager.ForcePass(26f, teleport: true); }),
@@ -120,6 +204,46 @@ public partial class Main
             (t += 1.0f, () => Shot("11_lights_off")),
             (t += 0.5f, () => { _audio.SaveDebugRecording(_captureDir); GetTree().Quit(); }),
         };
+    }
+
+    private void FireOnce()
+    {
+        var exclude = new Godot.Collections.Array<Rid> { _player.GetRid() };
+        // Aim at the first live crawler, then pull the trigger.
+        var c = NearestLiveCrawler();
+        if (c != null)
+        {
+            // SetLook is relative to the player body, which is already turned to the airlock's facing.
+            Vector3 to = _player.GlobalBasis.Inverse() * (c.GlobalPosition + Vector3.Up * 0.5f - _player.Camera.GlobalPosition);
+            _player.SetLook(Mathf.Atan2(-to.X, -to.Z), Mathf.Asin(Mathf.Clamp(to.Normalized().Y, -1f, 1f)));
+        }
+        var cam = _player.Camera;
+        var probe = _player.GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(cam.GlobalPosition, cam.GlobalPosition - cam.GlobalBasis.Z * 60f, Layers.Interior | Layers.Enemy, exclude));
+        GD.Print($"[capture] fire probe: hit={(probe.Count > 0 ? ((Node)probe["collider"].AsGodotObject()).Name + " " + probe["collider"].AsGodotObject().GetType().Name + " at " + ((Vector3)probe["position"]).DistanceTo(cam.GlobalPosition).ToString("0.0") + " m" : "nothing")} crawlerAt={(c != null ? c.GlobalPosition.DistanceTo(cam.GlobalPosition).ToString("0.0") : "-")} m");
+        _weapons.Trigger(true, true, _player.Camera, _player.GetWorld3D().DirectSpaceState, exclude);
+    }
+
+    private Solitude.Creatures.Crawler NearestLiveCrawler()
+    {
+        Solitude.Creatures.Crawler best = null;
+        float bd = float.MaxValue;
+        if (_station != null)
+            foreach (var k in _station.Crawlers)
+            {
+                if (k.Current == Solitude.Creatures.Crawler.State.Dead) continue;
+                float d = k.GlobalPosition.DistanceTo(_player.GlobalPosition);
+                if (d < bd) { bd = d; best = k; }
+            }
+        return best;
+    }
+
+    private float NearestCrawlerDistance() => NearestLiveCrawler()?.GlobalPosition.DistanceTo(_player.GlobalPosition) ?? -1f;
+
+    private int CountKnown()
+    {
+        int n = 0;
+        foreach (var s in _stations.Directory.Near(_sub.GlobalPosition, 4000f)) if (s.Known) n++;
+        return n;
     }
 
     private void UpdateCapture(float dt)

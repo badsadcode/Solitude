@@ -16,6 +16,8 @@ public partial class HoloTable : Node3D
 {
     public SonarSystem Sonar;
     public Submarine Sub;
+    /// <summary>Known station positions, drawn as beacon pillars.</summary>
+    public Func<IEnumerable<Vector3>> Beacons;
 
     public const float TableRadius = 0.52f;
     public const float BaseHeight = 0.32f;   // projection plane above the table top
@@ -198,6 +200,21 @@ public partial class HoloTable : Node3D
             float rr = Sonar.FrontRadius * scale;
             if (rr < TableRadius) Circle(po, rr, new Color(0.5f, 1f, 1f, 0.7f), 64);
         }
+
+        // Known stations: a pulsing pillar with a ring at its base (clamped to the rim if far).
+        if (Beacons != null)
+            foreach (var b in Beacons())
+            {
+                var p = new Vector3((b.X - sp.X) * scale, 0f, (b.Z - sp.Z) * scale);
+                float r2 = new Vector2(p.X, p.Z).Length();
+                bool far = r2 > TableRadius * 0.95f;
+                if (far) p *= TableRadius * 0.95f / r2;
+                float baseY = far ? 0.02f : MapY(b.Y, sp.Y, scale);
+                float pulse = 0.6f + 0.4f * MathF.Sin((float)now * 4f);
+                var bc = new Color(1f, 0.85f, 0.4f, far ? 0.5f : 0.9f * pulse);
+                Line(new Vector3(p.X, baseY, p.Z), new Vector3(p.X, baseY + 0.16f, p.Z), bc);
+                Circle(new Vector3(p.X, baseY, p.Z), far ? 0.012f : 0.02f + 0.01f * pulse, bc, 10);
+            }
 
         // Ghost contacts flicker on the table too, briefly
         foreach (var k in Sonar.Contacts)

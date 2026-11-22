@@ -166,6 +166,12 @@ public static class Art
             .Glow(new Color(1f, 1f, 1f), 0.9f, fromAlpha: true));
     public static ShaderMaterial Pipe => Cached("pipe", () => World(FlatTexture(new Color(0.8f, 0.8f, 0.8f)), Colors.White, roughness: 0.4f, metallic: 0.6f, jitter: 260f));
 
+    // Station interiors (NoorLevel blockouts restyled): triplanar, so the generator's UVs don't matter.
+    public static ShaderMaterial StationFloor => Cached("st_floor", () => World(GratingTexture(), new Color(0.75f, 0.78f, 0.72f), triplanar: true, triScale: 0.9f, roughness: 0.5f, metallic: 0.5f, jitter: 240f));
+    public static ShaderMaterial StationWall => Cached("st_wall", () => World(PanelTexture(31, new Color(0.42f, 0.48f, 0.44f)), Colors.White, triplanar: true, triScale: 0.55f, roughness: 0.7f, metallic: 0.25f, jitter: 240f));
+    public static ShaderMaterial StationCeiling => Cached("st_ceiling", () => World(PanelTexture(32, new Color(0.22f, 0.24f, 0.23f)), Colors.White, triplanar: true, triScale: 0.55f, roughness: 0.8f, jitter: 240f));
+    public static ShaderMaterial StationDoor => Cached("st_door", () => World(HazardTexture(), new Color(0.8f, 0.55f, 0.45f), triplanar: true, triScale: 0.7f, roughness: 0.5f, metallic: 0.4f, jitter: 240f));
+
     public static ShaderMaterial Crt(Texture2D feed)
     {
         var m = new ShaderMaterial { Shader = GD.Load<Shader>("res://Shaders/crt_monitor.gdshader") };

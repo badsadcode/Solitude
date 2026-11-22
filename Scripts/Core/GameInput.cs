@@ -33,6 +33,12 @@ public static class GameInput
     public const string Inventory = "inventory";
     public const string IntakeToggle = "intake_toggle";
 
+    // Stations
+    public const string Dock = "dock";
+    public const string Reload = "reload";
+    public const string Flashlight = "flashlight";
+    public const string UseMedkit = "use_medkit";
+
     // Debug
     public const string SummonCreature = "debug_summon_creature";
 
@@ -65,6 +71,10 @@ public static class GameInput
         Bind(SummonCreature, Godot.Key.F9);
         Bind(Inventory, Godot.Key.I);
         Bind(IntakeToggle, Godot.Key.G);
+        Bind(Dock, Godot.Key.K);
+        Bind(Reload, Godot.Key.R);
+        Bind(Flashlight, Godot.Key.F);
+        Bind(UseMedkit, Godot.Key.H);
 
         Bind(Fullscreen, Godot.Key.F);
         Bind(ToggleFullscreenWindow, Godot.Key.F11);

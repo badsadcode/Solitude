@@ -22,6 +22,16 @@ public partial class PlayerController : CharacterBody3D
     public float MouseSensitivity = 0.0022f;
 
     public event Action Footstep;
+    public event Action<float> Hurt;     // damage taken
+    public event Action Died;
+
+    /// <summary>True while aboard a station: no hull tilt, weapons and flashlight allowed.</summary>
+    public bool InStation;
+    public float Health { get; private set; } = 100f;
+    public bool Dead => Health <= 0f;
+    public SpotLight3D Flashlight { get; private set; }
+    public float SpeedFactor = 1f;          // starving / wounded slows you down
+    private const float StepHeight = 0.55f;
 
     private const float WalkSpeed = 2.6f, SprintSpeed = 4.2f, Accel = 10f, Gravity = 9.8f, EyeHeight = 1.62f;
 
@@ -50,6 +60,14 @@ public partial class PlayerController : CharacterBody3D
         _yaw.AddChild(_pitch);
         _pitch.AddChild(Camera);
         _camBase = Vector3.Zero;
+
+        Flashlight = new SpotLight3D
+        {
+            Name = "Flashlight", Position = new Vector3(0.15f, -0.1f, 0), SpotRange = 22f, SpotAngle = 26f,
+            SpotAngleAttenuation = 1.4f, LightEnergy = 3.2f, LightColor = new Color(1f, 0.93f, 0.8f),
+            ShadowEnabled = true, Visible = false,
+        };
+        Camera.AddChild(Flashlight);
     }
 
     public void SetLook(float yaw, float pitch)
@@ -67,6 +85,20 @@ public partial class PlayerController : CharacterBody3D
     }
 
     public void AddShake(float amount) => _shake = Mathf.Min(_shake + amount, 1.2f);
+
+    public void Damage(float amount)
+    {
+        if (Dead) return;
+        Health = Mathf.Max(0f, Health - amount);
+        AddShake(0.4f + amount * 0.02f);
+        Hurt?.Invoke(amount);
+        if (Dead) Died?.Invoke();
+    }
+
+    public void Heal(float amount) => Health = Mathf.Min(100f, Health + amount);
+    public void Revive(float health) => Health = health;
+
+    public Vector3 Forward => -Camera.GlobalBasis.Z;
 
     public override void _PhysicsProcess(double delta)
     {
@@ -88,18 +120,19 @@ public partial class PlayerController : CharacterBody3D
             if (wish.LengthSquared() > 1f) wish = wish.Normalized();
             sprint = Input.IsActionPressed(GameInput.Sprint);
         }
-        float speed = sprint ? SprintSpeed : WalkSpeed;
+        float speed = (sprint ? SprintSpeed : WalkSpeed) * SpeedFactor;
         Vector3 hv = new(v.X, 0, v.Z);
         hv = hv.Lerp(wish * speed, Mathf.Clamp(Accel * dt, 0f, 1f));
 
         // The deck leans with the hull: drift downhill.
-        if (Sub != null && IsOnFloor())
+        if (Sub != null && !InStation && IsOnFloor())
         {
             float roll = Mathf.DegToRad(Sub.RollDeg), pitch = Mathf.DegToRad(Sub.PitchDeg);
             hv += new Vector3(-Mathf.Sin(roll), 0, Mathf.Sin(pitch)) * Gravity * 0.35f * dt;
         }
         v.X = hv.X; v.Z = hv.Z;
         Velocity = v;
+        Stepper.TryStepUp(this, dt, StepHeight);
         MoveAndSlide();
 
         // Footsteps by distance travelled.
@@ -125,7 +158,7 @@ public partial class PlayerController : CharacterBody3D
         var space = GetWorld3D().DirectSpaceState;
         Vector3 from = Camera.GlobalPosition;
         Vector3 to = from - Camera.GlobalBasis.Z * 2.3f;
-        var q = PhysicsRayQueryParameters3D.Create(from, to, Layers.Interior);
+        var q = PhysicsRayQueryParameters3D.Create(from, to, Layers.Interior | Layers.Use);
         var hit = space.IntersectRay(q);
         if (hit.Count > 0 && hit["collider"].AsGodotObject() is Interactable it) Focused = it;
     }
@@ -133,7 +166,16 @@ public partial class PlayerController : CharacterBody3D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        if (Sub != null)
+        if (Sub != null && InStation)
+        {
+            _tilt.Rotation = Vector3.Zero;
+            _shake = Mathf.MoveToward(_shake, 0f, dt * 1.6f);
+            float s0 = _shake * _shake * 0.08f;
+            var r0 = new Vector3((float)GD.RandRange(-1.0, 1.0), (float)GD.RandRange(-1.0, 1.0), 0) * s0;
+            float b0 = Mathf.Sin(_bob * Mathf.Pi) * 0.035f;
+            Camera.Position = _camBase + r0 + new Vector3(Mathf.Cos(_bob * Mathf.Pi * 0.5f) * 0.02f, b0, 0);
+        }
+        else if (Sub != null)
         {
             // Show only part of the real attitude; full 1:1 is nauseating.
             float pitch = Mathf.DegToRad(Sub.PitchDeg) * 0.55f;

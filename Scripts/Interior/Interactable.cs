@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Godot;
 using Solitude.Core;
 
@@ -15,7 +15,7 @@ public partial class Interactable : StaticBody3D
 
     public Interactable()
     {
-        CollisionLayer = Layers.Interior;
+        CollisionLayer = Layers.Use;   // solid things (doors) add Layers.Interior themselves
         CollisionMask = 0;
     }
 

@@ -31,6 +31,7 @@ public partial class SubInterior : Node3D
     public Action OnHolo;
     public Action OnArm;
     public Action<string> OnPanel;
+    public Action OnHatch;
     public Action<string> OnMessage;
 
     // Sonar (set before Build)
@@ -475,6 +476,7 @@ public partial class SubInterior : Node3D
         _pipe.Box(new Vector3(-1.15f, 1.3f, 12.7f), new Vector3(0.04f, 2.6f, 0.04f), Grey);
         _pipe.Box(new Vector3(-0.65f, 1.3f, 12.7f), new Vector3(0.04f, 2.6f, 0.04f), Grey);
         _hazard.Cylinder(new Vector3(-0.9f, Height - 0.02f, 12.3f), 0.55f, 0.55f, 0.04f, 10, Colors.White);
+        Interactable.Create(this, new Vector3(-0.9f, 1.4f, 12.55f), new Vector3(0.7f, 2.4f, 0.4f), "Climb to the dive hatch", () => OnHatch?.Invoke());
 
         Light(new Vector3(0, Height - 0.15f, 11f), new Color(1f, 0.75f, 0.4f), 0.9f, 6f, flicker: 1f, shadows: true);
         Light(new Vector3(-1.5f, Height - 0.3f, 9.3f), new Color(1f, 0.1f, 0.05f), 0.4f, 3f);

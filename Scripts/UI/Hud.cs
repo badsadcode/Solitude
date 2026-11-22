@@ -150,6 +150,9 @@ public partial class Hud : CanvasLayer
         tw.Parallel().TweenProperty(_fade, "modulate:a", 0f, 3f);
     }
 
+    /// <summary>Fade the screen to black (1) or back (0).</summary>
+    public void FadeTo(float alpha, float seconds) => CreateTween().TweenProperty(_fade, "modulate:a", alpha, seconds);
+
     public void SetPrompt(string text) => _prompt.Text = text ?? "";
     public void SetCrosshair(bool on) => _crosshair.Visible = on;
     public void SetHelp(string text) => _help.Text = text ?? "";

@@ -13,6 +13,8 @@ public enum ItemId
     PatchKit, PowerCell,
     // Food — galley
     Ration, ClamStew, GlowBroth,
+    // Found aboard stations
+    CannedFood, Medkit,
 }
 
 public sealed record ItemInfo(string Name, string Description, int Weight, float Food = 0f);
@@ -35,6 +37,8 @@ public static class Items
         [ItemId.Ration] = new("Plankton ration", "Grey bar. Tastes of nothing, which is the good part.", 1, 25f),
         [ItemId.ClamStew] = new("Clam stew", "Hot, salty, almost comforting.", 1, 50f),
         [ItemId.GlowBroth] = new("Glow broth", "Your mouth glows for an hour afterwards. You dream in blue.", 1, 35f),
+        [ItemId.CannedFood] = new("Station tin", "Label long gone. Best before: the incident.", 1, 40f),
+        [ItemId.Medkit] = new("Medkit", "Gauze, sealant spray, something in an autoinjector. Press H to use.", 1),
     };
 
     public static string Name(ItemId id) => Info[id].Name;

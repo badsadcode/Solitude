@@ -129,7 +129,7 @@ public sealed class ImpactVoice : Voice
         _ring = new BandPass(150f + (float)rng.NextDouble() * 60f, 45f, rate);
         _ring2 = new BandPass(410f + (float)rng.NextDouble() * 100f, 35f, rate);
         _lp = new OnePole(900f, rate);
-        Gain = 0.45f + _strength * 0.35f;
+        Gain = 0.18f + _strength * 0.14f; // used for clanks everywhere now: keep it under the limiter
     }
 
     public override float Next(out bool alive)
