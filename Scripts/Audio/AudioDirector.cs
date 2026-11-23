@@ -62,6 +62,8 @@ public partial class AudioDirector : Node
     private OnePole _rumbleHp = new(25f, Rate), _droneLp = new(110f, Rate),_hissLp = new(2500f, Rate), _hissHp = new(600f, Rate), _flowLp = new(700f, Rate), _engLp = new(400f, Rate);
     private float _servoPh;
     private readonly BubbleBank _bubbles = new(Rate);
+    /// <summary>The helmet's breathing hiss (Tom: "a little bit too loud"): 0.6 ≈ 4.4 dB down.</summary>
+    private const float BreathLevel = 0.6f;
     private bool _exhaling;
     private float _breathPh, _bubbleT, _heartPh, _heartEnv, _bubblePh, _bubbleF, _bubbleEnv;
     private OnePole _muffleL = new(900f, Rate), _muffleR = new(900f, Rate), _breathLp = new(1400f, Rate), _exhaleLp = new(500f, Rate);
@@ -346,12 +348,12 @@ public partial class AudioDirector : Node
         if (_breathPh < 0.38f)
         {
             float u = _breathPh / 0.38f;
-            s += _breathLp.Process(w) * MathF.Sin(MathF.PI * u) * (0.1f + Exertion * 0.08f);
+            s += _breathLp.Process(w) * MathF.Sin(MathF.PI * u) * (0.1f + Exertion * 0.08f) * BreathLevel;
         }
         else if (_breathPh > 0.48f && _breathPh < 0.95f)
         {
             float u = (_breathPh - 0.48f) / 0.47f;
-            s += _exhaleLp.Process(w) * MathF.Sin(MathF.PI * u) * (0.16f + Exertion * 0.1f);
+            s += _exhaleLp.Process(w) * MathF.Sin(MathF.PI * u) * (0.16f + Exertion * 0.1f) * BreathLevel;
             // The regulator lets go: a gush of air that bubbles out past the helmet (bulgotanie).
             if (!_exhaling) { _exhaling = true; _bubbles.Exhale(Exertion); }
         }

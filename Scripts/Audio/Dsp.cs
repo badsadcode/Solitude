@@ -68,6 +68,8 @@ public abstract class Voice
 public sealed class BubbleBank
 {
     private const int Max = 48;
+    /// <summary>Tom: "one or two tones lower". 0.8 ≈ four semitones (two whole tones) down.</summary>
+    public const float Pitch = 0.8f;
     private readonly float _rate;
     private readonly float[] _f = new float[Max], _ph = new float[Max], _env = new float[Max], _decay = new float[Max],
         _rise = new float[Max], _gl = new float[Max], _gr = new float[Max], _wait = new float[Max];
@@ -85,7 +87,7 @@ public sealed class BubbleBank
         for (int i = 0; i < Max; i++)
         {
             if (_on[i]) continue;
-            float f0 = 3.26f / radius;
+            float f0 = 3.26f / radius * Pitch;
             float d = 0.043f * f0 + 0.0014f * MathF.Pow(f0, 1.5f);   // damping (1/s)
             _f[i] = f0; _ph[i] = R; _decay[i] = d;
             _rise[i] = d * (0.1f + 0.3f * R);                         // how fast it chirps up
