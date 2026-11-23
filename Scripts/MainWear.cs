@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Solitude.Core;
 using Solitude.Interior;
 using Solitude.Systems;
 using Line = Solitude.UI.TerminalScreen.Line;
@@ -117,9 +118,9 @@ public partial class Main
         switch (p)
         {
             case Part.Bearings when Mathf.Abs(_sub.EngineOutput) > 0.15f:
-                PlaySpatial("knock", at); if (failing) GetTree().CreateTimer(0.35).Timeout += () => PlaySpatial("knock", at);
+                PlaySpatial("knock", at); if (failing) Later.After(this, 0.35).Timeout += () => PlaySpatial("knock", at);
                 break;
-            case Part.HullSeals: PlaySpatial("drip", at); GetTree().CreateTimer(0.6).Timeout += () => PlaySpatial("drip", at); break;
+            case Part.HullSeals: PlaySpatial("drip", at); Later.After(this, 0.6).Timeout += () => PlaySpatial("drip", at); break;
             case Part.IntakeFilter when _systems.IntakeOn: PlaySpatial("steam", at); break;
             case Part.Scrubber: PlaySpatial(failing ? "deny" : "steam", at); break;
             case Part.Electronics: _audio.PlayBlip(failing ? 140f : 9000f, 0.08f, 0.12f); break;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Solitude.Core;
 using Solitude.Systems;
 using Solitude.World;
 
@@ -83,7 +84,7 @@ public partial class Main
                 // A few seconds later the comms set catches the crew's loop: voiced if we have it (twice,
                 // the way a loop does), otherwise as text.
                 var site = w;
-                GetTree().CreateTimer(4.5).Timeout += () =>
+                Later.After(this, 4.5).Timeout += () =>
                 {
                     if (Silenced(site)) return;
                     if (PlayWreckLoop(site, first: true)) PlayWreckLoop(site, first: false);

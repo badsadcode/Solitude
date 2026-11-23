@@ -130,7 +130,7 @@ public partial class Main
         _logScreen.SetTab(0);
         MoveStationCam(_interior.GlobalTransform * _interior.TerminalView);
         // Let the camera settle on the screen, then the screen fills the view.
-        GetTree().CreateTimer(0.45).Timeout += () => { if (_mode == Mode.Terminal && !_journalOpen) _hud.ShowTerminal(_logVp.GetTexture(), crt: true); };
+        Later.After(this, 0.45).Timeout += () => { if (_mode == Mode.Terminal && !_journalOpen) _hud.ShowTerminal(_logVp.GetTexture(), crt: true); };
     }
 
     private void OpenJournal()

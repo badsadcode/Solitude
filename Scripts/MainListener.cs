@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Solitude.Core;
 using Solitude.Creatures;
 using Solitude.Sonar;
 using Solitude.Systems;
@@ -94,7 +95,7 @@ public partial class Main
         if (!_toldAboutAnswer)
         {
             _toldAboutAnswer = true;
-            GetTree().CreateTimer(delay + 0.8).Timeout += () => _hud.Message("Something answered the ping. There was nothing there.", 6f);
+            Later.After(this, delay + 0.8).Timeout += () => _hud.Message("Something answered the ping. There was nothing there.", 6f);
         }
     }
 

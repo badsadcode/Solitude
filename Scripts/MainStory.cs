@@ -141,7 +141,7 @@ public partial class Main
         _audio.Unease = 1f;
         for (int i = 0; i < 3; i++) _audio.PlayCall();
         _hud.Message("The light turns toward you.", 6f);
-        if (SoundingRecordedLine() is string heard) GetTree().CreateTimer(6.5).Timeout += () => _hud.Message(heard, 7f);
+        if (SoundingRecordedLine() is string heard) Later.After(this, 6.5).Timeout += () => _hud.Message(heard, 7f);
         var tw = CreateTween();
         tw.TweenInterval(5.0);
         tw.TweenCallback(Callable.From(() => _hud.FadeTo(1f, 4f)));

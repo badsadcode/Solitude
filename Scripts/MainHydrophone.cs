@@ -258,7 +258,7 @@ public partial class Main
             ? $"REC {no:00} stored: {Hydrophone.Name(s.Class)}."
             : $"REC {no:00} stored: {Hydrophone.Describe(s.Class)}, bearing {compass:000}°. Unidentified.", 6f);
         if (s.Class == SoundClass.Sounding)
-            GetTree().CreateTimer(6.5).Timeout += () => _hud.Message("It's very faint. It's very regular. It sounds like counting.", 5f);
+            Later.After(this, 6.5).Timeout += () => _hud.Message("It's very faint. It's very regular. It sounds like counting.", 5f);
         Autosave("recording");
     }
 

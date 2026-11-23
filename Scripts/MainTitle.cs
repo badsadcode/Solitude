@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Solitude.Core;
 using Solitude.Creatures;
 using Solitude.Stations;
 using Solitude.Systems;
@@ -84,19 +85,19 @@ public partial class Main
             if (!arg.StartsWith("--credits-shot=")) continue;
             string dir = arg.Substring(15);
             DirAccess.MakeDirRecursiveAbsolute(dir);
-            GetTree().CreateTimer(3.5).Timeout += () =>
+            Later.After(this, 3.5).Timeout += () =>
             {
                 _hud.ShowCredits();
             };
             foreach (float at in new[] { 6f, 22f, 40f, 58f })
-                GetTree().CreateTimer(at).Timeout += () => GetViewport().GetTexture().GetImage().SavePng($"{dir}/credits_{(int)at:00}.png");
-            GetTree().CreateTimer(60.0).Timeout += () =>
+                Later.After(this, at).Timeout += () => GetViewport().GetTexture().GetImage().SavePng($"{dir}/credits_{(int)at:00}.png");
+            Later.After(this, 60.0).Timeout += () =>
             {
                 var ev = new InputEventKey { Keycode = Key.L, Pressed = true };
                 Input.ParseInputEvent(ev);
             };
-            GetTree().CreateTimer(61.5).Timeout += () => GetViewport().GetTexture().GetImage().SavePng($"{dir}/credits_licences.png");
-            GetTree().CreateTimer(62.0).Timeout += () => GetTree().Quit();
+            Later.After(this, 61.5).Timeout += () => GetViewport().GetTexture().GetImage().SavePng($"{dir}/credits_licences.png");
+            Later.After(this, 62.0).Timeout += () => GetTree().Quit();
         }
     }
 
@@ -119,12 +120,12 @@ public partial class Main
             string dir = arg.Substring(14);
             DirAccess.MakeDirRecursiveAbsolute(dir);
             foreach (float at in new[] { 0.3f, 0.9f, 1.9f, 2.6f, 4.2f, 6.0f, 9.5f })
-                GetTree().CreateTimer(at).Timeout += () =>
+                Later.After(this, at).Timeout += () =>
                 {
                     GetViewport().GetTexture().GetImage().SavePng($"{dir}/splash_{at:0.00}.png".Replace(',', '.'));
                     GD.Print($"[splash] shot at {at:0.0} s");
                 };
-            GetTree().CreateTimer(9.8).Timeout += () => GetTree().Quit();
+            Later.After(this, 9.8).Timeout += () => GetTree().Quit();
         }
     }
 

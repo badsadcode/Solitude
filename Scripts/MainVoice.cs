@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using Solitude.Core;
 using Solitude.Systems;
 
 namespace Solitude;
@@ -50,7 +51,7 @@ public partial class Main
         _voiceGap = gap;
         if (subtitle != null) _hud.Message(subtitle, seconds + 1f, immediate: true);   // in step with the voice
         _audio.Duck(-5f, 0.4f);
-        GetTree().CreateTimer(((AudioStreamWav)stream).GetLength() + 0.2).Timeout += () => { if (!VoiceBusy) _audio.Duck(0f, 1.2f); };
+        Later.After(this, ((AudioStreamWav)stream).GetLength() + 0.2).Timeout += () => { if (!VoiceBusy) _audio.Duck(0f, 1.2f); };
     }
 
     /// <summary>A wreck's loop on the comms set. first = the subtitle that goes in the ship's log.</summary>

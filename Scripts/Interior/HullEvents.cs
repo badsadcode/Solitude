@@ -329,7 +329,7 @@ public partial class HullEvents : Node3D
                 if (!Systems.Hold.Remove(ItemId.Sealant)) Systems.Hold.Remove(ItemId.PatchKit);
                 b.Spray.Emitting = false;
                 var spray = b.Spray;
-                GetTree().CreateTimer(1.0).Timeout += spray.QueueFree;
+                Later.After(this, 1.0).Timeout += spray.QueueFree;
                 b.Use.QueueFree();
                 _breaches.Remove(b);
                 Sub.Repair(4f);
@@ -532,7 +532,7 @@ public partial class HullEvents : Node3D
         };
         AddChild(p);
         p.Emitting = true;
-        GetTree().CreateTimer(2.5).Timeout += p.QueueFree;
+        Later.After(this, 2.5).Timeout += p.QueueFree;
         Sound?.Invoke("steam", ToGlobal(at));
     }
 
@@ -572,7 +572,7 @@ public partial class HullEvents : Node3D
                 {
                     // ...and one more, later, from the other side.
                     var other = new Vector3(-_knockFrom.X, 1.3f, _knockFrom.Z + 4f);
-                    GetTree().CreateTimer(9.0 + _rng.NextDouble() * 8.0).Timeout += () =>
+                    Later.After(this, 9.0 + _rng.NextDouble() * 8.0).Timeout += () =>
                     {
                         if (Aboard?.Invoke() == true) { Sound?.Invoke("knock", ToGlobal(other)); Player?.AddShake(0.1f); }
                     };

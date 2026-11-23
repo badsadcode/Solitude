@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Solitude.Core;
 using Solitude.Interior;
 using Solitude.Stations;
 using Solitude.Systems;
@@ -133,7 +134,7 @@ public partial class Main
         {
             _pingTimes.Clear();
             _hannaWindow = 0f;
-            GetTree().CreateTimer(2.0).Timeout += AnswerContact;
+            Later.After(this, 2.0).Timeout += AnswerContact;
             return;
         }
         // Two pings any time after that: she says hello (not too often).
@@ -141,7 +142,7 @@ public partial class Main
         {
             _pingTimes.Clear();
             _helloCd = 300f;
-            GetTree().CreateTimer(2.5).Timeout += () => { if (!VoiceBusy) HannaSay("hanna_hello"); };
+            Later.After(this, 2.5).Timeout += () => { if (!VoiceBusy) HannaSay("hanna_hello"); };
         }
     }
 
@@ -181,7 +182,7 @@ public partial class Main
         if (_hannaHaldane || w.Kind != WreckKind.SupplySub || w.Variant != 0 || w.Wrong) return;
         if (_hanna is not (Hanna.Sister or Hanna.Ascent)) return;
         _hannaHaldane = true;
-        GetTree().CreateTimer(14.0).Timeout += () => HannaSay("hanna_haldane");
+        Later.After(this, 14.0).Timeout += () => HannaSay("hanna_haldane");
         if (_hanna == Hanna.Sister) _hannaT = Mathf.Min(_hannaT, 120f);
     }
 
@@ -208,7 +209,7 @@ public partial class Main
         if ((_hanna == Hanna.Supplies || _hanna == Hanna.Ascent) && !_hannaIntercom)
         {
             _hannaIntercom = true;
-            GetTree().CreateTimer(2.5).Timeout += () => HannaSay("hanna_intercom");
+            Later.After(this, 2.5).Timeout += () => HannaSay("hanna_intercom");
         }
     }
 

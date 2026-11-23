@@ -126,7 +126,7 @@ public partial class StationInterior
         RefreshJunctions();
         Message?.Invoke("The cell seats with a clunk. Somewhere deep in the station, something big starts to turn.");
         // ...and everything aboard heard that.
-        GetTree().CreateTimer(3.5).Timeout += () =>
+        Later.After(this, 3.5).Timeout += () =>
         {
             int awake = 0;
             foreach (var c in Crawlers) if (c.Current != Solitude.Creatures.Crawler.State.Dead) { c.Hear(globalAt, 200f); awake++; }
