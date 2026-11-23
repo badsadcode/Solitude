@@ -170,7 +170,8 @@ public partial class Main
                                Mathf.Max(Mathf.Clamp((90f - _creatures.ApexDistance) / 60f, 0f, 1f),   // the wyrm is felt from further away
                                          Mathf.Clamp((70f - GloamDistance) / 50f, 0f, 1f)));
         float panic = Mathf.Max(air, near);
-        _audio.Heartbeat = panic;
+        // A resting heartbeat in the suit, always there, quickening with effort; panic takes over above it.
+        _audio.Heartbeat = Mathf.Max(panic, 0.18f + _diver.Exertion * 0.25f);
         _audio.Exertion = _diver.Exertion;
         h.Fog = Mathf.Max(panic * 0.8f, _diver.Oxygen <= 0f ? 1f : 0f);
         _post.SetShaderParameter("wobble", 1.2f + panic);

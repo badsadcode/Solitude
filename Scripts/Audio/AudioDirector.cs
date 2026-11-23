@@ -62,8 +62,8 @@ public partial class AudioDirector : Node
     private OnePole _rumbleHp = new(25f, Rate), _droneLp = new(110f, Rate),_hissLp = new(2500f, Rate), _hissHp = new(600f, Rate), _flowLp = new(700f, Rate), _engLp = new(400f, Rate);
     private float _servoPh;
     private readonly BubbleBank _bubbles = new(Rate);
-    /// <summary>The helmet's breathing hiss (Tom: "a little bit too loud"): 0.6 ≈ 4.4 dB down.</summary>
-    private const float BreathLevel = 0.6f;
+    /// <summary>The helmet's breathing hiss (Tom: "a little bit too loud", then "barely audible"): 0.3 ≈ 10 dB down.</summary>
+    private const float BreathLevel = 0.3f;   // (Tom, again: "barely audible"; the heart carries it now)
     private bool _exhaling;
     private float _breathPh, _bubbleT, _heartPh, _heartEnv, _bubblePh, _bubbleF, _bubbleEnv;
     private OnePole _muffleL = new(900f, Rate), _muffleR = new(900f, Rate), _breathLp = new(1400f, Rate), _exhaleLp = new(500f, Rate);
@@ -365,17 +365,28 @@ public partial class AudioDirector : Node
     }
 
     /// <summary>Heartbeat (lub-dub) when air runs low or something big is near.</summary>
+    /// <summary>
+    /// Your heart, heard from inside: lub-dub, a soft low thump (~55 Hz falling, with a little overtone so
+    /// laptop speakers carry it too). Heartbeat 0..1: in the suit it rests around 0.2 (barely there, ~80
+    /// bpm), and climbs with effort, low air and anything big nearby (louder, up to ~130 bpm).
+    /// </summary>
     private float Heart(float inv)
     {
         float hb = Heartbeat;
         if (hb < 0.02f) { _heartEnv = 0f; return 0f; }
-        float bpm = 70f + hb * 60f;
+        float bpm = 68f + hb * 62f;
         float prev = _heartPh;
         _heartPh = Wrap(_heartPh + inv * bpm / 60f);
-        if (_heartPh < prev || (prev < 0.28f && _heartPh >= 0.28f)) _heartEnv = 1f;
-        _heartEnv *= 1f - inv * 14f;
-        return MathF.Sin(_heartPh * MathF.Tau * 9f) * _heartEnv * 0.3f * hb;
+        if (_heartPh < prev) { _heartEnv = 1f; _heartF = 58f; _heartAmp = 1f; }                       // lub
+        else if (prev < 0.3f && _heartPh >= 0.3f) { _heartEnv = 1f; _heartF = 50f; _heartAmp = 0.65f; } // dub
+        _heartF *= 1f - inv * 2.2f;                       // each thump sags in pitch
+        _heartTonePh = Wrap(_heartTonePh + _heartF * inv);
+        _heartEnv *= 1f - inv * 16f;
+        float body = MathF.Sin(_heartTonePh * MathF.Tau) + 0.35f * MathF.Sin(_heartTonePh * 2f * MathF.Tau);
+        return body * _heartEnv * _heartAmp * (0.05f + 0.3f * hb);
     }
+
+    private float _heartF = 55f, _heartAmp = 1f, _heartTonePh;
 
     private static float SoftLimit(float x)
     {
