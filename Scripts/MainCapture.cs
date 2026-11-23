@@ -975,6 +975,33 @@ public partial class Main
             (t += 6f, () => { Input.ActionPress(GameInput.Forward); GD.Print("[swim] swimming"); }),
             (t += 8f, () => { Input.ActionRelease(GameInput.Forward); GD.Print("[swim] stopped"); }),
             (t += 5f, () => { _swimLog = false; }),
+            // --- The hold's manifest (I)
+            (t += 0.1f, CaptureMarkHold),
+            (t += 0.1f, () =>
+            {
+                EnterWalking(); _voiceQueue.Clear(); _voice?.Stop(); _wreckHearT = 9999f; _loopReplayT = 9999f;
+                var h = _systems.Hold;
+                h.Add(ItemId.Crystal, 3); h.Add(ItemId.Lumen, 2); h.Add(ItemId.PlateGloam); h.Add(ItemId.Servo, 2); h.Add(ItemId.StationAlloy);
+                h.Add(ItemId.CannedFood, 2); h.Add(ItemId.ClamStew); h.Add(ItemId.ModBilge);
+                GD.Print($"[hold] weight {h.Weight}/{h.Capacity}");
+                OpenHold();
+            }),
+            (t += 0.8f, () => { Shot("49a_hold_samples"); _holdScreen.Step(1); }),
+            (t += 0.4f, () => { Shot("49b_hold_samples_2"); _holdScreen.SetTab(1); }),
+            (t += 0.4f, () => { Shot("49c_hold_salvage"); _holdScreen.SetTab(3); }),
+            (t += 0.4f, () =>
+            {
+                Shot("49d_hold_food");
+                float before = _systems.Food; int cans = _systems.Hold.Count(ItemId.CannedFood);
+                var items = HoldItems((HoldGroup)_holdScreen.Current);
+                _systems.Eat(items[_holdScreen.Selected]);
+                GD.Print($"[hold] ate {items[0]}: food {before:0} -> {_systems.Food:0}, cans {cans} -> {_systems.Hold.Count(ItemId.CannedFood)}");
+                _holdScreen.SetTab(4);
+            }),
+            (t += 0.4f, () => { Shot("49e_hold_modules"); CloseTerminal(); GD.Print($"[hold] closed: mode {_mode}"); }),
+            (t += 0.3f, () => { _player.InStation = true; OpenHold(); }),
+            (t += 0.8f, () => { Shot("49f_hold_paper"); CloseTerminal(); _player.InStation = false; }),
+            (t += 0.3f, () => { }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -1253,6 +1280,7 @@ public partial class Main
     private void CaptureMarkWear() => CaptureSection("wear");
     private void CaptureMarkHanna() => CaptureSection("hanna");
     private void CaptureMarkSwim() => CaptureSection("swim");
+    private void CaptureMarkHold() => CaptureSection("hold");
     private bool _swimLog;
     private float _swimLogT;
     private void CaptureMarkCrew() => CaptureSection("crew");
@@ -1339,7 +1367,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), "hanna" => nameof(CaptureMarkHanna), "swim" => nameof(CaptureMarkSwim), "crew" => nameof(CaptureMarkCrew), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), "hanna" => nameof(CaptureMarkHanna), "swim" => nameof(CaptureMarkSwim), "hold" => nameof(CaptureMarkHold), "crew" => nameof(CaptureMarkCrew), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);

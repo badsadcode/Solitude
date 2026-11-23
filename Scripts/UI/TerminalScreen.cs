@@ -30,6 +30,8 @@ public partial class TerminalScreen : Control
         public Func<List<Line>> Lines;     // a page of lines
         public bool Notes;                 // the list + reader layout
         public bool StickToBottom;         // the log: newest at the bottom, opens scrolled down
+        /// <summary>A list-and-reader page with its own list (else the screen's NotesSource).</summary>
+        public Func<List<(string title, string where, string body)>> List;
     }
 
     public string Title = "SHIP'S LOG";
@@ -40,9 +42,29 @@ public partial class TerminalScreen : Control
     public bool Paper;
     /// <summary>Keyboard hints along the bottom (empty on the wall screen).</summary>
     public string Hint = "";
+    /// <summary>What an empty list page says.</summary>
+    public string EmptyText = "No notes yet. The stations are full of them.";
 
     public int Current { get; private set; }
     private int _scroll, _note, _noteScroll;
+    /// <summary>The highlighted entry on a list page.</summary>
+    public int Selected => _note;
+
+    private List<(string title, string where, string body)> CurrentList() =>
+        (Tabs.Count > 0 ? Tabs[Current].List : null)?.Invoke() ?? NotesSource?.Invoke() ?? new();
+
+    /// <summary>Switch between the green screen and the paper journal look.</summary>
+    public void SetPaper(bool paper)
+    {
+        if (Paper == paper && _font != null) return;
+        Paper = paper;
+        _font = new SystemFont
+        {
+            FontNames = Paper ? new[] { "Courier New", "Consolas", "monospace" } : new[] { "Consolas", "Lucida Console", "monospace" },
+            Antialiasing = Paper ? TextServer.FontAntialiasing.Gray : TextServer.FontAntialiasing.None,
+        };
+        QueueRedraw();
+    }
     private readonly List<(Rect2 r, int tab)> _tabRects = new();
     private readonly List<(Rect2 r, int note)> _noteRects = new();
     private Font _font;
@@ -68,7 +90,7 @@ public partial class TerminalScreen : Control
     {
         if (Tabs.Count == 0) return;
         Current = ((i % Tabs.Count) + Tabs.Count) % Tabs.Count;
-        _scroll = 0; _noteScroll = 0;
+        _scroll = 0; _noteScroll = 0; _note = 0;
         QueueRedraw();
     }
 
@@ -80,7 +102,7 @@ public partial class TerminalScreen : Control
         if (Tabs.Count == 0) return;
         if (Tabs[Current].Notes)
         {
-            int n = NotesSource?.Invoke()?.Count ?? 0;
+            int n = CurrentList().Count;
             if (n > 0) { _note = Math.Clamp(_note + dir, 0, n - 1); _noteScroll = 0; }
         }
         else _scroll += dir * (Tabs[Current].StickToBottom ? -1 : 1);
@@ -190,11 +212,11 @@ public partial class TerminalScreen : Control
 
     private void DrawNotes(float top, float bottom)
     {
-        var notes = NotesSource?.Invoke() ?? new List<(string, string, string)>();
+        var notes = CurrentList();
         float left = Paper ? 48 : 20, listW = 190;
         if (notes.Count == 0)
         {
-            DrawString(_font, new Vector2(left, top + 14), "No notes yet. The stations are full of them.", HorizontalAlignment.Left, -1, Fs, Dim);
+            DrawString(_font, new Vector2(left, top + 14), EmptyText, HorizontalAlignment.Left, -1, Fs, Dim);
             return;
         }
         _note = Math.Clamp(_note, 0, notes.Count - 1);

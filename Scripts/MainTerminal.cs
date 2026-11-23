@@ -100,6 +100,7 @@ public partial class Main
             Hint = "A/D page   W/S note   wheel scroll   J / ESC close",
         };
         _journalVp.AddChild(_journalScreen);
+        SetupHold();
     }
 
     private SubViewport MakeTerminalViewport(string name)
@@ -151,8 +152,10 @@ public partial class Main
         _logScreen.Hint = "";
         _logScreen.SetTab(0);
         _journalVp.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
-        bool journal = _journalOpen;
+        _holdVp.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
+        bool journal = _journalOpen || _holdOpen;   // both open over wherever you stand
         _journalOpen = false;
+        _holdOpen = false;
         if (journal)
         {
             // Back to wherever you were standing (aboard or in a station): nothing else changes.
@@ -167,11 +170,12 @@ public partial class Main
         EnterWalking();
     }
 
-    private TerminalScreen ActiveTerminal => _journalOpen ? _journalScreen : _logScreen;
+    private TerminalScreen ActiveTerminal => _holdOpen ? _holdScreen : _journalOpen ? _journalScreen : _logScreen;
 
     private void UpdateTerminal()
     {
         var t = ActiveTerminal;
+        if (_holdOpen && UpdateHold((float)GetProcessDeltaTime())) return;
         if (Input.IsActionJustPressed(GameInput.Cancel) || Input.IsActionJustPressed(GameInput.Interact) ||
             (_journalOpen && Input.IsActionJustPressed(GameInput.Journal)))
         {
@@ -193,7 +197,7 @@ public partial class Main
             else if (mb.ButtonIndex == MouseButton.WheelDown) t.Wheel(1);
             else if (mb.ButtonIndex == MouseButton.Left) t.Click(_hud.TerminalPoint(mb.Position / 1f));
         }
-        else if (e is InputEventKey k && k.Pressed && !k.Echo && k.PhysicalKeycode >= Key.Key1 && k.PhysicalKeycode <= Key.Key4)
+        else if (e is InputEventKey k && k.Pressed && !k.Echo && k.PhysicalKeycode >= Key.Key1 && k.PhysicalKeycode <= Key.Key5)
             t.SetTab((int)(k.PhysicalKeycode - Key.Key1));
     }
 

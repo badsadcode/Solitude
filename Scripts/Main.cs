@@ -884,14 +884,8 @@ public partial class Main : Node
 	{
 		string pwr = _systems.Emergency ? "PWR EMERGENCY" : $"PWR {_systems.Power:0}%";
 		_hud.SetVitals($"{pwr}{(_systems.Thermal ? " +THERMAL" : "")}    HULL {_sub.Hull:0}%    FOOD {_systems.Food:0}%    HOLD {_systems.Hold.Weight}/{_systems.Hold.Capacity}{(_systems.IntakeOn ? "    INTAKE" : "")}{ListenerVitals()}{StationVitals()}");
-		if (_mode == Mode.Walking && Input.IsActionJustPressed(GameInput.Inventory)) _holdVisible = !_holdVisible;
-		if (_holdVisible && _mode == Mode.Walking)
-		{
-			var lines = new System.Collections.Generic.List<string> { "HOLD  [I]" };
-			foreach (var (id, count) in _systems.Hold.All()) lines.Add($"  {Items.Name(id)}  x{count}");
-			_hud.SetHold(string.Join("\n", lines), true);
-		}
-		else _hud.SetHold("", false);
+		// I: the hold's manifest (Scripts/MainHold.cs). It opens over wherever you stand.
+		if (_mode == Mode.Walking && Input.IsActionJustPressed(GameInput.Inventory) && !_player.Hidden) OpenHold();
 		_audio.Servo = Mathf.Max(_arm.ServoActivity, _camServo * 0.45f);
 		_audio.Intake = _systems.IntakeOn ? 1f : 0f;
 	}
