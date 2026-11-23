@@ -61,6 +61,8 @@ public partial class AudioDirector : Node
     private float _brown, _dronePh1, _dronePh2, _dronePh3, _humPh, _engPh, _chugPh, _t;
     private OnePole _rumbleHp = new(25f, Rate), _droneLp = new(110f, Rate),_hissLp = new(2500f, Rate), _hissHp = new(600f, Rate), _flowLp = new(700f, Rate), _engLp = new(400f, Rate);
     private float _servoPh;
+    private readonly BubbleBank _bubbles = new(Rate);
+    private bool _exhaling;
     private float _breathPh, _bubbleT, _heartPh, _heartEnv, _bubblePh, _bubbleF, _bubbleEnv;
     private OnePole _muffleL = new(900f, Rate), _muffleR = new(900f, Rate), _breathLp = new(1400f, Rate), _exhaleLp = new(500f, Rate);
     private OnePole _servoLp = new(900f, Rate), _intakeLp = new(350f, Rate);
@@ -313,6 +315,8 @@ public partial class AudioDirector : Node
                 r = _muffleR.Process(r) * 0.85f;
                 float b = Breath(inv, w);
                 l += b; r += b;
+                var (bl, br) = _bubbles.Next(inv);
+                l += bl; r += br;
             }
             if (Hiding && !Diving && !BreathHeld)
             {
@@ -348,22 +352,13 @@ public partial class AudioDirector : Node
         {
             float u = (_breathPh - 0.48f) / 0.47f;
             s += _exhaleLp.Process(w) * MathF.Sin(MathF.PI * u) * (0.16f + Exertion * 0.1f);
-            // Bubbles leaving the regulator
-            _bubbleT -= inv;
-            if (_bubbleT <= 0f)
-            {
-                _bubbleT = 0.02f + (float)_rng.NextDouble() * 0.07f;
-                _bubbleF = 250f + (float)_rng.NextDouble() * 700f;
-                _bubbleEnv = 1f;
-            }
+            // The regulator lets go: a gush of air that bubbles out past the helmet (bulgotanie).
+            if (!_exhaling) { _exhaling = true; _bubbles.Exhale(Exertion); }
         }
-        if (_bubbleEnv > 0.001f)
-        {
-            _bubbleF *= 1f + inv * 3f;                    // pops chirp upward
-            _bubblePh = Wrap(_bubblePh + _bubbleF * inv);
-            s += MathF.Sin(_bubblePh * MathF.Tau) * _bubbleEnv * 0.05f;
-            _bubbleEnv *= 1f - inv * 60f;
-        }
+        else _exhaling = false;
+        // Between breaths, now and then a stray bubble rattles up past the visor.
+        _bubbleT -= inv;
+        if (_bubbleT <= 0f) { _bubbleT = 0.3f + (float)_rng.NextDouble() * 1.6f; _bubbles.Stray(); }
         return s;
     }
 
