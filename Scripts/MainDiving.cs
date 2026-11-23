@@ -170,8 +170,13 @@ public partial class Main
                                Mathf.Max(Mathf.Clamp((90f - _creatures.ApexDistance) / 60f, 0f, 1f),   // the wyrm is felt from further away
                                          Mathf.Clamp((70f - GloamDistance) / 50f, 0f, 1f)));
         float panic = Mathf.Max(air, near);
-        // A resting heartbeat in the suit, always there, quickening with effort; panic takes over above it.
-        _audio.Heartbeat = Mathf.Max(panic, 0.18f + _diver.Exertion * 0.25f);
+        // The heartbeat in the suit (Tom): it starts faint when you step out and grows, slowly and steadily,
+        // as the tank empties: never loud from air alone (the air ramp tops out at 0.6). Effort adds a
+        // little; something big nearby (near) takes over above it.
+        float used = 1f - Mathf.Clamp(_diver.Oxygen / 100f, 0f, 1f);
+        float rest = 0.06f + used * used * 0.2f + used * 0.34f;          // 0.06 full tank .. 0.6 empty
+        float effort = _diver.Exertion * 0.15f;
+        _audio.Heartbeat = Mathf.Max(near, Mathf.Min(0.7f, rest + effort));
         _audio.Exertion = _diver.Exertion;
         h.Fog = Mathf.Max(panic * 0.8f, _diver.Oxygen <= 0f ? 1f : 0f);
         _post.SetShaderParameter("wobble", 1.2f + panic);
