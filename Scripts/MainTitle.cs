@@ -78,6 +78,26 @@ public partial class Main
     {
         _hud.FadeTo(0f, 3f);
         StartTitleMusic();
+        // Dev: `-- --credits-shot=<dir>` opens the credits and photographs them, then quits.
+        foreach (var arg in OS.GetCmdlineUserArgs())
+        {
+            if (!arg.StartsWith("--credits-shot=")) continue;
+            string dir = arg.Substring(15);
+            DirAccess.MakeDirRecursiveAbsolute(dir);
+            GetTree().CreateTimer(3.5).Timeout += () =>
+            {
+                _hud.ShowCredits();
+            };
+            foreach (float at in new[] { 6f, 22f, 40f, 58f })
+                GetTree().CreateTimer(at).Timeout += () => GetViewport().GetTexture().GetImage().SavePng($"{dir}/credits_{(int)at:00}.png");
+            GetTree().CreateTimer(60.0).Timeout += () =>
+            {
+                var ev = new InputEventKey { Keycode = Key.L, Pressed = true };
+                Input.ParseInputEvent(ev);
+            };
+            GetTree().CreateTimer(61.5).Timeout += () => GetViewport().GetTexture().GetImage().SavePng($"{dir}/credits_licences.png");
+            GetTree().CreateTimer(62.0).Timeout += () => GetTree().Quit();
+        }
     }
 
     // ------------------------------------------------------------------ the studio splash

@@ -461,6 +461,23 @@ public partial class Hud : CanvasLayer
     /// Title in the top-left corner (same face as the intro), a quiet menu beneath it, studio and
     /// seed in the bottom-left. The live world plays behind it.
     /// </summary>
+    /// <summary>The credits over the title scene; the title menu comes back when they close.</summary>
+    public void ShowCredits()
+    {
+        if (_titleGroup != null) _titleGroup.Visible = false;
+        var c = new CreditsScreen { Name = "Credits" };
+        c.Closed = () =>
+        {
+            if (_titleGroup == null) return;
+            _titleGroup.Visible = true;
+            foreach (var n in _titleGroup.FindChildren("*", "Button", true, false)) { ((Button)n).GrabFocus(); break; }
+        };
+        _root.AddChild(c);
+        _root.MoveChild(c, _fade.GetIndex());   // under the fade, over the title
+    }
+
+    public bool CreditsOpen => _root.GetNodeOrNull("Credits") != null;
+
     public void ShowTitle(int seed, System.Action onNewDive, System.Action onQuit, System.Action onContinue = null)
     {
         _titleGroup?.QueueFree();
@@ -485,6 +502,7 @@ public partial class Hud : CanvasLayer
         var items = new System.Collections.Generic.List<(string, System.Action)>();
         if (onContinue != null) items.Add(("CONTINUE", onContinue));
         items.Add(("NEW DIVE", onNewDive));
+        items.Add(("CREDITS", ShowCredits));
         items.Add(("QUIT", onQuit));
         foreach (var (label, action) in items)
         {

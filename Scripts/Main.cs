@@ -981,6 +981,7 @@ public partial class Main : Node
 		else if (_sub.Depth > _sub.TestDepth) warn = "HULL STRESS — BELOW TEST DEPTH";
 		else if (_sub.Hull < 35f) warn = "HULL INTEGRITY CRITICAL";
 		if (_hull.Warning() is string hw) warn = hw; // a breach outranks everything
+		if (_mode == Mode.Title) warn = "";            // the title screen is a picture, not a dashboard
 
 		if (_mode == Mode.Helm)
 		{
