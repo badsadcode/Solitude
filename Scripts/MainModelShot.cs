@@ -57,6 +57,9 @@ public partial class Main
         var gameMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://Shaders/creature.gdshader") };
         var models = new List<Node3D>();
         float size = 1f;
+        var centre = Vector3.Zero;
+        string anim = null;   // `--model-anim=Walk`: play that clip (rigged characters), frozen part-way through
+        foreach (var a in OS.GetCmdlineUserArgs()) if (a.StartsWith("--model-anim=")) anim = a.Substring(13);
         for (int k = 0; k < 3; k++)
         {
             var m = GD.Load<PackedScene>(path).Instantiate<Node3D>();
@@ -65,7 +68,8 @@ public partial class Main
             foreach (var mi in FindMeshes(m))
             {
                 var aabb = mi.GetAabb();
-                size = Mathf.Max(size * 0f + aabb.Size.Length(), 0.1f);
+                size = Mathf.Max(aabb.Size.Length(), 0.1f);
+                centre = aabb.GetCenter();
                 if (k == 1)
                 {
                     if (mi.Mesh?.SurfaceGetMaterial(0) is BaseMaterial3D src)
@@ -80,6 +84,11 @@ public partial class Main
                 if (k == 2) mi.MaterialOverride = normalMat;
             }
         }
+        if (anim != null)
+            foreach (var m in models)
+                if (m.FindChild("AnimationPlayer", true, false) is AnimationPlayer ap && ap.HasAnimation(anim))
+                { ap.Play(anim); ap.Seek(ap.GetAnimation(anim).Length * 0.3, true); ap.SpeedScale = 0f; }
+                else GD.PrintErr($"[model-shot] no clip '{anim}'");
         for (int k = 0; k < 3; k++) models[k].Position = new Vector3((k - 1) * size * 1.1f, 0, 0);
         cam.MakeCurrent();
 
@@ -88,7 +97,7 @@ public partial class Main
         int shot = 0;
         var timer = new Timer { WaitTime = 0.5, Autostart = true, ProcessCallback = Timer.TimerProcessCallback.Idle };
         AddChild(timer);
-        void Place(int i) { cam.Position = dirs[i].Normalized() * size * 2.6f; cam.LookAt(stage.GlobalPosition, Mathf.Abs(dirs[i].Y) > 0.9f ? Vector3.Forward : Vector3.Up); }
+        void Place(int i) { cam.Position = centre + dirs[i].Normalized() * size * 2.6f; cam.LookAt(stage.GlobalPosition + centre, Mathf.Abs(dirs[i].Y) > 0.9f ? Vector3.Forward : Vector3.Up); }
         Place(0);
         timer.Timeout += () =>
         {
