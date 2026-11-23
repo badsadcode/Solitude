@@ -13,6 +13,8 @@ public partial class Main
 {
     private Diver _diver;
     private Harpoon _harpoon;
+    private Vector3 _lastLook;
+    private float _swimMotion;
     private float _zap;
     private bool _suitOn;
     private OmniLight3D _hatchLight;
@@ -178,6 +180,14 @@ public partial class Main
         float effort = _diver.Exertion * 0.15f;
         _audio.Heartbeat = Mathf.Max(near, Mathf.Min(0.7f, rest + effort));
         _audio.Exertion = _diver.Exertion;
+        // Bubbles come from moving (Tom): swimming through the water, or turning your head.
+        Vector3 look = -_diver.Camera.GlobalBasis.Z;
+        float turn = _lastLook == Vector3.Zero ? 0f : _lastLook.AngleTo(look) / Mathf.Max(dt, 1e-4f);   // rad/s
+        _lastLook = look;
+        float swim = (_diver.Velocity - WaterAt(_diver.GlobalPosition)).Length() / 1.6f;
+        float motion = Mathf.Clamp(Mathf.Max(swim, Mathf.Clamp(turn / 2.5f, 0f, 1f) * 0.7f), 0f, 1f);
+        _swimMotion = Mathf.MoveToward(_swimMotion, motion, dt * (motion > _swimMotion ? 6f : 1.5f));
+        _audio.SwimMotion = _swimMotion;
         h.Fog = Mathf.Max(panic * 0.8f, _diver.Oxygen <= 0f ? 1f : 0f);
         _post.SetShaderParameter("wobble", 1.2f + panic);
     }

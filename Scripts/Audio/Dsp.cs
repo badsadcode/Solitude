@@ -101,10 +101,10 @@ public sealed class BubbleBank
     private float LogRadius(float minMm, float maxMm) => MathF.Exp(MathF.Log(minMm) + R * (MathF.Log(maxMm) - MathF.Log(minMm))) / 1000f;
 
     /// <summary>An exhale: a gush that comes out in two or three surges, glugs first, then a fizz.</summary>
-    public void Exhale(float exertion)
+    public void Exhale(float exertion, float motion = 1f)
     {
         float side = R < 0.5f ? -1f : 1f;                 // the stream rolls up past one side of the visor
-        int n = 26 + (int)(exertion * 22f) + _rng.Next(8);
+        int n = (int)((26 + exertion * 22f + _rng.Next(8)) * Math.Clamp(motion, 0f, 1f));
         for (int k = 0; k < n; k++)
         {
             float t = MathF.Pow(R, 1.4f) * (1.1f - exertion * 0.35f);

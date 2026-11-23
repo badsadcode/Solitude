@@ -34,7 +34,8 @@ public partial class AudioDirector : Node
     public volatile float Servo;      // manipulator hydraulics activity 0..1
     public volatile float Intake;     // intake filter running 0/1
     public volatile bool Diving;      // in the suit: breathing in the helmet, the world muffled
-    public volatile float Exertion;   // 0..1, breathing rate
+    public volatile float Exertion;
+    public volatile float SwimMotion; // 0..1, the diver moving or turning: the bubbles come from this   // 0..1, breathing rate
     public volatile float Heartbeat;  // 0..1, panic
     public volatile float Unease;     // 0..1, story progress: the distant calls come more often
     public volatile float Silt;       // 0..1, a silt storm outside: a roar, and grit ticking on the hull
@@ -355,12 +356,17 @@ public partial class AudioDirector : Node
             float u = (_breathPh - 0.48f) / 0.47f;
             s += _exhaleLp.Process(w) * MathF.Sin(MathF.PI * u) * (0.16f + Exertion * 0.1f) * BreathLevel;
             // The regulator lets go: a gush of air that bubbles out past the helmet (bulgotanie).
-            if (!_exhaling) { _exhaling = true; _bubbles.Exhale(Exertion); }
+            if (!_exhaling) { _exhaling = true; if (SwimMotion > 0.08f) _bubbles.Exhale(Exertion, SwimMotion); }
         }
         else _exhaling = false;
-        // Between breaths, now and then a stray bubble rattles up past the visor.
+        // While you swim or turn, water tumbles bubbles past the visor: more, the faster you move.
         _bubbleT -= inv;
-        if (_bubbleT <= 0f) { _bubbleT = 0.3f + (float)_rng.NextDouble() * 1.6f; _bubbles.Stray(); }
+        if (_bubbleT <= 0f)
+        {
+            float m = SwimMotion;
+            _bubbleT = m > 0.08f ? (0.04f + (float)_rng.NextDouble() * 0.22f) / m : 0.25f;
+            if (m > 0.08f) _bubbles.Stray();
+        }
         return s;
     }
 
