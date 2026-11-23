@@ -372,21 +372,44 @@ public partial class AudioDirector : Node
     /// </summary>
     private float Heart(float inv)
     {
+        // No hard cut-offs (each one is a click, Tom heard them): the overall level glides, each beat is
+        // its own voice starting at zero phase with a short fade-in, and lub and dub ring on separately so
+        // the second never chops off the first's tail.
         float hb = Heartbeat;
-        if (hb < 0.02f) { _heartEnv = 0f; return 0f; }
-        float bpm = 68f + hb * 62f;
+        float target = hb < 0.02f ? 0f : 0.05f + 0.3f * hb;
+        _heartGain += (target - _heartGain) * MathF.Min(1f, inv * 4f);
+        if (_heartGain < 0.0005f && target == 0f) { _hv0.Env = _hv1.Env = 0f; return 0f; }
+        float bpm = 68f + MathF.Max(hb, 0.02f) * 62f;
         float prev = _heartPh;
         _heartPh = Wrap(_heartPh + inv * bpm / 60f);
-        if (_heartPh < prev) { _heartEnv = 1f; _heartF = 58f; _heartAmp = 1f; }                       // lub
-        else if (prev < 0.3f && _heartPh >= 0.3f) { _heartEnv = 1f; _heartF = 50f; _heartAmp = 0.65f; } // dub
-        _heartF *= 1f - inv * 2.2f;                       // each thump sags in pitch
-        _heartTonePh = Wrap(_heartTonePh + _heartF * inv);
-        _heartEnv *= 1f - inv * 16f;
-        float body = MathF.Sin(_heartTonePh * MathF.Tau) + 0.35f * MathF.Sin(_heartTonePh * 2f * MathF.Tau);
-        return body * _heartEnv * _heartAmp * (0.05f + 0.3f * hb);
+        if (hb >= 0.02f)
+        {
+            if (_heartPh < prev) _hv0.Start(58f, 1f);                       // lub
+            else if (prev < 0.3f && _heartPh >= 0.3f) _hv1.Start(50f, 0.65f); // dub
+        }
+        return (_hv0.Next(inv) + _hv1.Next(inv)) * _heartGain;
     }
 
-    private float _heartF = 55f, _heartAmp = 1f, _heartTonePh;
+    private float _heartGain;
+    private HeartVoice _hv0 = new(), _hv1 = new();
+
+    private sealed class HeartVoice
+    {
+        public float Env;
+        private float _f, _amp, _ph, _att;
+        public void Start(float f, float amp) { _f = f; _amp = amp; _ph = 0f; _att = 0f; Env = 1f; }
+        public float Next(float inv)
+        {
+            if (Env < 0.0005f) return 0f;
+            _f *= 1f - inv * 2.2f;                                   // each thump sags in pitch
+            _ph += _f * inv; _ph -= MathF.Floor(_ph);
+            _att = MathF.Min(1f, _att + inv / 0.008f);              // 8 ms fade-in
+            float body = MathF.Sin(_ph * MathF.Tau) + 0.35f * MathF.Sin(_ph * 2f * MathF.Tau);
+            float v = body * Env * _att * _amp;
+            Env *= 1f - inv * 16f;
+            return v;
+        }
+    }
 
     private static float SoftLimit(float x)
     {
