@@ -91,7 +91,9 @@ public sealed class BubbleBank
             float d = 0.043f * f0 + 0.0014f * MathF.Pow(f0, 1.5f);   // damping (1/s)
             _f[i] = f0; _ph[i] = R; _decay[i] = d;
             _rise[i] = d * (0.1f + 0.3f * R);                         // how fast it chirps up
-            float a = loud * MathF.Sqrt(radius / 0.004f) * 0.06f;      // big ones are fuller
+            // Big ones are fuller. Level: x3.7 over the first try, which sat ~18 dB under the sea's rumble
+            // in the game (the demos had no sea under them, so they sounded fine): Tom couldn't hear them.
+            float a = loud * MathF.Sqrt(radius / 0.004f) * 0.22f;
             _gl[i] = a * MathF.Sqrt(0.5f * (1f - pan)); _gr[i] = a * MathF.Sqrt(0.5f * (1f + pan));
             _env[i] = 1f; _wait[i] = delay; _on[i] = true;
             return;
@@ -123,6 +125,9 @@ public sealed class BubbleBank
         int n = 1 + (R < 0.3f ? 2 : 0);
         for (int k = 0; k < n; k++) Add(LogRadius(2f, 7f), k * 0.05f, R * 2f - 1f, 0.45f);
     }
+
+    /// <summary>Bubbles ringing or waiting right now (diagnostics).</summary>
+    public int Count { get { int n = 0; for (int i = 0; i < Max; i++) if (_on[i]) n++; return n; } }
 
     public (float l, float r) Next(float dt)
     {

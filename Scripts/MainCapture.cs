@@ -960,6 +960,21 @@ public partial class Main
             }),
             (t += 2.5f, () => { Shot("48a_voiced_log"); GD.Print($"[capture] crew log playing: {_voice?.Playing} ({(_voice?.Stream as Resource)?.ResourcePath})"); CloseLog(); }),
             (t += 0.3f, () => GD.Print($"[capture] after putting it down: playing {_voice?.Playing}")),
+            // --- The suit's bubbles: still, then swimming, then still again
+            (t += 0.1f, CaptureMarkSwim),
+            (t += 0.1f, () =>
+            {
+                EnterWalking();
+                _suitOn = false; OnSuit();
+                _sub.TelegraphIndex = 2; _sub.ApplyTelegraph();
+                _sub.LinearVelocity = Vector3.Zero; _sub.AngularVelocity = Vector3.Zero;
+                _player.Transform = new Transform3D(Basis.Identity, SubHatchSpot);
+                TryDiveFromHatch();
+            }),
+            (t += 3.2f, () => { _diver.Place(_diver.GlobalPosition + Vector3.Up * 4f + _sub.GlobalBasis.X * 8f, 0f); _swimLog = true; GD.Print("[swim] holding still"); }),
+            (t += 6f, () => { Input.ActionPress(GameInput.Forward); GD.Print("[swim] swimming"); }),
+            (t += 8f, () => { Input.ActionRelease(GameInput.Forward); GD.Print("[swim] stopped"); }),
+            (t += 5f, () => { _swimLog = false; }),
             // --- Tom's quick tests: turn rate, the locker model
             (t += 0.1f, CaptureMarkTest),
             (t += 0.1f, () => { EnterWalking(); _player.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi / 2f), new Vector3(-0.2f, 0.05f, 11.6f)); /* face port (-X) */ _player.SetLook(0f, -0.1f); }),
@@ -1237,6 +1252,9 @@ public partial class Main
     private void CaptureMarkWrecks() => CaptureSection("wrecks");
     private void CaptureMarkWear() => CaptureSection("wear");
     private void CaptureMarkHanna() => CaptureSection("hanna");
+    private void CaptureMarkSwim() => CaptureSection("swim");
+    private bool _swimLog;
+    private float _swimLogT;
     private void CaptureMarkCrew() => CaptureSection("crew");
     private void LogHanna(string what) => GD.Print($"[capture] hanna {what}: state {_hanna}, station {HannaSite?.Name ?? "-"}, voice busy {VoiceBusy}, queued {_voiceQueue.Count}, transcript {_hannaTranscript.Count}");
     private List<Solitude.Systems.WreckSite> _capWrecks = new();
@@ -1321,7 +1339,7 @@ public partial class Main
         {
             if (!arg.StartsWith("--capture-from=")) continue;
             string section = arg.Substring(15);
-            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), "hanna" => nameof(CaptureMarkHanna), "crew" => nameof(CaptureMarkCrew), _ => "" });
+            int idx = _captureScript.FindIndex(s => s.act.Method.Name == section switch { "creatures" => nameof(CaptureMarkCreatures), "biomes" => nameof(CaptureMarkBiomes), "story" => nameof(CaptureMarkStory), "test" => nameof(CaptureMarkTest), "harpoon" => nameof(CaptureMarkHarpoon), "modules" => nameof(CaptureMarkModules), "listener" => nameof(CaptureMarkListener), "hydrophone" => nameof(CaptureMarkHydrophone), "whale" => nameof(CaptureMarkWhale), "eye" => nameof(CaptureMarkEye), "prox" => nameof(CaptureMarkProx), "gloam" => nameof(CaptureMarkGloam), "terminal" => nameof(CaptureMarkTerminal), "silt" => nameof(CaptureMarkSilt), "lab" => nameof(CaptureMarkLab), "wrecks" => nameof(CaptureMarkWrecks), "wear" => nameof(CaptureMarkWear), "hanna" => nameof(CaptureMarkHanna), "swim" => nameof(CaptureMarkSwim), "crew" => nameof(CaptureMarkCrew), _ => "" });
             if (idx < 0) { GD.PushWarning($"[capture] unknown section {section}"); return; }
             float shift = _captureScript[idx].at - 7f;
             for (int i = 0; i < _captureScript.Count; i++) _captureScript[i] = (_captureScript[i].at - shift, _captureScript[i].act);
@@ -1333,6 +1351,11 @@ public partial class Main
     {
         if (_captureScript == null) return;
         _captureT += dt;
+        if (_swimLog && (_swimLogT -= dt) <= 0f)
+        {
+            _swimLogT = 1f;
+            GD.Print($"[swim] t={_captureT:0.0} speed={(_diver.Velocity - WaterAt(_diver.GlobalPosition)).Length():0.00} motion={_audio.SwimMotion:0.00} bubbles={_audio.BubbleCount} diving={_audio.Diving}");
+        }
         if (_docCam != null)
         {
             // side (1), head-on (-1) or top-down (2) view of the ravager, lit by the camera's lamp.

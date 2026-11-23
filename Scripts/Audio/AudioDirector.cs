@@ -63,6 +63,7 @@ public partial class AudioDirector : Node
     private OnePole _rumbleHp = new(25f, Rate), _droneLp = new(110f, Rate),_hissLp = new(2500f, Rate), _hissHp = new(600f, Rate), _flowLp = new(700f, Rate), _engLp = new(400f, Rate);
     private float _servoPh;
     private readonly BubbleBank _bubbles = new(Rate);
+    public int BubbleCount => _bubbles.Count;
     /// <summary>The helmet's breathing hiss (Tom: "a little bit too loud", then "barely audible"): 0.3 ≈ 10 dB down.</summary>
     private const float BreathLevel = 0.3f;   // (Tom, again: "barely audible"; the heart carries it now)
     private bool _exhaling;
