@@ -14,6 +14,8 @@ public partial class HydrophoneDisplay : Control
     public Hydrophone Phone;
     /// <summary>Set by Main every frame: beam bearing, what's in the beam, recording progress.</summary>
     public float Beam;
+    /// <summary>The beam has caught a sound: it brightens.</summary>
+    public bool Locked;
     public string Line1 = "", Line2 = "", Line3 = "", Line4 = "";
     public float RecordProgress = -1f;   // 0..1 while recording
     public bool SelfNoisy;
@@ -75,8 +77,9 @@ public partial class HydrophoneDisplay : Control
         // The beam: a bracket at the steered bearing.
         float bx = (Hydrophone.Wrap(Beam) + 180f) / 360f * w;
         var beamCol = new Color(1f, 0.85f, 0.4f, 0.85f);
-        DrawLine(new Vector2(bx - 5, Top), new Vector2(bx - 5, Top + WfHeight), new Color(beamCol, 0.35f), 1f);
-        DrawLine(new Vector2(bx + 5, Top), new Vector2(bx + 5, Top + WfHeight), new Color(beamCol, 0.35f), 1f);
+        float edge = Locked ? 0.9f : 0.35f;
+        DrawLine(new Vector2(bx - 5, Top), new Vector2(bx - 5, Top + WfHeight), new Color(beamCol, edge), Locked ? 2f : 1f);
+        DrawLine(new Vector2(bx + 5, Top), new Vector2(bx + 5, Top + WfHeight), new Color(beamCol, edge), Locked ? 2f : 1f);
         DrawLine(new Vector2(bx - 7, Top - 2), new Vector2(bx + 7, Top - 2), beamCol, 2f);
 
         float y = Top + WfHeight + 28f;

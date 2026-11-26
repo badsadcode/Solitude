@@ -24,6 +24,7 @@ public partial class Main
     private HydroSource _geo;
     private readonly Random _hydroRng = new();
     private const float RecordSeconds = 4f;
+    private SoundClass? _hydLocked;   // what the beam is on right now (for the tick when it catches something)
 
     private void SetupHydrophone()
     {
@@ -130,6 +131,11 @@ public partial class Main
         string side = _beam > 0.5f ? "S" : _beam < -0.5f ? "P" : "";
         _hydroDisplay.Beam = _beam;
         _hydroDisplay.SelfNoisy = _listener.Noise > 0.3f;
+        _hydroDisplay.Locked = src != null;
+        // A soft tick when the beam catches something new, so you can sweep by ear.
+        SoundClass? now = src is HydroSource cs ? cs.Class : null;
+        if (listening && now != null && now != _hydLocked) _audio.PlayBlip(1100f, 0.02f, 0.25f);
+        _hydLocked = now;
         _hydroDisplay.Line1 = $"BEAM {side}{Mathf.Abs(Mathf.RoundToInt(_beam)):000}°   {db:0} dB";
         if (src is HydroSource s)
         {
@@ -140,7 +146,7 @@ public partial class Main
         }
         else
         {
-            _hydroDisplay.Line2 = _listener.Noise > 0.3f ? "OWN NOISE: NOTHING CAN BE HEARD" : "SEA NOISE";
+            _hydroDisplay.Line2 = _listener.Noise > 0.3f ? "OWN NOISE: STOP THE ENGINE TO LISTEN" : "SEA NOISE · STEER ONTO A TRACE";
             _hydroDisplay.Line3 = "";
         }
         _hydroDisplay.Line4 = $"LIBRARY {_phone.Recordings.Count}/{Hydrophone.MaxRecordings}   [R] REC  [Q] BAND  [A/D] STEER";
@@ -151,7 +157,11 @@ public partial class Main
         foreach (var h in _hydroSources)
         {
             var sig = Hydrophone.Of(h.Class);
-            float wgt = h.Level * Hydrophone.BeamWeight(_beam, h.Bearing, Mathf.Max(6f, h.Spread));
+            // Ears are logarithmic: a source at a tenth of the level should sound quieter, not vanish.
+            float wgt = Mathf.Pow(h.Level, 0.55f) * Hydrophone.BeamWeight(_beam, h.Bearing, Mathf.Max(6f, h.Spread));
+            // Once the beam has caught something, you can always hear it: quiet, maybe, but above the sea.
+            if (src is HydroSource on && on.Class == h.Class)
+                wgt = Mathf.Max(wgt * 1.4f, 0.45f * Hydrophone.BeamWeight(_beam, h.Bearing, Mathf.Max(6f, h.Spread)));
             lo += wgt * sig.Low; mid += wgt * sig.Mid; hi += wgt * sig.High;
         }
         var g = _phone.Filter;
@@ -162,7 +172,7 @@ public partial class Main
         _audio.HydPulseHz = dom.PulseHz;
         _audio.HydDuty = src == null ? 1f : dom.Duty;
         _audio.HydToneHz = dom.ToneHz;
-        _audio.HydTone = src is HydroSource d2 ? dom.Tone * Mathf.Min(1f, d2.Level * 2f) : 0f;
+        _audio.HydTone = src is HydroSource d2 ? dom.Tone * Mathf.Clamp(Mathf.Pow(d2.Level, 0.55f) * 1.6f, 0.6f, 1f) : 0f;
         _audio.HydSelf = _listener.Noise;
     }
 
@@ -178,8 +188,14 @@ public partial class Main
         _audio.PlayBlip(620f, 0.05f);
         Input.MouseMode = Input.MouseModeEnum.Captured;
         MoveStationCam(_interior.GlobalTransform * _interior.HydrophoneView);
+        _hydLocked = null;
         if (_phone.Recordings.Count == 0)
-            _hud.Message("Headphones on. The sea is louder than you thought. Your own boat is the loudest thing in it.", 6f);
+        {
+            _hud.Message("Headphones on. The sea is louder than you thought. Your own boat is the loudest thing in it.", 5f);
+            _hud.Message("The green streaks are sounds, all the way around the boat. The yellow bar is where you're listening.", 6f);
+            _hud.Message("Steer the bar onto a streak. When it catches something you'll hear it, and the screen says what it hears.", 6f);
+            _hud.Message("Hold R to keep it. The boat remembers what you've recorded, and knows it the next time.", 6f);
+        }
     }
 
     private void SteerBeam(float deg) => _beam = Hydrophone.Wrap(_beam + deg);

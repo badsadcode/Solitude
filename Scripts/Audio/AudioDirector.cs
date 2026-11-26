@@ -293,7 +293,7 @@ public partial class AudioDirector : Node
             _hydOn += ((Hydro ? 1f : 0f) - _hydOn) * inv * 4f;
             if (_hydOn > 0.001f)
             {
-                l *= 1f - 0.75f * _hydOn; r *= 1f - 0.75f * _hydOn;
+                l *= 1f - 0.88f * _hydOn; r *= 1f - 0.88f * _hydOn;   // the boat drops well back: its hum sits right where the Sounding is
                 _hLo += (HydLow - _hLo) * inv * 3f; _hMi += (HydMid - _hMi) * inv * 3f; _hHi += (HydHigh - _hHi) * inv * 3f;
                 float env = 1f;
                 float ph = HydPulseHz;
@@ -305,10 +305,14 @@ public partial class AudioDirector : Node
                     env = 0.15f + 0.85f * env;
                 }
                 _hydTonePh = Wrap(_hydTonePh + MathF.Max(1f, HydToneHz) * inv);
-                float sea = _hydLowBp.Process(w) * _hLo * 1.35f + _hydMidBp.Process(w) * _hMi * 1.05f + _hydHighBp.Process(w) * _hHi * 0.75f;
-                float hTone = MathF.Sin(_hydTonePh * MathF.Tau) * HydTone * 0.08f;
+                // Band-passed noise keeps only a sliver of the noise's energy: hence the big gains.
+                float sea = (_hydLowBp.Process(w) * _hLo * 1.35f + _hydMidBp.Process(w) * _hMi * 1.05f + _hydHighBp.Process(w) * _hHi * 0.75f) * 3.2f;
+                // Harmonics, so a 50-73 Hz hum is still heard on headphones and laptop speakers.
+                float tp = _hydTonePh * MathF.Tau;
+                float hTone = (MathF.Sin(tp) + 0.6f * MathF.Sin(2f * tp) + 0.35f * MathF.Sin(3f * tp)) * HydTone * 0.55f;
                 float self = _hydSelfLp.Process(w) * HydSelf * 0.9f;
-                float hyd = ((sea + hTone) * env + self + w * 0.004f) * _hydOn;
+                // Soft limit: a ravager in the beam is loud, but it shouldn't crackle.
+                float hyd = MathF.Tanh(((sea + hTone) * env + self + w * 0.004f) * 1.3f) * 0.6f * _hydOn;
                 l += hyd; r += hyd;
             }
 

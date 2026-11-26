@@ -610,7 +610,7 @@ public partial class Main : Node
 			Vector2 rel = mm.Relative * Settings.MouseSensitivity;
 			if (_mode == Mode.Walking) { _player.Look(rel); _weapons.AddSway(rel); }
 			else if (_mode == Mode.Diving) _diver.Look(rel);
-			else if (_mode == Mode.Hydrophone) SteerBeam(rel.X * 0.12f);
+			else if (_mode == Mode.Hydrophone && _captureDir == null) SteerBeam(rel.X * 0.12f);
 			else if (_mode == Mode.Helm)
 			{
 				_sub.Rudder = Mathf.Clamp(_sub.Rudder + rel.X * 0.0025f, -1f, 1f);
